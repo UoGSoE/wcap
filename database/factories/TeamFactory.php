@@ -17,7 +17,13 @@ class TeamFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'name' => fake()->randomElement([
+                'IT Support Team',
+                'Development Team',
+                'Infrastructure Team',
+                'Security Team',
+            ]),
+            'manager_id' => \App\Models\User::factory(),
         ];
     }
 }

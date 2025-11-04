@@ -1,0 +1,213 @@
+<?php
+
+use App\Enums\Location;
+use App\Models\PlanEntry;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+
+use function Pest\Laravel\actingAs;
+
+uses(RefreshDatabase::class);
+
+test('home page renders with 14 days starting from monday', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->assertOk()
+        ->assertSee('What are you working on?')
+        ->assertSee('Monday')
+        ->assertSee('Sunday');
+});
+
+test('saving new entries creates database records', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => 'Test note '.$offset,
+            'location' => Location::HOME->value,
+        ];
+    })->toArray();
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertOk();
+
+    expect(PlanEntry::where('user_id', $user->id)->count())->toBe(14);
+
+    $firstEntry = PlanEntry::where('user_id', $user->id)->first();
+    expect($firstEntry->note)->toBe('Test note 0');
+    expect($firstEntry->location)->toBe(Location::HOME);
+});
+
+test('saving updates existing entries', function () {
+    $user = User::factory()->create();
+    $date = now()->startOfWeek();
+
+    $created = PlanEntry::factory()->create([
+        'user_id' => $user->id,
+        'entry_date' => $date,
+        'note' => 'Original note',
+        'location' => Location::HOME,
+    ]);
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) use ($date) {
+        return [
+            'id' => null,
+            'entry_date' => $date->copy()->addDays($offset)->format('Y-m-d'),
+            'note' => 'Updated note '.$offset,
+            'location' => Location::JWS->value,
+        ];
+    })->toArray();
+
+    // Set the id for the first entry (the one we created above)
+    $entries[0]['id'] = $created->id;
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertOk();
+
+    // Should still only have 14 entries (not duplicates)
+    expect(PlanEntry::where('user_id', $user->id)->count())->toBe(14);
+
+    $updatedEntry = PlanEntry::where('user_id', $user->id)
+        ->where('entry_date', $date)
+        ->first();
+
+    expect($updatedEntry->note)->toBe('Updated note 0');
+    expect($updatedEntry->location)->toBe(Location::JWS);
+});
+
+test('copy next copies entry to next day only', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => '',
+            'location' => '',
+        ];
+    })->toArray();
+
+    $entries[0]['note'] = 'First day task';
+    $entries[0]['location'] = Location::HOME->value;
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('copyNext', 0)
+        ->assertSet('entries.1.note', 'First day task')
+        ->assertSet('entries.1.location', Location::HOME->value)
+        ->assertSet('entries.2.note', '');
+});
+
+test('copy rest copies entry to all remaining days', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => '',
+            'location' => '',
+        ];
+    })->toArray();
+
+    $entries[0]['note'] = 'Same task all week';
+    $entries[0]['location'] = Location::RANKINE->value;
+
+    $component = Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('copyRest', 0);
+
+    // Check all remaining days were copied
+    for ($i = 1; $i < 14; $i++) {
+        $component->assertSet("entries.{$i}.note", 'Same task all week')
+            ->assertSet("entries.{$i}.location", Location::RANKINE->value);
+    }
+});
+
+test('validation requires location field', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => 'Test note',
+            'location' => '', // Empty location should fail
+        ];
+    })->toArray();
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertHasErrors(['entries.0.location']);
+});
+
+test('validation allows empty note field', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => '', // Empty note should be allowed
+            'location' => Location::HOME->value,
+        ];
+    })->toArray();
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(PlanEntry::where('user_id', $user->id)->count())->toBe(14);
+});
+
+test('existing entries are loaded on mount', function () {
+    $user = User::factory()->create();
+    $date = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $user->id,
+        'entry_date' => $date,
+        'note' => 'Existing task',
+        'location' => Location::BO,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->assertSet('entries.0.note', 'Existing task')
+        ->assertSet('entries.0.location', Location::BO->value);
+});

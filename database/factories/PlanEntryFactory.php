@@ -17,7 +17,21 @@ class PlanEntryFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'user_id' => \App\Models\User::factory(),
+            'entry_date' => fake()->dateTimeBetween('now', '+2 weeks'),
+            'note' => fake()->optional(0.8)->randomElement([
+                'Support tickets',
+                'Project planning',
+                'Code review',
+                'Team meeting',
+                'Documentation',
+                'Bug fixes',
+                'Feature development',
+            ]),
+            'category' => null,
+            'location' => fake()->randomElement(\App\Enums\Location::cases()),
+            'is_holiday' => false,
+            'created_by_manager' => false,
         ];
     }
 }
