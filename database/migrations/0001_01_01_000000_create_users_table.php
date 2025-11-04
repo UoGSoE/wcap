@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('forenames');
             $table->boolean('is_staff')->default(true);
             $table->boolean('is_admin')->default(false);
+            $table->string('default_location')->nullable();
+            $table->string('default_category')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

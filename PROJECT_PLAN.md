@@ -248,7 +248,7 @@ public array $entries = [
 
 (Small additional note: we should use the 'Settings' link in the sidebar to let users set defaults for their
 location and what they work on.  If they spend 90% of their time doing, say, Active Directory work in the Such-and-such
-building - we can pre-fill their form).
+building - we can pre-fill their form - I have added a default_location and default_category column to the user model in preperation).
 
 #### 1. Hide Weekends in UI
 **Priority**: HIGH
