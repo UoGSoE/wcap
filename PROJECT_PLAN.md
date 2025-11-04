@@ -246,7 +246,7 @@ public array $entries = [
 
 ### Phase 2: Core Improvements (Immediate Priority)
 
-(Small additional note: we should use the 'Settings' link in the sidebar to let users set defaults for their
+(Small additional note: we should add a 'Profile' link in the sidebar (and as a small button at the top-left of the HomePage) to let users set defaults for their
 location and what they work on.  If they spend 90% of their time doing, say, Active Directory work in the Such-and-such
 building - we can pre-fill their form - I have added a default_location and default_category column to the user model in preperation).
 
