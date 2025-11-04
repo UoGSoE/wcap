@@ -246,6 +246,10 @@ public array $entries = [
 
 ### Phase 2: Core Improvements (Immediate Priority)
 
+(Small additional note: we should use the 'Settings' link in the sidebar to let users set defaults for their
+location and what they work on.  If they spend 90% of their time doing, say, Active Directory work in the Such-and-such
+building - we can pre-fill their form).
+
 #### 1. Hide Weekends in UI
 **Priority**: HIGH
 **Rationale**: Campus closed weekends, no need to plan for Sat/Sun
