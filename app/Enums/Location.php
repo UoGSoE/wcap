@@ -32,4 +32,21 @@ enum Location: string
             self::MATHS => 'Maths',
         };
     }
+
+    public function shortLabel(): string
+    {
+        return match ($this) {
+            self::HOME => 'Home',
+            self::JWS => 'JWS',
+            self::JWN => 'JWN',
+            self::RANKINE => 'Rank',
+            self::BO => 'BO',
+            self::OTHER => 'Other',
+            self::JOSEPH_BLACK => 'JB',
+            self::ALWYN_WILLIAM => 'AW',
+            self::GILBERT_SCOTT => 'GS',
+            self::KELVIN => 'Kelv',
+            self::MATHS => 'Maths',
+        };
+    }
 }

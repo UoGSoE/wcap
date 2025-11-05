@@ -76,24 +76,19 @@
                                         @if ($entry && $entry->location)
                                             @if ($showLocation)
                                                 <flux:tooltip :content="$entry->note ?: 'No details'">
-                                                    <flux:badge size="sm" :color="match($entry->location->value) {
-                                                        'home' => 'zinc',
-                                                        'jws' => 'blue',
-                                                        'jwn' => 'green',
-                                                        'rankine' => 'purple',
-                                                        'boyd-orr' => 'orange',
-                                                        default => 'zinc'
-                                                    }" inset="top bottom" class="cursor-help">
-                                                        {{ $entry->location->label() }}
+                                                    <flux:badge size="sm" inset="top bottom" class="cursor-help">
+                                                        {{ $entry->location->shortLabel() }}
                                                     </flux:badge>
                                                 </flux:tooltip>
                                             @else
-                                                <flux:text class="text-sm">{{ $entry->note ?: '-' }}</flux:text>
+                                                <flux:text class="text-sm">{{ $entry->note ?: '?' }}</flux:text>
                                             @endif
                                         @elseif ($entry && !$entry->location)
-                                            <flux:badge size="sm" color="zinc" variant="outline" inset="top bottom">Away</flux:badge>
+                                            <flux:badge size="sm" color="amber" variant="outline" inset="top bottom">Away</flux:badge>
                                         @else
-                                            <flux:badge size="sm" color="zinc" variant="outline" inset="top bottom">-</flux:badge>
+                                            <flux:tooltip content="No record">
+                                                <flux:badge size="sm" color="red" variant="outline" inset="top bottom">-</flux:badge>
+                                            </flux:tooltip>
                                         @endif
                                     </flux:table.cell>
                                 @endforeach
@@ -132,14 +127,7 @@
                                     @if (!empty($membersAtLocation))
                                         <div>
                                             <flux:subheading class="flex items-center gap-2">
-                                                <flux:badge :color="match($location->value) {
-                                                    'home' => 'zinc',
-                                                    'jws' => 'blue',
-                                                    'jwn' => 'green',
-                                                    'rankine' => 'purple',
-                                                    'boyd-orr' => 'orange',
-                                                    default => 'zinc'
-                                                }">
+                                                <flux:badge>
                                                     {{ $location->label() }}
                                                 </flux:badge>
                                                 <span class="text-sm text-zinc-500">({{ count($membersAtLocation) }})</span>
