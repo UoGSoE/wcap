@@ -74,6 +74,7 @@
         </flux:main>
 
         <flux:toast />
+        <div class="min-h-5"></div>
         @fluxScripts
         @stack('scripts')
     </body>

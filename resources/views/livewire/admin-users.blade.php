@@ -34,10 +34,10 @@
                         <flux:table.cell>
                             <div class="flex gap-1">
                                 @if ($user->is_admin)
-                                    <flux:badge color="blue">Admin</flux:badge>
+                                    <flux:badge color="sky">Admin</flux:badge>
                                 @endif
                                 @if ($user->isManager())
-                                    <flux:badge color="green">Manager</flux:badge>
+                                    <flux:badge color="zinc">Manager</flux:badge>
                                 @endif
                                 @if ($user->is_staff)
                                     <flux:badge color="zinc">Staff</flux:badge>
