@@ -8,6 +8,7 @@
         <flux:tabs>
             <flux:tab name="team">My Team</flux:tab>
             <flux:tab name="location">By Location</flux:tab>
+            <flux:tab name="coverage">Coverage</flux:tab>
         </flux:tabs>
 
         <flux:tab.panel name="team">
@@ -137,6 +138,44 @@
                             </div>
                         @endif
                     </flux:card>
+                @endforeach
+            </div>
+        </flux:tab.panel>
+
+        <flux:tab.panel name="coverage">
+            <flux:subheading>Location coverage at a glance</flux:subheading>
+            <flux:text class="text-sm text-zinc-600 dark:text-zinc-400 mt-2 mb-6">
+                Gray cells indicate at least one person at that location. Gaps mean no coverage.
+            </flux:text>
+
+            <div class="grid gap-2 p-0.5 rounded-lg" style="grid-template-columns: 150px repeat(10, 1fr);">
+                {{-- Header row --}}
+                <div>
+                    <flux:text variant="strong"></flux:text>
+                </div>
+                @foreach ($days as $day)
+                    <div class="">
+                        <flux:text variant="strong">{{ $day->format('D') }}</flux:text>
+                        <flux:text>{{ $day->format('j/n') }}</flux:text>
+                    </div>
+                @endforeach
+
+                {{-- Location rows --}}
+                @foreach ($locations as $location)
+                    <div>
+                        <flux:text variant="strong">{{ $location->label() }}</flux:text>
+                    </div>
+                    @foreach ($days as $day)
+                        @php
+                            $dateKey = $day->format('Y-m-d');
+                            $count = $coverage[$location->value][$dateKey] ?? 0;
+                        @endphp
+                        <div class="p-3 text-center text-sm font-medium {{ $count > 0 ? 'bg-zinc-300 dark:bg-zinc-700' : '' }}">
+                            @if ($count > 0)
+                                {{ $count }}
+                            @endif
+                        </div>
+                    @endforeach
                 @endforeach
             </div>
         </flux:tab.panel>

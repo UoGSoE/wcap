@@ -225,3 +225,45 @@ test('toggle switch changes display between location and note', function () {
         ->assertSet('showLocation', false)
         ->assertSee('Working on tickets');
 });
+
+test('coverage tab shows location coverage grid', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $member1 = User::factory()->create();
+    $member2 = User::factory()->create();
+    $member3 = User::factory()->create();
+    $team->users()->attach([$member1->id, $member2->id, $member3->id]);
+
+    $monday = now()->startOfWeek();
+    $tuesday = $monday->copy()->addDay();
+
+    // Monday: 2 at Home, 1 at JWS
+    PlanEntry::factory()->create(['user_id' => $member1->id, 'entry_date' => $monday, 'location' => Location::HOME]);
+    PlanEntry::factory()->create(['user_id' => $member2->id, 'entry_date' => $monday, 'location' => Location::HOME]);
+    PlanEntry::factory()->create(['user_id' => $member3->id, 'entry_date' => $monday, 'location' => Location::JWS]);
+
+    // Tuesday: 3 at JWS
+    PlanEntry::factory()->create(['user_id' => $member1->id, 'entry_date' => $tuesday, 'location' => Location::JWS]);
+    PlanEntry::factory()->create(['user_id' => $member2->id, 'entry_date' => $tuesday, 'location' => Location::JWS]);
+    PlanEntry::factory()->create(['user_id' => $member3->id, 'entry_date' => $tuesday, 'location' => Location::JWS]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+
+    $coverage = $component->viewData('coverage');
+
+    // Monday coverage
+    expect($coverage['home'][$monday->format('Y-m-d')])->toBe(2);
+    expect($coverage['jws'][$monday->format('Y-m-d')])->toBe(1);
+    expect($coverage['jwn'][$monday->format('Y-m-d')])->toBe(0);
+
+    // Tuesday coverage
+    expect($coverage['jws'][$tuesday->format('Y-m-d')])->toBe(3);
+    expect($coverage['home'][$tuesday->format('Y-m-d')])->toBe(0);
+
+    // Check UI renders coverage tab
+    $component->assertSee('Coverage')
+        ->assertSee('Location coverage at a glance');
+});

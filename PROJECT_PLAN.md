@@ -548,6 +548,38 @@ building - we can pre-fill their form - I have added a default_location and defa
 ```
 NOT: `<flux:tabs wire:model.live="activeTab">` with panels inside tabs - that doesn't work!
 
+**Post-Implementation Enhancement #1: Toggle Switch** ✅
+Added a `flux:switch` toggle to the "My Team" tab that lets managers flip between viewing locations and viewing notes.
+
+**Implementation**:
+- Added `public bool $showLocation = true` property to component
+- `flux:switch` with `wire:model.live="showLocation"`
+- Conditional rendering in table cells:
+  - `$showLocation = true`: Color-coded location badges with tooltips (original behavior)
+  - `$showLocation = false`: Work notes displayed as text
+- Clean UI with "View: Locations/Work Notes" indicator
+
+**Why this is useful**: Managers can focus on what's important to them at any moment - either "where is everyone?" or "what is everyone doing?" - without changing pages.
+
+**Post-Implementation Enhancement #2: Coverage Tab** ✅
+Added a third tab showing a visual grid of location coverage across all days.
+
+**Implementation**:
+- Coverage calculation in render(): `$coverage[location][date] = count`
+- CSS Grid layout (11 columns: location names + 10 weekdays)
+- Visual design:
+  - Gray cells (`bg-zinc-300`) when count > 0 with number displayed
+  - Transparent/white cells when count = 0 (visual gap)
+  - Grid gaps for clarity
+- Header row with day abbreviations
+- One row per location
+
+**Why this is useful**: Senior managers can instantly spot coverage gaps - like "no one at Boyd-Orr on Tuesday" - at a glance. The visual gap metaphor makes it immediately obvious where coverage is missing.
+
+**Test Coverage**:
+- 12 tests total, 46 assertions ✓
+- Added 2 new tests for toggle and coverage features
+
 **Future Enhancements**:
 - Hierarchical teams (managers of managers) - currently only direct reports
 - Date range selector to view beyond current 2 weeks

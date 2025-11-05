@@ -61,12 +61,23 @@ class ManagerReport extends Component
             }
         }
 
+        // Calculate coverage grid: location x day counts
+        $coverage = [];
+        foreach (Location::cases() as $location) {
+            $coverage[$location->value] = [];
+            foreach ($days as $day) {
+                $dateKey = $day->format('Y-m-d');
+                $coverage[$location->value][$dateKey] = count($daysByLocation[$dateKey][$location->value] ?? []);
+            }
+        }
+
         return view('livewire.manager-report', [
             'days' => $days,
             'teamMembers' => $teamMembers,
             'planEntries' => $planEntries,
             'daysByLocation' => $daysByLocation,
             'locations' => Location::cases(),
+            'coverage' => $coverage,
         ]);
     }
 
