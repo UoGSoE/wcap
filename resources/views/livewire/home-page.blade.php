@@ -15,7 +15,10 @@
         @if ($day->isWeekday())
             <flux:card size="sm" class="mt-6" wire:key="day-{{ $index }}">
                 <div class="flex justify-between items-center">
-                    <flux:heading size="lg">{{ $day->format('l') }} / {{ $day->format('jS') }}</flux:heading>
+                    <div class="flex items-center gap-2">
+                        <flux:checkbox wire:model.live="entries.{{ $index }}.is_available" />
+                        <flux:heading size="lg">{{ $day->format('l') }} / {{ $day->format('jS') }}</flux:heading>
+                    </div>
                     <div class="flex gap-2">
                         <flux:button wire:click="copyNext({{ $index }})">Copy next</flux:button>
                         <flux:button wire:click="copyRest({{ $index }})">Copy rest</flux:button>
@@ -36,6 +39,7 @@
             <input type="hidden" wire:model="entries.{{ $index }}.entry_date" />
             <input type="hidden" wire:model="entries.{{ $index }}.note" />
             <input type="hidden" wire:model="entries.{{ $index }}.location" />
+            <input type="hidden" wire:model="entries.{{ $index }}.is_available" />
         @endif
     @endforeach
     </div>

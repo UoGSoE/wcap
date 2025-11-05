@@ -30,6 +30,7 @@ class PlanEntryFactory extends Factory
             ]),
             'category' => null,
             'location' => fake()->randomElement(\App\Enums\Location::cases()),
+            'is_available' => true,
             'is_holiday' => false,
             'created_by_manager' => false,
         ];

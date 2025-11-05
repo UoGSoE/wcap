@@ -19,7 +19,9 @@ test('home page renders with 14 days starting from monday', function () {
         ->assertOk()
         ->assertSee('What are you working on?')
         ->assertSee('Monday')
-        ->assertSee('Sunday');
+        ->assertSee('Friday')
+        ->assertDontSee('Saturday')
+        ->assertDontSee('Sunday');
 });
 
 test('saving new entries creates database records', function () {
@@ -35,6 +37,7 @@ test('saving new entries creates database records', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note '.$offset,
             'location' => Location::HOME->value,
+            'is_available' => true,
         ];
     })->toArray();
 
@@ -69,6 +72,7 @@ test('saving updates existing entries', function () {
             'entry_date' => $date->copy()->addDays($offset)->format('Y-m-d'),
             'note' => 'Updated note '.$offset,
             'location' => Location::JWS->value,
+            'is_available' => true,
         ];
     })->toArray();
 
@@ -104,6 +108,7 @@ test('copy next copies entry to next day only', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
             'location' => '',
+            'is_available' => true,
         ];
     })->toArray();
 
@@ -131,6 +136,7 @@ test('copy rest copies entry to all remaining days', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
             'location' => '',
+            'is_available' => true,
         ];
     })->toArray();
 
@@ -161,6 +167,7 @@ test('validation requires location field', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note',
             'location' => '', // Empty location should fail
+            'is_available' => true,
         ];
     })->toArray();
 
@@ -183,6 +190,7 @@ test('validation allows empty note field', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => '', // Empty note should be allowed
             'location' => Location::HOME->value,
+            'is_available' => true,
         ];
     })->toArray();
 
@@ -249,4 +257,116 @@ test('existing entries override user defaults', function () {
         ->assertSet('entries.0.location', Location::JWS->value)
         ->assertSet('entries.1.note', 'Support Tickets')
         ->assertSet('entries.1.location', Location::HOME->value);
+});
+
+test('is_available checkbox saves correctly', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => 'Test note',
+            'location' => Location::HOME->value,
+            'is_available' => $offset % 2 === 0, // Alternate true/false
+        ];
+    })->toArray();
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertOk();
+
+    expect(PlanEntry::where('user_id', $user->id)->count())->toBe(14);
+
+    $firstEntry = PlanEntry::where('user_id', $user->id)->where('entry_date', now()->startOfWeek())->first();
+    expect($firstEntry->is_available)->toBeTrue();
+
+    $secondEntry = PlanEntry::where('user_id', $user->id)->where('entry_date', now()->startOfWeek()->addDay())->first();
+    expect($secondEntry->is_available)->toBeFalse();
+});
+
+test('copy next includes is_available', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => '',
+            'location' => '',
+            'is_available' => true,
+        ];
+    })->toArray();
+
+    $entries[0]['note'] = 'First day task';
+    $entries[0]['location'] = Location::HOME->value;
+    $entries[0]['is_available'] = false;
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('copyNext', 0)
+        ->assertSet('entries.1.note', 'First day task')
+        ->assertSet('entries.1.location', Location::HOME->value)
+        ->assertSet('entries.1.is_available', false)
+        ->assertSet('entries.2.is_available', true);
+});
+
+test('copy rest includes is_available', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => '',
+            'location' => '',
+            'is_available' => true,
+        ];
+    })->toArray();
+
+    $entries[0]['note'] = 'Same task all week';
+    $entries[0]['location'] = Location::RANKINE->value;
+    $entries[0]['is_available'] = false;
+
+    $component = Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('copyRest', 0);
+
+    for ($i = 1; $i < 14; $i++) {
+        $component->assertSet("entries.{$i}.note", 'Same task all week')
+            ->assertSet("entries.{$i}.location", Location::RANKINE->value)
+            ->assertSet("entries.{$i}.is_available", false);
+    }
+});
+
+test('existing entries load is_available value', function () {
+    $user = User::factory()->create();
+    $date = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $user->id,
+        'entry_date' => $date,
+        'note' => 'Unavailable task',
+        'location' => Location::HOME,
+        'is_available' => false,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->assertSet('entries.0.is_available', false)
+        ->assertSet('entries.1.is_available', true);
 });

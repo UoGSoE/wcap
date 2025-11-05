@@ -38,6 +38,7 @@ class HomePage extends Component
                 'entry_date' => $dateKey,
                 'note' => $existing?->note ?? $defaultNote,
                 'location' => $existing?->location?->value ?? $defaultLocation,
+                'is_available' => $existing?->is_available ?? true,
             ];
         }
     }
@@ -49,6 +50,7 @@ class HomePage extends Component
             'entries.*.note' => 'nullable|string',
             'entries.*.location' => 'required|string',
             'entries.*.entry_date' => 'required|date',
+            'entries.*.is_available' => 'required|boolean',
         ], [
             'entries.*.location.required' => 'Location is required for each day.',
         ]);
@@ -63,6 +65,7 @@ class HomePage extends Component
                     'entry_date' => $entry['entry_date'],
                     'note' => $entry['note'],
                     'location' => $entry['location'],
+                    'is_available' => $entry['is_available'],
                 ]
             );
         }
@@ -79,6 +82,7 @@ class HomePage extends Component
         if ($dayIndex < 13) {
             $this->entries[$dayIndex + 1]['note'] = $this->entries[$dayIndex]['note'];
             $this->entries[$dayIndex + 1]['location'] = $this->entries[$dayIndex]['location'];
+            $this->entries[$dayIndex + 1]['is_available'] = $this->entries[$dayIndex]['is_available'];
         }
     }
 
@@ -86,10 +90,12 @@ class HomePage extends Component
     {
         $sourceNote = $this->entries[$dayIndex]['note'];
         $sourceLocation = $this->entries[$dayIndex]['location'];
+        $sourceIsAvailable = $this->entries[$dayIndex]['is_available'];
 
         for ($i = $dayIndex + 1; $i < 14; $i++) {
             $this->entries[$i]['note'] = $sourceNote;
             $this->entries[$i]['location'] = $sourceLocation;
+            $this->entries[$i]['is_available'] = $sourceIsAvailable;
         }
     }
 

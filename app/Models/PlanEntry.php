@@ -18,6 +18,7 @@ class PlanEntry extends Model
         'note',
         'category',
         'location',
+        'is_available',
         'is_holiday',
         'created_by_manager',
     ];
@@ -27,6 +28,7 @@ class PlanEntry extends Model
         return [
             'entry_date' => 'date',
             'location' => Location::class,
+            'is_available' => 'boolean',
             'is_holiday' => 'boolean',
             'created_by_manager' => 'boolean',
         ];
