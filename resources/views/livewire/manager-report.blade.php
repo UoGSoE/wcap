@@ -13,6 +13,22 @@
         </div>
     @endadmin
 
+    @if ($availableTeams->isNotEmpty())
+        <div class="mb-6">
+            <flux:pillbox
+                wire:model.live="selectedTeams"
+                placeholder="Filter by team(s)..."
+                searchable
+                label="Teams"
+                description="Select specific teams to view, or leave empty to view all"
+            >
+                @foreach ($availableTeams as $team)
+                    <flux:pillbox.option :value="$team->id">{{ $team->name }}</flux:pillbox.option>
+                @endforeach
+            </flux:pillbox>
+        </div>
+    @endif
+
     <flux:tab.group>
         <flux:tabs>
             <flux:tab name="team">My Team</flux:tab>

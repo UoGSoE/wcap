@@ -39,7 +39,7 @@ class TestDataSeeder extends Seeder
 
         foreach ($teamNames as $teamName) {
             // Use admin2x as the manager of Infrastructure team
-            if ($teamName === 'Infrastructure') {
+            if (str_starts_with($teamName, 'Service Operations')) {
                 $manager = $admin;
             } else {
                 $manager = User::factory()->create([

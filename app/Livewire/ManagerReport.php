@@ -3,7 +3,9 @@
 namespace App\Livewire;
 
 use App\Enums\Location;
+use App\Models\Team;
 use App\Models\User;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class ManagerReport extends Component
@@ -11,6 +13,9 @@ class ManagerReport extends Component
     public bool $showLocation = true;
 
     public bool $showAllUsers = false;
+
+    #[Url]
+    public array $selectedTeams = [];
 
     public function mount(): void
     {
@@ -26,6 +31,7 @@ class ManagerReport extends Component
     {
         $days = $this->getDays();
         $teamMembers = $this->getTeamMembers();
+        $availableTeams = $this->getAvailableTeams();
 
         // Get all plan entries for team members for the date range
         $startDate = $days[0]->format('Y-m-d');
@@ -80,6 +86,7 @@ class ManagerReport extends Component
             'daysByLocation' => $daysByLocation,
             'locations' => Location::cases(),
             'coverage' => $coverage,
+            'availableTeams' => $availableTeams,
         ]);
     }
 
@@ -98,6 +105,16 @@ class ManagerReport extends Component
     {
         $user = auth()->user();
 
+        // If specific teams are selected, show only users from those teams
+        if (! empty($this->selectedTeams)) {
+            return Team::whereIn('id', $this->selectedTeams)
+                ->with('users')
+                ->get()
+                ->flatMap(fn ($team) => $team->users)
+                ->unique('id')
+                ->sortBy('surname');
+        }
+
         // If admin and toggle is on, show all users
         if ($user->isAdmin() && $this->showAllUsers) {
             return User::orderBy('surname')->get();
@@ -110,5 +127,18 @@ class ManagerReport extends Component
             ->flatMap(fn ($team) => $team->users)
             ->unique('id')
             ->sortBy('surname');
+    }
+
+    private function getAvailableTeams()
+    {
+        $user = auth()->user();
+
+        // If admin and showing all users, show all teams
+        if ($user->isAdmin() && $this->showAllUsers) {
+            return Team::orderBy('name')->get();
+        }
+
+        // Otherwise, show only teams managed by this user
+        return $user->managedTeams()->orderBy('name')->get();
     }
 }
