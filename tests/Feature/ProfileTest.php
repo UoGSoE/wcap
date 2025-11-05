@@ -23,14 +23,14 @@ test('profile page renders', function () {
 
 test('profile loads existing defaults', function () {
     $user = User::factory()->create([
-        'default_location' => Location::HOME->value,
+        'default_location' => Location::OTHER->value,
         'default_category' => 'Active Directory',
     ]);
 
     actingAs($user);
 
     Livewire::test(\App\Livewire\Profile::class)
-        ->assertSet('default_location', Location::HOME->value)
+        ->assertSet('default_location', Location::OTHER->value)
         ->assertSet('default_category', 'Active Directory');
 });
 
@@ -56,7 +56,7 @@ test('saving profile updates user defaults', function () {
 
 test('profile allows empty defaults', function () {
     $user = User::factory()->create([
-        'default_location' => Location::HOME->value,
+        'default_location' => Location::OTHER->value,
         'default_category' => 'Something',
     ]);
 

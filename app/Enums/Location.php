@@ -4,7 +4,6 @@ namespace App\Enums;
 
 enum Location: string
 {
-    case HOME = 'home';
     case JWS = 'jws';
     case JWN = 'jwn';
     case RANKINE = 'rankine';
@@ -19,7 +18,6 @@ enum Location: string
     public function label(): string
     {
         return match ($this) {
-            self::HOME => 'Home',
             self::JWS => 'JWS',
             self::JWN => 'JWN',
             self::RANKINE => 'Rankine',
@@ -36,7 +34,6 @@ enum Location: string
     public function shortLabel(): string
     {
         return match ($this) {
-            self::HOME => 'Home',
             self::JWS => 'JWS',
             self::JWN => 'JWN',
             self::RANKINE => 'Rank',

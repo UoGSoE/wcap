@@ -28,6 +28,11 @@
                     <flux:separator class="my-2" />
                     <flux:sidebar.item badge="3" icon="list-bullet" href="" wire:navigate>List things</flux:sidebar.item>
                     <flux:sidebar.item icon="user-group" href="{{ route('manager.report') }}" wire:navigate>Team Report</flux:sidebar.item>
+                    @admin
+                        <flux:separator class="my-2" />
+                        <flux:sidebar.item icon="cog-6-tooth" href="{{ route('admin.teams') }}" wire:navigate>Manage Teams</flux:sidebar.item>
+                        <flux:sidebar.item icon="users" href="{{ route('admin.users') }}" wire:navigate>Manage Users</flux:sidebar.item>
+                    @endadmin
                 </flux:sidebar.nav>
                 <flux:sidebar.spacer />
                 <flux:sidebar.nav>
@@ -69,6 +74,7 @@
         </flux:main>
 
         <flux:toast />
+        <div class="min-h-5"></div>
         @fluxScripts
         @stack('scripts')
     </body>
