@@ -31,76 +31,170 @@ class ManagerReport extends Component
 
     public function render()
     {
-        $days = $this->getDays();
-        $teamMembers = $this->getTeamMembers();
+        $days = $this->buildDays();
+        $teamMembers = $this->getTeamMembersArray();
         $availableTeams = $this->getAvailableTeams();
 
-        // Get all plan entries for team members for the date range
-        $startDate = $days[0]->format('Y-m-d');
-        $endDate = $days[9]->format('Y-m-d');
-
-        $teamMemberIds = $teamMembers->pluck('id')->toArray();
-
-        $planEntries = \App\Models\PlanEntry::query()
-            ->whereIn('user_id', $teamMemberIds)
-            ->whereBetween('entry_date', [$startDate, $endDate])
-            ->get()
-            ->groupBy('user_id');
-
-        // Organize data for "By Location" tab
-        $daysByLocation = [];
-        foreach ($days as $day) {
-            $dateKey = $day->format('Y-m-d');
-            $daysByLocation[$dateKey] = [];
-
-            foreach ($teamMembers as $member) {
-                $entry = $planEntries->get($member->id)?->first(function ($entry) use ($dateKey) {
-                    return $entry->entry_date->format('Y-m-d') === $dateKey;
-                });
-
-                if ($entry && $entry->location) {
-                    $location = $entry->location->value;
-                    if (! isset($daysByLocation[$dateKey][$location])) {
-                        $daysByLocation[$dateKey][$location] = [];
-                    }
-                    $daysByLocation[$dateKey][$location][] = [
-                        'member' => $member,
-                        'note' => $entry->note,
-                    ];
-                }
-            }
-        }
-
-        // Calculate coverage grid: location x day counts
-        $coverage = [];
-        foreach (Location::cases() as $location) {
-            $coverage[$location->value] = [];
-            foreach ($days as $day) {
-                $dateKey = $day->format('Y-m-d');
-                $coverage[$location->value][$dateKey] = count($daysByLocation[$dateKey][$location->value] ?? []);
-            }
-        }
+        $entriesByUser = $this->buildEntriesByUser($teamMembers, $days);
+        $teamRows = $this->buildTeamRows($teamMembers, $days, $entriesByUser);
+        $locationDays = $this->buildLocationDays($days, $teamMembers, $entriesByUser);
+        $coverageMatrix = $this->buildCoverageMatrix($days, $locationDays);
 
         return view('livewire.manager-report', [
             'days' => $days,
-            'teamMembers' => $teamMembers,
-            'planEntries' => $planEntries,
-            'daysByLocation' => $daysByLocation,
+            'teamRows' => $teamRows,
+            'locationDays' => $locationDays,
+            'coverageMatrix' => $coverageMatrix,
             'locations' => Location::cases(),
-            'coverage' => $coverage,
             'availableTeams' => $availableTeams,
         ]);
     }
 
-    private function getDays(): array
+    private function buildDays(): array
     {
         $start = now()->startOfWeek();
+        $days = [];
 
-        return collect(range(0, 13))
-            ->map(fn ($offset) => $start->copy()->addDays($offset))
-            ->filter(fn ($day) => $day->isWeekday())
-            ->values()
-            ->toArray();
+        for ($offset = 0; $offset < 14; $offset++) {
+            $day = $start->copy()->addDays($offset);
+
+            if ($day->isWeekday()) {
+                $days[] = [
+                    'date' => $day,
+                    'key' => $day->toDateString(),
+                ];
+            }
+        }
+
+        return $days;
+    }
+
+    private function buildEntriesByUser(array $teamMembers, array $days): array
+    {
+        $start = $days[0]['key'];
+        $end = end($days)['key'];
+        $userIds = array_map(fn ($member) => $member->id, $teamMembers);
+
+        $entries = \App\Models\PlanEntry::query()
+            ->whereIn('user_id', $userIds)
+            ->whereBetween('entry_date', [$start, $end])
+            ->get();
+
+        $indexed = [];
+
+        foreach ($entries as $entry) {
+            $userId = $entry->user_id;
+            $dateKey = $entry->entry_date->toDateString();
+
+            if (! isset($indexed[$userId])) {
+                $indexed[$userId] = [];
+            }
+
+            $indexed[$userId][$dateKey] = $entry;
+        }
+
+        return $indexed;
+    }
+
+    private function buildTeamRows(array $teamMembers, array $days, array $entriesByUser): array
+    {
+        $rows = [];
+
+        foreach ($teamMembers as $member) {
+            $row = [
+                'member_id' => $member->id,
+                'name' => "{$member->surname}, {$member->forenames}",
+                'days' => [],
+            ];
+
+            foreach ($days as $day) {
+                $dateKey = $day['key'];
+                $entry = $entriesByUser[$member->id][$dateKey] ?? null;
+
+                $state = 'missing';
+                if ($entry !== null) {
+                    $state = $entry->location === null ? 'away' : 'planned';
+                }
+
+                $row['days'][] = [
+                    'date' => $day['date'],
+                    'state' => $state,
+                    'location' => $entry?->location,
+                    'location_short' => $entry?->location?->shortLabel(),
+                    'note' => $entry?->note ?? 'No details',
+                ];
+            }
+
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    private function buildLocationDays(array $days, array $teamMembers, array $entriesByUser): array
+    {
+        $result = [];
+        $locations = Location::cases();
+
+        foreach ($days as $day) {
+            $dateKey = $day['key'];
+            $locationData = [];
+
+            foreach ($locations as $location) {
+                $locationData[$location->value] = [
+                    'label' => $location->label(),
+                    'members' => [],
+                ];
+            }
+
+            foreach ($teamMembers as $member) {
+                $entry = $entriesByUser[$member->id][$dateKey] ?? null;
+
+                if ($entry && $entry->location !== null) {
+                    $locationData[$entry->location->value]['members'][] = [
+                        'name' => "{$member->surname}, {$member->forenames}",
+                        'note' => $entry->note,
+                    ];
+                }
+            }
+
+            $result[] = [
+                'date' => $day['date'],
+                'locations' => $locationData,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function buildCoverageMatrix(array $days, array $locationDays): array
+    {
+        $matrix = [];
+
+        foreach (Location::cases() as $location) {
+            $row = [
+                'label' => $location->label(),
+                'entries' => [],
+            ];
+
+            foreach ($locationDays as $index => $dayData) {
+                $members = $dayData['locations'][$location->value]['members'];
+
+                $row['entries'][] = [
+                    'date' => $days[$index]['date'],
+                    'count' => count($members),
+                ];
+            }
+
+            $matrix[] = $row;
+        }
+
+        return $matrix;
+    }
+
+    private function getTeamMembersArray(): array
+    {
+        return array_values($this->getTeamMembers()->all());
     }
 
     private function getTeamMembers()
