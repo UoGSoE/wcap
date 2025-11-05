@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password',
         'default_location',
         'default_category',
+        'is_admin',
     ];
 
     /**
@@ -47,6 +48,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -63,5 +65,10 @@ class User extends Authenticatable
     public function managedTeams(): HasMany
     {
         return $this->hasMany(Team::class, 'manager_id');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->is_admin;
     }
 }

@@ -267,3 +267,70 @@ test('coverage tab shows location coverage grid', function () {
     $component->assertSee('Coverage')
         ->assertSee('Location coverage at a glance');
 });
+
+test('admin can see toggle switch for all users', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $team = Team::factory()->create(['manager_id' => $admin->id]);
+
+    actingAs($admin);
+
+    Livewire::test(\App\Livewire\ManagerReport::class)
+        ->assertOk()
+        ->assertSee('View All Users');
+});
+
+test('non-admin does not see toggle switch', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManagerReport::class)
+        ->assertOk()
+        ->assertDontSee('View All Users');
+});
+
+test('admin with toggle enabled sees all users not just team', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $team = Team::factory()->create(['manager_id' => $admin->id]);
+
+    // Team member
+    $teamMember = User::factory()->create(['surname' => 'TeamMember', 'forenames' => 'John']);
+    $team->users()->attach($teamMember->id);
+
+    // Non-team member
+    $otherUser = User::factory()->create(['surname' => 'OtherUser', 'forenames' => 'Jane']);
+
+    actingAs($admin);
+
+    Livewire::test(\App\Livewire\ManagerReport::class)
+        ->assertOk()
+        ->assertSet('showAllUsers', false)
+        ->assertSee('TeamMember, John')
+        ->assertDontSee('OtherUser, Jane')
+        ->set('showAllUsers', true)
+        ->assertSet('showAllUsers', true)
+        ->assertSee('TeamMember, John')
+        ->assertSee('OtherUser, Jane');
+});
+
+test('admin with toggle disabled sees only their team', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $team = Team::factory()->create(['manager_id' => $admin->id]);
+
+    // Team member
+    $teamMember = User::factory()->create(['surname' => 'TeamMember', 'forenames' => 'John']);
+    $team->users()->attach($teamMember->id);
+
+    // Non-team member
+    $otherUser = User::factory()->create(['surname' => 'OtherUser', 'forenames' => 'Jane']);
+
+    actingAs($admin);
+
+    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+
+    // Default state - toggle is off
+    expect($component->viewData('teamMembers')->count())->toBe(1);
+    $component->assertSee('TeamMember, John')
+        ->assertDontSee('OtherUser, Jane');
+});

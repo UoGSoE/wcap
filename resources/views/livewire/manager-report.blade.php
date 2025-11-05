@@ -4,6 +4,15 @@
 
     <flux:spacer class="mt-6"/>
 
+    @admin
+        <div class="mb-4">
+            <flux:field variant="inline">
+                <flux:label>View All Users</flux:label>
+                <flux:switch wire:model.live="showAllUsers" />
+            </flux:field>
+        </div>
+    @endadmin
+
     <flux:tab.group>
         <flux:tabs>
             <flux:tab name="team">My Team</flux:tab>

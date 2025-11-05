@@ -10,6 +10,8 @@ class ManagerReport extends Component
 {
     public bool $showLocation = true;
 
+    public bool $showAllUsers = false;
+
     public function mount(): void
     {
         $user = auth()->user();
@@ -95,6 +97,11 @@ class ManagerReport extends Component
     private function getTeamMembers()
     {
         $user = auth()->user();
+
+        // If admin and toggle is on, show all users
+        if ($user->isAdmin() && $this->showAllUsers) {
+            return User::orderBy('surname')->get();
+        }
 
         // Get all users from teams managed by this user
         return $user->managedTeams()

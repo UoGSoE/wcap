@@ -23,11 +23,14 @@ class TestDataSeeder extends Seeder
         ]);
 
         $teamNames = [
-            'Apps and Data',
-            'Infrastructure',
-            'Resilience',
-            'Security',
-            'Front Desk',
+            'Service Operations / Applications & Data',
+            'Service Operations / Infrastructure',
+            'Service Operations / Research Computing',
+            'Service Delivery / Help Desk',
+            'Service Delivery / Fulfilment',
+            'Service Resilience',
+            'Principle Engineer EduTech',
+            'Principle Engineer Linux',
             'Other',
         ];
 

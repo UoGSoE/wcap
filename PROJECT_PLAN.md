@@ -580,6 +580,24 @@ Added a third tab showing a visual grid of location coverage across all days.
 - 12 tests total, 46 assertions ✓
 - Added 2 new tests for toggle and coverage features
 
+**Post-Implementation Enhancement #3: Admin View All Users Toggle** ✅
+Added an admin-only toggle that allows admins to view all users in the system, not just their direct reports.
+
+**Implementation**:
+- Added `is_admin` boolean field to User model with `isAdmin(): bool` helper method
+- Created custom `@admin` Blade directive in AppServiceProvider for cleaner templates
+  - Usage: `@admin ... @endadmin` (checks `auth()->check() && auth()->user()->isAdmin()`)
+- Added `public bool $showAllUsers = false` property to ManagerReport component
+- Updated `getTeamMembers()` method to return `User::orderBy('surname')->get()` when admin toggle is enabled
+- Added toggle switch at top of page (only visible to admins)
+- Non-admins never see the toggle and always see only their team members
+
+**Why this is useful**: Senior admins (who may not be direct managers of everyone) can view organization-wide planning without needing to be assigned as a manager to every team. The default state (toggle off) still shows their direct reports, maintaining the normal manager workflow.
+
+**Test Coverage**:
+- 16 tests total, 60 assertions ✓
+- Added 4 new tests for admin toggle functionality
+
 **Future Enhancements**:
 - Hierarchical teams (managers of managers) - currently only direct reports
 - Date range selector to view beyond current 2 weeks
