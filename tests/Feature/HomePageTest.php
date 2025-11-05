@@ -154,7 +154,7 @@ test('copy rest copies entry to all remaining days', function () {
     }
 });
 
-test('validation requires location field', function () {
+test('validation requires location field when available', function () {
     $user = User::factory()->create();
 
     actingAs($user);
@@ -166,7 +166,7 @@ test('validation requires location field', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note',
-            'location' => '', // Empty location should fail
+            'location' => '', // Empty location should fail when available
             'is_available' => true,
         ];
     })->toArray();
@@ -175,6 +175,35 @@ test('validation requires location field', function () {
         ->set('entries', $entries)
         ->call('save')
         ->assertHasErrors(['entries.0.location']);
+});
+
+test('validation skips location when unavailable', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => 'Test note',
+            'location' => '', // Empty location is OK when unavailable
+            'is_available' => false,
+        ];
+    })->toArray();
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(PlanEntry::where('user_id', $user->id)->count())->toBe(14);
+
+    $firstEntry = PlanEntry::where('user_id', $user->id)->first();
+    expect($firstEntry->is_available)->toBeFalse();
+    expect($firstEntry->location)->toBeNull();
 });
 
 test('validation allows empty note field', function () {

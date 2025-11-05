@@ -16,8 +16,7 @@
             <flux:card size="sm" class="mt-6" wire:key="day-{{ $index }}">
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-2">
-                        <flux:checkbox wire:model.live="entries.{{ $index }}.is_available" />
-                        <flux:heading size="lg">{{ $day->format('l') }} / {{ $day->format('jS') }}</flux:heading>
+                        <flux:checkbox label="{{ $day->format('l') }} {{ $day->format('jS') }}" wire:model.live="entries.{{ $index }}.is_available" />
                     </div>
                     <div class="flex gap-2">
                         <flux:button wire:click="copyNext({{ $index }})">Copy next</flux:button>

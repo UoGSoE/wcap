@@ -5,6 +5,8 @@ namespace App\Livewire;
 use App\Enums\Location;
 use App\Models\PlanEntry;
 use Flux\Flux;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Fluent;
 use Livewire\Component;
 
 class HomePage extends Component
@@ -45,15 +47,25 @@ class HomePage extends Component
 
     public function save(): void
     {
-        $validated = $this->validate([
-            'entries.*.id' => 'nullable|integer|exists:plan_entries,id',
-            'entries.*.note' => 'nullable|string',
-            'entries.*.location' => 'required|string',
-            'entries.*.entry_date' => 'required|date',
-            'entries.*.is_available' => 'required|boolean',
-        ], [
-            'entries.*.location.required' => 'Location is required for each day.',
-        ]);
+        $validator = Validator::make(
+            ['entries' => $this->entries],
+            [
+                'entries.*.id' => 'nullable|integer|exists:plan_entries,id',
+                'entries.*.note' => 'nullable|string',
+                'entries.*.location' => 'string',
+                'entries.*.entry_date' => 'required|date',
+                'entries.*.is_available' => 'required|boolean',
+            ],
+            [
+                'entries.*.location.required' => 'Location is required when you are available.',
+            ]
+        );
+
+        $validator->sometimes('entries.*.location', 'required', function (Fluent $input, Fluent $item) {
+            return $item->is_available === true;
+        });
+
+        $validated = $validator->validate();
 
         $user = auth()->user();
 
@@ -64,7 +76,7 @@ class HomePage extends Component
                     'user_id' => $user->id,
                     'entry_date' => $entry['entry_date'],
                     'note' => $entry['note'],
-                    'location' => $entry['location'],
+                    'location' => $entry['location'] ?: null,
                     'is_available' => $entry['is_available'],
                 ]
             );

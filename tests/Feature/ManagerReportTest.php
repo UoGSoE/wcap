@@ -20,7 +20,7 @@ test('manager can view team report page', function () {
     Livewire::test(\App\Livewire\ManagerReport::class)
         ->assertOk()
         ->assertSee('Team Report')
-        ->assertSee('My Team')
+        ->assertSee('My Reports')
         ->assertSee('By Location');
 });
 
@@ -439,4 +439,106 @@ test('team filtering overrides show all users toggle', function () {
         ->set('selectedTeams', [$team->id])
         ->assertSee('TeamMember, John')
         ->assertDontSee('OtherUser, Jane'); // Team filter overrides show all
+});
+
+test('unavailable users with null location show as away in my team tab', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $teamMember = User::factory()->create(['surname' => 'Smith', 'forenames' => 'John']);
+    $team->users()->attach($teamMember->id);
+
+    $monday = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $teamMember->id,
+        'entry_date' => $monday,
+        'note' => 'On holiday',
+        'location' => null,
+        'is_available' => false,
+    ]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManagerReport::class)
+        ->assertOk()
+        ->assertSee('Smith, John')
+        ->assertSee('Away');
+});
+
+test('unavailable users do not appear in by location view', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $member1 = User::factory()->create(['surname' => 'Available', 'forenames' => 'User']);
+    $member2 = User::factory()->create(['surname' => 'Unavailable', 'forenames' => 'User']);
+    $team->users()->attach([$member1->id, $member2->id]);
+
+    $monday = now()->startOfWeek();
+
+    // Member 1 is at home
+    PlanEntry::factory()->create([
+        'user_id' => $member1->id,
+        'entry_date' => $monday,
+        'location' => Location::HOME,
+        'is_available' => true,
+    ]);
+
+    // Member 2 is unavailable
+    PlanEntry::factory()->create([
+        'user_id' => $member2->id,
+        'entry_date' => $monday,
+        'location' => null,
+        'is_available' => false,
+    ]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+
+    $daysByLocation = $component->viewData('daysByLocation');
+    $mondayKey = $monday->format('Y-m-d');
+
+    // Only member1 should appear in location data
+    expect($daysByLocation[$mondayKey]['home'])->toHaveCount(1);
+    expect($daysByLocation[$mondayKey]['home'][0]['member']->id)->toBe($member1->id);
+
+    // Unavailable member should not appear in any location
+    $component->assertSee('Available, User');
+});
+
+test('unavailable users do not appear in coverage counts', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $member1 = User::factory()->create();
+    $member2 = User::factory()->create();
+    $team->users()->attach([$member1->id, $member2->id]);
+
+    $monday = now()->startOfWeek();
+
+    // Both at home on Monday
+    PlanEntry::factory()->create([
+        'user_id' => $member1->id,
+        'entry_date' => $monday,
+        'location' => Location::HOME,
+        'is_available' => true,
+    ]);
+
+    PlanEntry::factory()->create([
+        'user_id' => $member2->id,
+        'entry_date' => $monday,
+        'location' => null,
+        'is_available' => false,
+    ]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $coverage = $component->viewData('coverage');
+
+    $mondayKey = $monday->format('Y-m-d');
+
+    // Coverage should only count member1, not member2
+    expect($coverage['home'][$mondayKey])->toBe(1);
 });

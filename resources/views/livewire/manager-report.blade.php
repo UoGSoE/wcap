@@ -73,7 +73,7 @@
                                         });
                                     @endphp
                                     <flux:table.cell class="text-center">
-                                        @if ($entry)
+                                        @if ($entry && $entry->location)
                                             @if ($showLocation)
                                                 <flux:tooltip :content="$entry->note ?: 'No details'">
                                                     <flux:badge size="sm" :color="match($entry->location->value) {
@@ -90,6 +90,8 @@
                                             @else
                                                 <flux:text class="text-sm">{{ $entry->note ?: '-' }}</flux:text>
                                             @endif
+                                        @elseif ($entry && !$entry->location)
+                                            <flux:badge size="sm" color="zinc" variant="outline" inset="top bottom">Away</flux:badge>
                                         @else
                                             <flux:badge size="sm" color="zinc" variant="outline" inset="top bottom">-</flux:badge>
                                         @endif
