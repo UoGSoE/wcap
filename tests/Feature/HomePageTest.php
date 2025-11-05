@@ -211,3 +211,42 @@ test('existing entries are loaded on mount', function () {
         ->assertSet('entries.0.note', 'Existing task')
         ->assertSet('entries.0.location', Location::BO->value);
 });
+
+test('new entries use user defaults', function () {
+    $user = User::factory()->create([
+        'default_location' => Location::HOME->value,
+        'default_category' => 'Support Tickets',
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->assertSet('entries.0.note', 'Support Tickets')
+        ->assertSet('entries.0.location', Location::HOME->value)
+        ->assertSet('entries.13.note', 'Support Tickets')
+        ->assertSet('entries.13.location', Location::HOME->value);
+});
+
+test('existing entries override user defaults', function () {
+    $user = User::factory()->create([
+        'default_location' => Location::HOME->value,
+        'default_category' => 'Support Tickets',
+    ]);
+
+    $date = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $user->id,
+        'entry_date' => $date,
+        'note' => 'Specific task',
+        'location' => Location::JWS,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->assertSet('entries.0.note', 'Specific task')
+        ->assertSet('entries.0.location', Location::JWS->value)
+        ->assertSet('entries.1.note', 'Support Tickets')
+        ->assertSet('entries.1.location', Location::HOME->value);
+});

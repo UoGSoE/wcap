@@ -13,11 +13,14 @@ class HomePage extends Component
 
     public function mount(): void
     {
-        $days = $this->getDays();
         $user = auth()->user();
+        $days = $this->getDays();
+
+        $defaultNote = $user->default_category;
+        $defaultLocation = $user->default_location;
 
         // Load existing entries for the 14-day period
-        $existingEntries = PlanEntry::where('user_id', $user->id)
+        $existingEntries = $user->planEntries()
             ->whereBetween('entry_date', [
                 $days[0]->format('Y-m-d'),
                 $days[13]->format('Y-m-d'),
@@ -33,8 +36,8 @@ class HomePage extends Component
             $this->entries[$index] = [
                 'id' => $existing?->id,
                 'entry_date' => $dateKey,
-                'note' => $existing?->note ?? '',
-                'location' => $existing?->location?->value ?? '',
+                'note' => $existing?->note ?? $defaultNote,
+                'location' => $existing?->location?->value ?? $defaultLocation,
             ];
         }
     }

@@ -32,8 +32,8 @@ class TestDataSeeder extends Seeder
         $managers = [];
         foreach ($teamNames as $teamName) {
             $manager = User::factory()->create([
-                'username' => strtolower($teamName) . '2x',
-                'email' => 'manager.' . strtolower($teamName) . '2x@example.com',
+                'username' => strtolower($teamName).'2x',
+                'email' => 'manager.'.strtolower($teamName).'2x@example.com',
                 'password' => Hash::make('secret'),
             ]);
             $team = Team::factory()->create([
@@ -44,7 +44,7 @@ class TestDataSeeder extends Seeder
 
             foreach (range(1, 10) as $i) {
                 $user = User::factory()->create([
-                    'username' => 'user' . strtolower($teamName) . '1x' . $i,
+                    'username' => 'user'.strtolower($teamName).'1x'.$i,
                     'password' => Hash::make('secret'),
                 ]);
                 $user->teams()->attach($team);

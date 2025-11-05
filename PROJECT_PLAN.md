@@ -1,5 +1,19 @@
 # Time Tracker Implementation Plan
 
+## 🎯 PRIME DIRECTIVE: SIMPLICITY FIRST
+
+**The team's cardinal rule: Keep it simple until you know otherwise.**
+
+- **No premature optimization** - Don't create variables "just in case"
+- **No premature abstraction** - Don't extract code until there's duplication
+- **Chain when possible** - Use `auth()->user()->update()` not `$user = auth()->user(); $user->update()`
+- **Write the simplest thing that works** - If you need complexity later, refactor then
+- **YAGNI (You Aren't Gonna Need It)** - Don't build features before they're required
+
+This applies to all code, all decisions, all features. Simple code is maintainable code.
+
+---
+
 ## Project Overview
 Building a two-week time tracking form for the IT team where users can plan what they'll be working on and where they'll be located.
 
@@ -231,6 +245,173 @@ public array $entries = [
 - Use Flux UI components throughout (flux:input, flux:select, flux:button, flux:toast)
 - Leverage `wire:loading` for better feedback
 - Consider using `wire:model.live` for real-time updates vs `wire:model.blur` for performance
+
+---
+
+## Phase 2 Implementation: Profile & Defaults Feature
+
+### What We Built
+- Profile page where users can set default location and work category
+- HomePage now pre-fills new entries with user's defaults
+- Navigation links added (sidebar + small button on HomePage)
+- Full test coverage for both Profile and HomePage defaults functionality
+
+### Critical Lessons Learned
+
+#### 🚨 LESSON 1: NEVER RUN DESTRUCTIVE DATABASE COMMANDS (EVER)
+
+**What almost happened**: When a test failed, there was an impulse to run `lando php artisan migrate:fresh --force` to "fix" the database.
+
+**Why this would have been catastrophic**:
+- Tests use `:memory:` SQLite database (see phpunit.xml)
+- `RefreshDatabase` trait handles test migrations automatically
+- Development database is completely separate from test database
+- Running `migrate:fresh` would have **DELETED ALL DEVELOPMENT DATA**
+- This would have wiped out hours of work by other developers
+
+**The rule**:
+```
+NEVER EVER run these commands without explicit user approval:
+- migrate:fresh
+- migrate:reset
+- db:wipe
+- Any command that truncates/drops/resets data
+
+If you think you need to run one of these, STOP and ask the user.
+```
+
+**The actual fix**: The test failed because UserFactory needed to include `default_location` and `default_category` fields. A one-line addition to the factory, not a database wipe.
+
+#### 📖 LESSON 2: Code Must Be Readable Aloud
+
+**The principle**: If you can't read the code aloud and have it make sense, it's too clever.
+
+**Bad example** (triple null coalescing):
+```php
+'note' => $existing?->note ?? $user->default_category ?? '',
+```
+Try reading that aloud. It's confusing.
+
+**Good example** (extract variables):
+```php
+$defaultNote = $user->default_category;
+// ... later in loop ...
+'note' => $existing?->note ?? $defaultNote,
+```
+This reads clearly: "If there's an existing note, use it. Otherwise, use the default note."
+
+**Key insight**: Clever, shorthand, ultra-optimized code that we can't read is worthless. Code is read 10x more than it's written. Optimize for reading.
+
+#### 🔗 LESSON 3: Use Relationships and Helper Methods
+
+**The principle**: Relationships and helper methods make business logic self-documenting.
+
+**Before** (raw query):
+```php
+PlanEntry::where('user_id', $user->id)->whereBetween('entry_date', [...])
+```
+
+**After** (relationship):
+```php
+$user->planEntries()->whereBetween('entry_date', [...])
+```
+
+**Why this matters**:
+- More semantic - reads as "the user's plan entries"
+- Can't accidentally forget the `user_id` constraint
+- More secure - automatically scoped
+- Reusable across the entire application (managers, admins, APIs, etc.)
+
+**Added to User model**:
+```php
+public function planEntries(): HasMany
+{
+    return $this->hasMany(PlanEntry::class);
+}
+```
+
+#### 🗄️ LESSON 4: Database Defaults > Code Null Coalescing
+
+**The principle**: Push defaults to the database layer when possible.
+
+**Before** (nulls in database, coalescing in code):
+```php
+// Migration
+$table->string('default_location')->nullable();
+
+// Code (everywhere)
+$location = $user->default_location ?? '';
+$this->default_location = auth()->user()->default_location ?? '';
+```
+
+**After** (defaults in database):
+```php
+// Migration
+$table->string('default_location')->default('');
+
+// Code (everywhere)
+$location = $user->default_location;
+$this->default_location = auth()->user()->default_location;
+```
+
+**Why this matters**:
+- Simpler code throughout the application
+- Consistent behavior - can't forget the `?? ''`
+- Database enforces the default for ALL operations (factories, seeders, direct SQL, etc.)
+- One source of truth
+
+#### ✅ LESSON 5: Don't Write Tautology Tests
+
+**The principle**: Tests must verify actual behavior, not mathematical truths.
+
+**Bad test** (removed):
+```php
+test('empty defaults result in empty fields', function () {
+    $user = User::factory()->create([
+        'default_location' => '',
+        'default_category' => '',
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\HomePage::class)
+        ->assertSet('entries.0.note', '')
+        ->assertSet('entries.0.location', '');
+});
+```
+
+**Why this is bad**: This literally tests that `'' == ''`. It provides zero confidence that the code works correctly. It's a tautology.
+
+**Good tests** (kept):
+- "new entries use user defaults" - Tests that defaults ARE applied
+- "existing entries override user defaults" - Tests precedence/priority
+
+**The rule**: Every test should verify meaningful behavior. Ask yourself: "If this test passes, what does it tell me about my application?"
+
+### Code Simplification Wins
+
+During this implementation, we continuously simplified:
+
+1. **Auth calls**: From 3 separate `auth()` calls to 1 `$user = auth()->user()` (more secure!)
+2. **Null coalescing chains**: From `?? ?? ''` to simple variables
+3. **Query security**: From `where('user_id', $user->id)` to `$user->planEntries()`
+4. **Database defaults**: From code-level `?? ''` to migration `default('')`
+
+All following the prime directive: **Simple until you know otherwise.**
+
+### Test Results
+
+**Profile Tests**: 4 tests, 12 assertions ✓
+- Page rendering
+- Loading existing defaults
+- Saving updates
+- Allowing empty values
+
+**HomePage Tests**: 10 tests, 56 assertions ✓
+- Original 8 tests (form rendering, saving, copying, validation, loading)
+- 2 new tests (defaults applied, defaults overridden by existing entries)
+
+**Total**: 14 tests, 68 assertions, all passing ✓
 
 ---
 

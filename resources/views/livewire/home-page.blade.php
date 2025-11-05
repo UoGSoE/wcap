@@ -1,6 +1,9 @@
 <div>
     <div class="flex justify-between items-center">
-        <flux:heading size="xl">What are you working on?</flux:heading>
+        <div class="flex items-center gap-2">
+            <flux:heading size="xl">What are you working on?</flux:heading>
+            <flux:button size="xs" variant="ghost" href="{{ route('profile') }}" wire:navigate icon="user-circle">Profile</flux:button>
+        </div>
         <flux:button size="sm" variant="primary" wire:click="save" wire:loading.attr="disabled">
             <span wire:loading.remove>Save</span>
             <span wire:loading>Saving...</span>
