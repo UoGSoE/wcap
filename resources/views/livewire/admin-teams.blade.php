@@ -53,7 +53,7 @@
     </flux:card>
 
     {{-- Edit/Create Modal --}}
-    <flux:modal wire:model="showEditModal" variant="flyout">
+    <flux:modal wire:model="showEditModal" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">
