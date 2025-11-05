@@ -615,7 +615,7 @@ Added an admin-only toggle that allows admins to view all users in the system, n
 - Route: `/admin/users`
 - Simple table with "Make Admin" / "Remove Admin" toggle
 
-**b) Team Management UI**
+**b) Team Management UI** ✅
 - Create teams
 - Assign users to teams
 - Set team manager
@@ -626,6 +626,59 @@ Added an admin-only toggle that allows admins to view all users in the system, n
 - Users can be on multiple teams
 - Multiple managers can see the same user's entries
 - Only admins can manage teams
+
+**What We Built**:
+- **Route**: `/admin/teams` → `AdminTeams::class` (routes/web.php:11)
+- **Authorization**: Admin-only access via `@admin` directive
+- **Navigation**: "Manage Teams" link in sidebar (resources/views/components/layouts/app.blade.php:32-34)
+
+**Livewire Component** (app/Livewire/AdminTeams.php):
+- **Team List View**: Table showing all teams with manager and member count
+- **Create Team Modal**: Flyout modal for creating new teams
+  - Team name (required, unique validation)
+  - Manager selection via combobox (required - enforces "must always have a manager")
+  - Multi-select team members via pillbox
+- **Edit Team Modal**: Same flyout modal for editing existing teams
+  - Pre-loads team data
+  - Unique validation allows keeping same name but prevents duplicates
+  - Update manager and members
+- **Delete Team Modal**: Flyout modal with transfer option
+  - Optional: Select another team to transfer all members to
+  - Or: Delete team without transferring (just removes associations)
+  - Uses `syncWithoutDetaching()` for safe member transfers
+
+**Blade Template** (resources/views/livewire/admin-teams.blade.php):
+- Consistent flyout modals for both create/edit and delete operations
+- Uses Flux Pro components: `flux:table`, `flux:modal`, `flux:select`, `flux:pillbox`
+- Table shows: Team name, manager full_name, member count badges, action buttons
+- Proper use of `full_name` accessor (surname, forenames) throughout
+
+**Key Implementation Details**:
+- Team name uniqueness enforced: `unique:teams,name` on create, `unique:teams,name,{id}` on update
+- Manager is required field - validation ensures "always have a manager" rule
+- Users ordered by `surname` then `forenames` (not by non-existent `name` field)
+- Flux combobox variant is inherently searchable (no `searchable` prop needed)
+- Modal state managed via `wire:model="showEditModal"` and `wire:model="showDeleteModal"`
+
+**Test Coverage** (tests/Feature/AdminTeamsTest.php):
+- 15 tests, 55 assertions ✓
+- Authorization (admin vs non-admin)
+- Team CRUD operations
+- Unique name validation (create and update)
+- Team member management (add/remove/replace)
+- Delete with and without member transfer
+- Form validation (team name required, manager required)
+- Cancel/close modal operations
+- Member count display accuracy
+
+**Lessons Learned**:
+- 🔍 **User Model Structure**: Users have `surname` and `forenames` fields with a `full_name` accessor, not a `name` field
+- 📋 **Flux Table Syntax**: Use `flux:table.columns`, `flux:table.column`, `flux:table.row`, `flux:table.cell` (not the shorter forms)
+- 🔍 **Combobox Searchability**: The combobox variant is searchable by default - adding `searchable` prop throws an error
+- 🎨 **Consistent UI Pattern**: Using flyout modals for both edit and delete operations creates a cohesive UX
+
+**Next Steps**:
+- Section 3.a still pending: Admin user management UI (promote/demote users to admin role)
 
 #### 4. Excel/CSV Export
 **Priority**: MEDIUM

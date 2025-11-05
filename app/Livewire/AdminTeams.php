@@ -17,6 +17,8 @@ class AdminTeams extends Component
 
     public array $selectedUserIds = [];
 
+    public bool $showEditModal = false;
+
     public bool $showDeleteModal = false;
 
     public ?int $deletingTeamId = null;
@@ -49,6 +51,7 @@ class AdminTeams extends Component
         $this->teamName = '';
         $this->managerId = null;
         $this->selectedUserIds = [];
+        $this->showEditModal = true;
     }
 
     public function editTeam(int $teamId): void
@@ -59,6 +62,7 @@ class AdminTeams extends Component
         $this->teamName = $team->name;
         $this->managerId = $team->manager_id;
         $this->selectedUserIds = $team->users->pluck('id')->toArray();
+        $this->showEditModal = true;
     }
 
     public function save(): void
@@ -110,6 +114,7 @@ class AdminTeams extends Component
 
     public function cancelEdit(): void
     {
+        $this->showEditModal = false;
         $this->editingTeamId = null;
         $this->teamName = '';
         $this->managerId = null;
