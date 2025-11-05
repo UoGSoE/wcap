@@ -431,7 +431,7 @@ All following the prime directive: **Simple until you know otherwise.**
 location and what they work on.  If they spend 90% of their time doing, say, Active Directory work in the Such-and-such
 building - we can pre-fill their form - I have added a default_location and default_category column to the user model in preperation).
 
-#### 1. Hide Weekends in UI
+#### 1. Hide Weekends in UI ✅
 **Priority**: HIGH
 **Rationale**: Campus closed weekends, no need to plan for Sat/Sun
 
@@ -441,14 +441,17 @@ building - we can pre-fill their form - I have added a default_location and defa
 - Still save entries for Sat/Sun (they'll just be empty/hidden)
 - Use hidden inputs if needed to maintain the array structure
 
-**Notes**:
-- Part-time staff who work different days can deal with it for now
-- Future enhancement: configurable working days per user
+**What We Actually Did**:
+- Updated `home-page.blade.php` to check `$day->isWeekday()` (Carbon method)
+- Wrapped the card display in `@if ($day->isWeekday())`
+- Added hidden inputs for weekend entries to maintain array structure
+- Zero backend changes needed - all existing logic (save, copyNext, copyRest) works unchanged
+- Single template change - perfectly simple solution!
 
-**Code approach**:
+**Code Implementation**:
 ```blade
 @foreach ($days as $index => $day)
-    @if (!in_array($day->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY]))
+    @if ($day->isWeekday())
         {{-- Show the day card --}}
     @else
         {{-- Hidden inputs to maintain array structure --}}
@@ -459,6 +462,10 @@ building - we can pre-fill their form - I have added a default_location and defa
     @endif
 @endforeach
 ```
+
+**Notes**:
+- Part-time staff who work different days can deal with it for now
+- Future enhancement: configurable working days per user
 
 #### 2. Manager Report Page
 **Priority**: HIGH
