@@ -1,12 +1,12 @@
 <?php
 
+use App\Enums\Location;
 use App\Models\Team;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use App\Enums\Location;
 
 use function Pest\Laravel\actingAs;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 

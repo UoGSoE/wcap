@@ -2,11 +2,11 @@
 
 namespace App\Livewire;
 
-use Flux\Flux;
 use App\Models\User;
-use Livewire\Component;
-use Illuminate\Support\Str;
+use Flux\Flux;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Livewire\Component;
 
 class AdminUsers extends Component
 {
