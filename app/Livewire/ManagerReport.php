@@ -23,6 +23,10 @@ class ManagerReport extends Component
         if ($user->managedTeams->isEmpty()) {
             abort(403, 'You do not manage any teams.');
         }
+
+        if ($user->isAdmin()) {
+            $this->showAllUsers = true;
+        }
     }
 
     public function render()

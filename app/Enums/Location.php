@@ -10,6 +10,11 @@ enum Location: string
     case RANKINE = 'rankine';
     case BO = 'boyd-orr';
     case OTHER = 'other';
+    case JOSEPH_BLACK = 'joseph-black';
+    case ALWYN_WILLIAM = 'alwyn-william';
+    case GILBERT_SCOTT = 'gilbert-scott';
+    case KELVIN = 'kelvin';
+    case MATHS = 'maths';
 
     public function label(): string
     {
@@ -20,6 +25,11 @@ enum Location: string
             self::RANKINE => 'Rankine',
             self::BO => 'Boyd-Orr',
             self::OTHER => 'Other',
+            self::JOSEPH_BLACK => 'Joseph Black',
+            self::ALWYN_WILLIAM => 'Alwyn William',
+            self::GILBERT_SCOTT => 'Gilbert Scott',
+            self::KELVIN => 'Kelvin',
+            self::MATHS => 'Maths',
         };
     }
 }

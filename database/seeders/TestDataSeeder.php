@@ -31,13 +31,14 @@ class TestDataSeeder extends Seeder
             'Service Resilience',
             'Principle Engineer EduTech',
             'Principle Engineer Linux',
-            'Other',
         ];
 
         $managers = [];
-        $infrastructureTeamMembers = [];
+        $allUsers = [];
 
         foreach ($teamNames as $teamName) {
+            $minTeamMembers = str_starts_with($teamName, 'Principle Engineer') ? 1 : 2;
+            $maxTeamMembers = str_starts_with($teamName, 'Principle Engineer') ? 1 : 5;
             // Use admin2x as the manager of Infrastructure team
             if (str_starts_with($teamName, 'Service Operations')) {
                 $manager = $admin;
@@ -55,28 +56,26 @@ class TestDataSeeder extends Seeder
             ]);
             $managers[$teamName] = $manager;
 
-            foreach (range(1, 10) as $i) {
+            foreach (range($minTeamMembers, $maxTeamMembers) as $i) {
                 $user = User::factory()->create([
                     'username' => 'user'.strtolower($teamName).'1x'.$i,
                     'password' => Hash::make('secret'),
                 ]);
                 $user->teams()->attach($team);
 
-                // Keep track of Infrastructure team members for plan entry generation
-                if ($teamName === 'Infrastructure') {
-                    $infrastructureTeamMembers[] = $user;
-                }
+                // Track all users for plan entry generation
+                $allUsers[] = $user;
             }
         }
 
-        // Generate realistic plan entries for Infrastructure team members
-        $this->generatePlanEntries($infrastructureTeamMembers);
+        // Generate realistic plan entries for all users
+        $this->generatePlanEntries($allUsers);
     }
 
     private function generatePlanEntries(array $teamMembers): void
     {
         $startDate = now()->startOfWeek();
-        $locations = [Location::HOME, Location::JWS, Location::JWN, Location::RANKINE, Location::BO];
+        $locations = Location::cases();
         $notes = [
             'Support tickets',
             'Server maintenance',

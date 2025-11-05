@@ -4,35 +4,35 @@
 
     <flux:spacer class="mt-6"/>
 
-    @admin
-        <div class="mb-4">
-            <flux:field variant="inline">
-                <flux:label>View All Users</flux:label>
-                <flux:switch wire:model.live="showAllUsers" />
-            </flux:field>
-        </div>
-    @endadmin
-
-    @if ($availableTeams->isNotEmpty())
-        <div class="mb-6">
+        <div class="mb-4 flex justify-between items-center gap-4">
             <flux:pillbox
                 wire:model.live="selectedTeams"
                 multiple
                 placeholder="Filter by team(s)..."
                 searchable
-                label="Teams"
-                description="Select specific teams to view, or leave empty to view all"
+                class="flex-1"
             >
                 @foreach ($availableTeams as $team)
                     <flux:pillbox.option :value="$team->id">{{ $team->name }}</flux:pillbox.option>
                 @endforeach
             </flux:pillbox>
+            @admin
+                <flux:field variant="inline" class="">
+                    <flux:label>View All Users</flux:label>
+                    <flux:switch wire:model.live="showAllUsers" />
+                </flux:field>
+            @endadmin
+
+        </div>
+
+    @if ($availableTeams->isNotEmpty())
+        <div class="mb-6">
         </div>
     @endif
 
     <flux:tab.group>
         <flux:tabs>
-            <flux:tab name="team">My Team</flux:tab>
+            <flux:tab name="team">My Reports</flux:tab>
             <flux:tab name="location">By Location</flux:tab>
             <flux:tab name="coverage">Coverage</flux:tab>
         </flux:tabs>
@@ -51,13 +51,10 @@
             <div class="overflow-x-auto">
                 <flux:table>
                     <flux:table.columns>
-                        <flux:table.column class="sticky left-0 bg-white dark:bg-zinc-900">Team Member</flux:table.column>
+                        <flux:table.column class="sticky left-0">Team Member</flux:table.column>
                         @foreach ($days as $day)
-                            <flux:table.column>
-                                <div class="text-center">
-                                    <div>{{ $day->format('D') }}</div>
-                                    <div class="text-xs text-zinc-500">{{ $day->format('j/n') }}</div>
-                                </div>
+                            <flux:table.column align="center">
+                                <flux:text variant="strong">{{ $day->format('D') }} {{ $day->format('jS') }}</flux:text>
                             </flux:table.column>
                         @endforeach
                     </flux:table.columns>
@@ -65,7 +62,7 @@
                     <flux:table.rows>
                         @forelse ($teamMembers as $member)
                             <flux:table.row :key="$member->id">
-                                <flux:table.cell class="sticky left-0 bg-white dark:bg-zinc-900 font-medium">
+                                <flux:table.cell class="sticky left-0 font-medium">
                                     {{ $member->surname }}, {{ $member->forenames }}
                                 </flux:table.cell>
                                 @foreach ($days as $day)
@@ -180,9 +177,8 @@
                     <flux:text variant="strong"></flux:text>
                 </div>
                 @foreach ($days as $day)
-                    <div class="">
-                        <flux:text variant="strong">{{ $day->format('D') }}</flux:text>
-                        <flux:text>{{ $day->format('j/n') }}</flux:text>
+                    <div class="text-center">
+                        <flux:text variant="strong">{{ $day->format('D') }} {{ $day->format('jS') }}</flux:text>
                     </div>
                 @endforeach
 
