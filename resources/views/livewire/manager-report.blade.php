@@ -11,6 +11,16 @@
         </flux:tabs>
 
         <flux:tab.panel name="team">
+            <div class="flex items-center justify-between mb-4">
+                <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
+                    View: <span class="font-medium">{{ $showLocation ? 'Locations' : 'Work Notes' }}</span>
+                </flux:text>
+                <flux:field variant="inline">
+                    <flux:label>Show Locations</flux:label>
+                    <flux:switch wire:model.live="showLocation" />
+                </flux:field>
+            </div>
+
             <div class="overflow-x-auto">
                 <flux:table>
                     <flux:table.columns>
@@ -40,18 +50,22 @@
                                     @endphp
                                     <flux:table.cell class="text-center">
                                         @if ($entry)
-                                            <flux:tooltip :content="$entry->note ?: 'No details'">
-                                                <flux:badge size="sm" :color="match($entry->location->value) {
-                                                    'home' => 'zinc',
-                                                    'jws' => 'blue',
-                                                    'jwn' => 'green',
-                                                    'rankine' => 'purple',
-                                                    'boyd-orr' => 'orange',
-                                                    default => 'zinc'
-                                                }" inset="top bottom" class="cursor-help">
-                                                    {{ $entry->location->label() }}
-                                                </flux:badge>
-                                            </flux:tooltip>
+                                            @if ($showLocation)
+                                                <flux:tooltip :content="$entry->note ?: 'No details'">
+                                                    <flux:badge size="sm" :color="match($entry->location->value) {
+                                                        'home' => 'zinc',
+                                                        'jws' => 'blue',
+                                                        'jwn' => 'green',
+                                                        'rankine' => 'purple',
+                                                        'boyd-orr' => 'orange',
+                                                        default => 'zinc'
+                                                    }" inset="top bottom" class="cursor-help">
+                                                        {{ $entry->location->label() }}
+                                                    </flux:badge>
+                                                </flux:tooltip>
+                                            @else
+                                                <flux:text class="text-sm">{{ $entry->note ?: '-' }}</flux:text>
+                                            @endif
                                         @else
                                             <flux:badge size="sm" color="zinc" variant="outline" inset="top bottom">-</flux:badge>
                                         @endif

@@ -197,3 +197,31 @@ test('duplicate team members across teams only shown once', function () {
     // Should only appear once
     expect(count($component->viewData('teamMembers')))->toBe(1);
 });
+
+test('toggle switch changes display between location and note', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $teamMember = User::factory()->create(['surname' => 'Smith', 'forenames' => 'John']);
+    $team->users()->attach($teamMember->id);
+
+    $monday = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $teamMember->id,
+        'entry_date' => $monday,
+        'note' => 'Working on tickets',
+        'location' => Location::HOME,
+    ]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManagerReport::class)
+        ->assertOk()
+        ->assertSet('showLocation', true)
+        ->assertSee('Home')
+        ->assertSee('Show Locations')
+        ->set('showLocation', false)
+        ->assertSet('showLocation', false)
+        ->assertSee('Working on tickets');
+});

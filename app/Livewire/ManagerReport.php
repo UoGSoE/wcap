@@ -8,6 +8,8 @@ use Livewire\Component;
 
 class ManagerReport extends Component
 {
+    public bool $showLocation = true;
+
     public function mount(): void
     {
         $user = auth()->user();
