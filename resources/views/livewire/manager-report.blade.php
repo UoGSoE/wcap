@@ -1,0 +1,130 @@
+<div>
+    <flux:heading size="xl">Team Report</flux:heading>
+    <flux:subheading>View your team's plans for the next two weeks</flux:subheading>
+
+    <flux:spacer class="mt-6"/>
+
+    <flux:tab.group>
+        <flux:tabs>
+            <flux:tab name="team">My Team</flux:tab>
+            <flux:tab name="location">By Location</flux:tab>
+        </flux:tabs>
+
+        <flux:tab.panel name="team">
+            <div class="overflow-x-auto">
+                <flux:table>
+                    <flux:table.columns>
+                        <flux:table.column class="sticky left-0 bg-white dark:bg-zinc-900">Team Member</flux:table.column>
+                        @foreach ($days as $day)
+                            <flux:table.column>
+                                <div class="text-center">
+                                    <div>{{ $day->format('D') }}</div>
+                                    <div class="text-xs text-zinc-500">{{ $day->format('j/n') }}</div>
+                                </div>
+                            </flux:table.column>
+                        @endforeach
+                    </flux:table.columns>
+
+                    <flux:table.rows>
+                        @forelse ($teamMembers as $member)
+                            <flux:table.row :key="$member->id">
+                                <flux:table.cell class="sticky left-0 bg-white dark:bg-zinc-900 font-medium">
+                                    {{ $member->surname }}, {{ $member->forenames }}
+                                </flux:table.cell>
+                                @foreach ($days as $day)
+                                    @php
+                                        $dateKey = $day->format('Y-m-d');
+                                        $entry = $planEntries->get($member->id)?->first(function ($entry) use ($dateKey) {
+                                            return $entry->entry_date->format('Y-m-d') === $dateKey;
+                                        });
+                                    @endphp
+                                    <flux:table.cell class="text-center">
+                                        @if ($entry)
+                                            <flux:tooltip :content="$entry->note ?: 'No details'">
+                                                <flux:badge size="sm" :color="match($entry->location->value) {
+                                                    'home' => 'zinc',
+                                                    'jws' => 'blue',
+                                                    'jwn' => 'green',
+                                                    'rankine' => 'purple',
+                                                    'boyd-orr' => 'orange',
+                                                    default => 'zinc'
+                                                }" inset="top bottom" class="cursor-help">
+                                                    {{ $entry->location->label() }}
+                                                </flux:badge>
+                                            </flux:tooltip>
+                                        @else
+                                            <flux:badge size="sm" color="zinc" variant="outline" inset="top bottom">-</flux:badge>
+                                        @endif
+                                    </flux:table.cell>
+                                @endforeach
+                            </flux:table.row>
+                        @empty
+                            <flux:table.row>
+                                <flux:table.cell colspan="{{ count($days) + 1 }}" class="text-center text-zinc-500">
+                                    No team members found
+                                </flux:table.cell>
+                            </flux:table.row>
+                        @endforelse
+                    </flux:table.rows>
+                </flux:table>
+            </div>
+        </flux:tab.panel>
+
+        <flux:tab.panel name="location">
+            <div class="grid grid-cols-1 gap-6">
+                @foreach ($days as $day)
+                    @php
+                        $dateKey = $day->format('Y-m-d');
+                        $locationsForDay = $daysByLocation[$dateKey] ?? [];
+                    @endphp
+                    <flux:card>
+                        <flux:heading size="lg">{{ $day->format('l, F jS') }}</flux:heading>
+                        <flux:spacer class="mt-4"/>
+
+                        @if (empty($locationsForDay))
+                            <flux:text class="text-zinc-500">No plans recorded for this day</flux:text>
+                        @else
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                @foreach ($locations as $location)
+                                    @php
+                                        $membersAtLocation = $locationsForDay[$location->value] ?? [];
+                                    @endphp
+                                    @if (!empty($membersAtLocation))
+                                        <div>
+                                            <flux:subheading class="flex items-center gap-2">
+                                                <flux:badge :color="match($location->value) {
+                                                    'home' => 'zinc',
+                                                    'jws' => 'blue',
+                                                    'jwn' => 'green',
+                                                    'rankine' => 'purple',
+                                                    'boyd-orr' => 'orange',
+                                                    default => 'zinc'
+                                                }">
+                                                    {{ $location->label() }}
+                                                </flux:badge>
+                                                <span class="text-sm text-zinc-500">({{ count($membersAtLocation) }})</span>
+                                            </flux:subheading>
+                                            <flux:spacer class="mt-2"/>
+                                            <ul class="space-y-1">
+                                                @foreach ($membersAtLocation as $data)
+                                                    <li>
+                                                        <flux:text>
+                                                            {{ $data['member']->surname }}, {{ $data['member']->forenames }}
+                                                            @if ($data['note'])
+                                                                <span class="text-xs text-zinc-500">- {{ $data['note'] }}</span>
+                                                            @endif
+                                                        </flux:text>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endif
+                    </flux:card>
+                @endforeach
+            </div>
+        </flux:tab.panel>
+    </flux:tab.group>
+</div>

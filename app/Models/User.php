@@ -59,4 +59,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(PlanEntry::class);
     }
+
+    public function managedTeams(): HasMany
+    {
+        return $this->hasMany(Team::class, 'manager_id');
+    }
 }

@@ -467,30 +467,92 @@ building - we can pre-fill their form - I have added a default_location and defa
 - Part-time staff who work different days can deal with it for now
 - Future enhancement: configurable working days per user
 
-#### 2. Manager Report Page
+#### 2. Manager Report Page ✅
 **Priority**: HIGH
 **Rationale**: Managers need to see their team's plans
 
-**Requirements**:
-- Show all team members' plans
-- Hierarchical: Managers see everyone below them (recursive down the tree)
-- Filter by date range
-- Export to Excel/CSV
+**What We Built**:
+- Dual-tab layout: "My Team" (person-centric) and "By Location" (day-centric)
+- Authorization: Only users who manage teams can access
+- Shows 10 weekdays (current + next week, no weekends)
+- Handles multiple teams and deduplicates members across teams
+- Color-coded location badges with hover tooltips for notes
 
-**UI Considerations**:
-- Table view? (rows = team members, columns = days)
-- Need to experiment with the best layout
-- How to navigate deep hierarchies clearly?
-- Maybe collapsible team sections?
+**Implementation Details**:
 
-**Questions to explore**:
-- Show just direct reports with "View Team" button to drill down?
-- Or flat list of everyone with indentation/tree view?
-- Calendar/grid view vs list view?
+**Database & Models**:
+- Added `managedTeams()` HasMany relationship to User model (app/Models/User.php:63-66)
+- Uses existing Team/User many-to-many relationship via pivot table
 
-**Routes**:
-- `/manager/reports` - Main manager report page
-- `/manager/team/{team-id}` - Specific team view
+**Route**:
+- `/manager/report` → `ManagerReport::class` (routes/web.php:10)
+
+**Livewire Component** (app/Livewire/ManagerReport.php):
+- `mount()`: Authorization check - aborts with 403 if user has no managed teams
+- `getDays()`: Returns 10 weekdays using `$day->isWeekday()` filter
+- `getTeamMembers()`: Flattens all users from all managed teams, deduplicates, sorts by surname
+- `render()`: Loads plan entries for team members, organizes data for both tab views
+
+**Blade Template** (resources/views/livewire/manager-report.blade.php):
+- **Tab 1 - "My Team"**:
+  - `flux:table` with sticky first column (team member names)
+  - 10 columns for weekdays (M, T, W, Th, F × 2)
+  - Color-coded `flux:badge` for locations
+  - `flux:tooltip` on hover to show work notes
+  - Empty entries show "-" badge
+- **Tab 2 - "By Location"**:
+  - Daily `flux:card` for each weekday
+  - Groups team members by location
+  - Shows person count per location
+  - Displays notes inline
+
+**Navigation**:
+- Added "Team Report" link to sidebar with user-group icon (resources/views/components/layouts/app.blade.php:30)
+
+**Color Coding**:
+- Home = zinc (gray)
+- JWS = blue
+- JWN = green
+- Rankine = purple
+- Boyd-Orr = orange
+
+**Test Coverage** (tests/Feature/ManagerReportTest.php):
+- 10 tests, 33 assertions ✓
+- Authorization (manager vs non-manager)
+- Team member display
+- Weekdays only (10 days)
+- Plan entry rendering
+- Empty state handling
+- Multiple teams
+- Member deduplication
+- Location grouping
+
+**Test Data Seeder** (database/seeders/TestDataSeeder.php):
+- admin2x user is manager of Infrastructure team
+- 10 team members with realistic plan entries
+- 10 weekdays of varied locations and tasks
+- 80/20 split: primary location / secondary location for variety
+
+**Key Lesson Learned**:
+🔥 **Flux Tabs Component Structure** - Tabs do NOT use `wire:model`. The component manages state internally:
+```blade
+<flux:tab.group>
+    <flux:tabs>
+        <flux:tab name="team">My Team</flux:tab>
+        <flux:tab name="location">By Location</flux:tab>
+    </flux:tabs>
+
+    <flux:tab.panel name="team">...</flux:tab.panel>
+    <flux:tab.panel name="location">...</flux:tab.panel>
+</flux:tab.group>
+```
+NOT: `<flux:tabs wire:model.live="activeTab">` with panels inside tabs - that doesn't work!
+
+**Future Enhancements**:
+- Hierarchical teams (managers of managers) - currently only direct reports
+- Date range selector to view beyond current 2 weeks
+- Export functionality (CSV/Excel)
+- Filter/search team members
 
 #### 3. Admin: User & Team Management
 **Priority**: HIGH

@@ -7,4 +7,5 @@ require __DIR__.'/sso-auth.php';
 Route::middleware('auth')->group(function () {
     Route::get('/', \App\Livewire\HomePage::class)->name('home');
     Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
+    Route::get('/manager/report', \App\Livewire\ManagerReport::class)->name('manager.report');
 });
