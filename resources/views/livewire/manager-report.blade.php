@@ -17,6 +17,7 @@
         <div class="mb-6">
             <flux:pillbox
                 wire:model.live="selectedTeams"
+                multiple
                 placeholder="Filter by team(s)..."
                 searchable
                 label="Teams"

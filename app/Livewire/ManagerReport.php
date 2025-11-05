@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Enums\Location;
 use App\Models\Team;
 use App\Models\User;
-use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class ManagerReport extends Component
@@ -14,7 +13,6 @@ class ManagerReport extends Component
 
     public bool $showAllUsers = false;
 
-    #[Url]
     public array $selectedTeams = [];
 
     public function mount(): void
