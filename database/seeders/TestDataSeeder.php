@@ -70,6 +70,9 @@ class TestDataSeeder extends Seeder
 
         // Generate realistic plan entries for all users
         $this->generatePlanEntries($allUsers);
+
+        // Mark some users as unavailable for random days
+        $this->markSomeUsersUnavailable($allUsers);
     }
 
     private function generatePlanEntries(array $teamMembers): void
@@ -117,8 +120,40 @@ class TestDataSeeder extends Seeder
                     'location' => $location,
                     'note' => $note,
                     'category' => null,
+                    'is_available' => true,
                     'is_holiday' => false,
                     'created_by_manager' => false,
+                ]);
+            }
+        }
+    }
+
+    private function markSomeUsersUnavailable(array $allUsers): void
+    {
+        $unavailableReasons = [
+            'Annual leave',
+            'Holiday',
+            'Training course',
+            'Conference',
+            'Sick leave',
+        ];
+
+        // Randomly select 5 users to have some unavailable time
+        $selectedUsers = collect($allUsers)->random(min(5, count($allUsers)));
+
+        foreach ($selectedUsers as $user) {
+            // Each user gets 1-5 random days marked as unavailable
+            $daysOff = rand(1, 5);
+
+            $userEntries = PlanEntry::where('user_id', $user->id)
+                ->get()
+                ->random(min($daysOff, PlanEntry::where('user_id', $user->id)->count()));
+
+            foreach ($userEntries as $entry) {
+                $entry->update([
+                    'is_available' => false,
+                    'location' => null,
+                    'note' => $unavailableReasons[array_rand($unavailableReasons)],
                 ]);
             }
         }

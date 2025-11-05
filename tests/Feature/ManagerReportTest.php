@@ -291,7 +291,7 @@ test('non-admin does not see toggle switch', function () {
 });
 
 test('admin with toggle enabled sees all users not just team', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
+    $admin = User::factory()->create(['is_admin' => true, 'surname' => 'McAdmin', 'forenames' => 'Admin']);
     $team = Team::factory()->create(['manager_id' => $admin->id]);
 
     // Team member
@@ -305,17 +305,19 @@ test('admin with toggle enabled sees all users not just team', function () {
 
     Livewire::test(\App\Livewire\ManagerReport::class)
         ->assertOk()
+        ->assertSet('showAllUsers', true)
+        ->assertSee('McAdmin, Admin')
+        ->assertSee('TeamMember, John')
+        ->assertSee('OtherUser, Jane')
+        ->set('showAllUsers', false)
         ->assertSet('showAllUsers', false)
         ->assertSee('TeamMember, John')
         ->assertDontSee('OtherUser, Jane')
-        ->set('showAllUsers', true)
-        ->assertSet('showAllUsers', true)
-        ->assertSee('TeamMember, John')
-        ->assertSee('OtherUser, Jane');
+        ->assertDontSee('McAdmin, Admin');
 });
 
 test('admin with toggle disabled sees only their team', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
+    $admin = User::factory()->create(['is_admin' => true, 'surname' => 'McAdmin', 'forenames' => 'Admin']);
     $team = Team::factory()->create(['manager_id' => $admin->id]);
 
     // Team member
@@ -329,10 +331,11 @@ test('admin with toggle disabled sees only their team', function () {
 
     $component = Livewire::test(\App\Livewire\ManagerReport::class);
 
-    // Default state - toggle is off
-    expect($component->viewData('teamMembers')->count())->toBe(1);
+    // Default state - toggle is on for admins
+    expect($component->viewData('teamMembers')->count())->toBe(3);
     $component->assertSee('TeamMember, John')
-        ->assertDontSee('OtherUser, Jane');
+        ->assertSee('OtherUser, Jane')
+        ->assertSee('McAdmin, Admin');
 });
 
 test('manager sees team filter pillbox with their teams', function () {
