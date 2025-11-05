@@ -111,7 +111,7 @@
                                 <flux:card>
                                     <div>
                                         <flux:subheading class="flex items-center gap-2">
-                                            <flux:badge>
+                                            <flux:badge :color="empty($location['members']) ? 'red' : null">
                                                 {{ $location['label'] }}
                                             </flux:badge>
                                             <span class="text-sm text-zinc-500">({{ count($location['members']) }})</span>
