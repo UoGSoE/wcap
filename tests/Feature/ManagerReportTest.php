@@ -82,7 +82,7 @@ test('existing plan entries display correctly in team view', function () {
         'user_id' => $teamMember->id,
         'entry_date' => $monday,
         'note' => 'Working on tickets',
-        'location' => Location::HOME,
+        'location' => Location::OTHER,
     ]);
 
     actingAs($manager);
@@ -90,7 +90,7 @@ test('existing plan entries display correctly in team view', function () {
     Livewire::test(\App\Livewire\ManagerReport::class)
         ->assertOk()
         ->assertSee('Smith, John')
-        ->assertSee('Home');
+        ->assertSee('Other');
 });
 
 test('empty entries are handled gracefully', function () {
@@ -122,7 +122,7 @@ test('by location view groups team members correctly', function () {
         'user_id' => $member1->id,
         'entry_date' => $monday,
         'note' => 'Support tickets',
-        'location' => Location::HOME,
+        'location' => Location::OTHER,
     ]);
 
     PlanEntry::factory()->create([
@@ -136,7 +136,7 @@ test('by location view groups team members correctly', function () {
 
     Livewire::test(\App\Livewire\ManagerReport::class)
         ->assertOk()
-        ->assertSee('Home')
+        ->assertSee('Other')
         ->assertSee('JWS')
         ->assertSee('Smith, John')
         ->assertSee('Doe, Jane')
@@ -211,7 +211,7 @@ test('toggle switch changes display between location and note', function () {
         'user_id' => $teamMember->id,
         'entry_date' => $monday,
         'note' => 'Working on tickets',
-        'location' => Location::HOME,
+        'location' => Location::OTHER,
     ]);
 
     actingAs($manager);
@@ -219,7 +219,7 @@ test('toggle switch changes display between location and note', function () {
     Livewire::test(\App\Livewire\ManagerReport::class)
         ->assertOk()
         ->assertSet('showLocation', true)
-        ->assertSee('Home')
+        ->assertSee('Other')
         ->assertSee('Show Locations')
         ->set('showLocation', false)
         ->assertSet('showLocation', false)
@@ -239,8 +239,8 @@ test('coverage tab shows location coverage grid', function () {
     $tuesday = $monday->copy()->addDay();
 
     // Monday: 2 at Home, 1 at JWS
-    PlanEntry::factory()->create(['user_id' => $member1->id, 'entry_date' => $monday, 'location' => Location::HOME]);
-    PlanEntry::factory()->create(['user_id' => $member2->id, 'entry_date' => $monday, 'location' => Location::HOME]);
+    PlanEntry::factory()->create(['user_id' => $member1->id, 'entry_date' => $monday, 'location' => Location::OTHER]);
+    PlanEntry::factory()->create(['user_id' => $member2->id, 'entry_date' => $monday, 'location' => Location::OTHER]);
     PlanEntry::factory()->create(['user_id' => $member3->id, 'entry_date' => $monday, 'location' => Location::JWS]);
 
     // Tuesday: 3 at JWS
@@ -255,13 +255,13 @@ test('coverage tab shows location coverage grid', function () {
     $coverage = $component->viewData('coverage');
 
     // Monday coverage
-    expect($coverage['home'][$monday->format('Y-m-d')])->toBe(2);
+    expect($coverage['other'][$monday->format('Y-m-d')])->toBe(2);
     expect($coverage['jws'][$monday->format('Y-m-d')])->toBe(1);
     expect($coverage['jwn'][$monday->format('Y-m-d')])->toBe(0);
 
     // Tuesday coverage
     expect($coverage['jws'][$tuesday->format('Y-m-d')])->toBe(3);
-    expect($coverage['home'][$tuesday->format('Y-m-d')])->toBe(0);
+    expect($coverage['other'][$tuesday->format('Y-m-d')])->toBe(0);
 
     // Check UI renders coverage tab
     $component->assertSee('Coverage')
@@ -483,7 +483,7 @@ test('unavailable users do not appear in by location view', function () {
     PlanEntry::factory()->create([
         'user_id' => $member1->id,
         'entry_date' => $monday,
-        'location' => Location::HOME,
+        'location' => Location::OTHER,
         'is_available' => true,
     ]);
 
@@ -503,8 +503,8 @@ test('unavailable users do not appear in by location view', function () {
     $mondayKey = $monday->format('Y-m-d');
 
     // Only member1 should appear in location data
-    expect($daysByLocation[$mondayKey]['home'])->toHaveCount(1);
-    expect($daysByLocation[$mondayKey]['home'][0]['member']->id)->toBe($member1->id);
+    expect($daysByLocation[$mondayKey]['other'])->toHaveCount(1);
+    expect($daysByLocation[$mondayKey]['other'][0]['member']->id)->toBe($member1->id);
 
     // Unavailable member should not appear in any location
     $component->assertSee('Available, User');
@@ -524,7 +524,7 @@ test('unavailable users do not appear in coverage counts', function () {
     PlanEntry::factory()->create([
         'user_id' => $member1->id,
         'entry_date' => $monday,
-        'location' => Location::HOME,
+        'location' => Location::OTHER,
         'is_available' => true,
     ]);
 
@@ -543,5 +543,5 @@ test('unavailable users do not appear in coverage counts', function () {
     $mondayKey = $monday->format('Y-m-d');
 
     // Coverage should only count member1, not member2
-    expect($coverage['home'][$mondayKey])->toBe(1);
+    expect($coverage['other'][$mondayKey])->toBe(1);
 });

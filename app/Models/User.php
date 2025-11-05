@@ -20,12 +20,15 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'username',
+        'surname',
+        'forenames',
         'email',
         'password',
         'default_location',
         'default_category',
         'is_admin',
+        'is_staff',
     ];
 
     /**
@@ -49,6 +52,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_staff' => 'boolean',
         ];
     }
 
@@ -65,6 +69,11 @@ class User extends Authenticatable
     public function managedTeams(): HasMany
     {
         return $this->hasMany(Team::class, 'manager_id');
+    }
+
+    public function isManager(): bool
+    {
+        return $this->managedTeams->count() > 0;
     }
 
     public function isAdmin(): bool

@@ -31,6 +31,7 @@
                     @admin
                         <flux:separator class="my-2" />
                         <flux:sidebar.item icon="cog-6-tooth" href="{{ route('admin.teams') }}" wire:navigate>Manage Teams</flux:sidebar.item>
+                        <flux:sidebar.item icon="users" href="{{ route('admin.users') }}" wire:navigate>Manage Users</flux:sidebar.item>
                     @endadmin
                 </flux:sidebar.nav>
                 <flux:sidebar.spacer />

@@ -36,7 +36,7 @@ test('saving new entries creates database records', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note '.$offset,
-            'location' => Location::HOME->value,
+            'location' => Location::OTHER->value,
             'is_available' => true,
         ];
     })->toArray();
@@ -50,7 +50,7 @@ test('saving new entries creates database records', function () {
 
     $firstEntry = PlanEntry::where('user_id', $user->id)->first();
     expect($firstEntry->note)->toBe('Test note 0');
-    expect($firstEntry->location)->toBe(Location::HOME);
+    expect($firstEntry->location)->toBe(Location::OTHER);
 });
 
 test('saving updates existing entries', function () {
@@ -61,7 +61,7 @@ test('saving updates existing entries', function () {
         'user_id' => $user->id,
         'entry_date' => $date,
         'note' => 'Original note',
-        'location' => Location::HOME,
+        'location' => Location::OTHER,
     ]);
 
     actingAs($user);
@@ -113,13 +113,13 @@ test('copy next copies entry to next day only', function () {
     })->toArray();
 
     $entries[0]['note'] = 'First day task';
-    $entries[0]['location'] = Location::HOME->value;
+    $entries[0]['location'] = Location::OTHER->value;
 
     Livewire::test(\App\Livewire\HomePage::class)
         ->set('entries', $entries)
         ->call('copyNext', 0)
         ->assertSet('entries.1.note', 'First day task')
-        ->assertSet('entries.1.location', Location::HOME->value)
+        ->assertSet('entries.1.location', Location::OTHER->value)
         ->assertSet('entries.2.note', '');
 });
 
@@ -218,7 +218,7 @@ test('validation allows empty note field', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => '', // Empty note should be allowed
-            'location' => Location::HOME->value,
+            'location' => Location::OTHER->value,
             'is_available' => true,
         ];
     })->toArray();
@@ -251,7 +251,7 @@ test('existing entries are loaded on mount', function () {
 
 test('new entries use user defaults', function () {
     $user = User::factory()->create([
-        'default_location' => Location::HOME->value,
+        'default_location' => Location::OTHER->value,
         'default_category' => 'Support Tickets',
     ]);
 
@@ -259,14 +259,14 @@ test('new entries use user defaults', function () {
 
     Livewire::test(\App\Livewire\HomePage::class)
         ->assertSet('entries.0.note', 'Support Tickets')
-        ->assertSet('entries.0.location', Location::HOME->value)
+        ->assertSet('entries.0.location', Location::OTHER->value)
         ->assertSet('entries.13.note', 'Support Tickets')
-        ->assertSet('entries.13.location', Location::HOME->value);
+        ->assertSet('entries.13.location', Location::OTHER->value);
 });
 
 test('existing entries override user defaults', function () {
     $user = User::factory()->create([
-        'default_location' => Location::HOME->value,
+        'default_location' => Location::OTHER->value,
         'default_category' => 'Support Tickets',
     ]);
 
@@ -285,7 +285,7 @@ test('existing entries override user defaults', function () {
         ->assertSet('entries.0.note', 'Specific task')
         ->assertSet('entries.0.location', Location::JWS->value)
         ->assertSet('entries.1.note', 'Support Tickets')
-        ->assertSet('entries.1.location', Location::HOME->value);
+        ->assertSet('entries.1.location', Location::OTHER->value);
 });
 
 test('is_available checkbox saves correctly', function () {
@@ -300,7 +300,7 @@ test('is_available checkbox saves correctly', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note',
-            'location' => Location::HOME->value,
+            'location' => Location::OTHER->value,
             'is_available' => $offset % 2 === 0, // Alternate true/false
         ];
     })->toArray();
@@ -337,14 +337,14 @@ test('copy next includes is_available', function () {
     })->toArray();
 
     $entries[0]['note'] = 'First day task';
-    $entries[0]['location'] = Location::HOME->value;
+    $entries[0]['location'] = Location::OTHER->value;
     $entries[0]['is_available'] = false;
 
     Livewire::test(\App\Livewire\HomePage::class)
         ->set('entries', $entries)
         ->call('copyNext', 0)
         ->assertSet('entries.1.note', 'First day task')
-        ->assertSet('entries.1.location', Location::HOME->value)
+        ->assertSet('entries.1.location', Location::OTHER->value)
         ->assertSet('entries.1.is_available', false)
         ->assertSet('entries.2.is_available', true);
 });
@@ -389,7 +389,7 @@ test('existing entries load is_available value', function () {
         'user_id' => $user->id,
         'entry_date' => $date,
         'note' => 'Unavailable task',
-        'location' => Location::HOME,
+        'location' => Location::OTHER,
         'is_available' => false,
     ]);
 
