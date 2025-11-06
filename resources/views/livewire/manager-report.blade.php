@@ -109,17 +109,10 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             @foreach ($dayData['locations'] as $location)
-                                <flux:card>
-                                    <div>
-                                        <flux:subheading class="flex items-center gap-2">
-                                            <flux:badge :color="empty($location['members']) ? 'red' : null">
-                                                {{ $location['label'] }}
-                                            </flux:badge>
-                                            <span class="text-sm text-zinc-500">({{ count($location['members']) }})</span>
-                                        </flux:subheading>
-                                        <flux:spacer class="mt-2"/>
+                                <flux:callout :icon="empty($location['members']) ? 'x-circle' : 'check-circle'" :heading="$location['label']" :variant="empty($location['members']) ? 'danger' : 'secondary'">
+                                    <flux:callout.text>
                                         @if (empty($location['members']))
-                                            <flux:text class="text-zinc-500">No staff</flux:text>
+                                            <flux:text variant="strong">No staff</flux:text>
                                         @else
                                             <ul class="space-y-1">
                                                 @foreach ($location['members'] as $memberData)
@@ -134,8 +127,8 @@
                                                 @endforeach
                                             </ul>
                                         @endif
-                                    </div>
-                                </flux:card>
+                                    </flux:callout.text>
+                                </flux:callout>
                             @endforeach
                         </div>
                     </div>
