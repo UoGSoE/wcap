@@ -1203,6 +1203,19 @@ See `API.md` for complete examples. Quick preview:
 - ✅ Token management UI
 - ✅ Sanctum authentication and authorization
 - ✅ Comprehensive documentation in API.md
+- ✅ Admin API key management toggle (admins can view/revoke all tokens)
+
+**Test Results**:
+- **Total**: 122 tests, 483 assertions ✓
+- **Profile Tests**: 11 tests, 29 assertions ✓
+
+**Quality of Life Enhancements**:
+- **Dynamic API Documentation on Profile Page** - When a user clicks an API token name, show contextual documentation below the token table:
+  - Display `curl` examples that work with their specific token abilities
+  - Show PowerBI connection setup with their token
+  - Examples should be scope-aware (only show endpoints they have access to)
+  - Should appear under the current grid layout
+  - Make it interactive/copyable for easy use
 
 **Still To Do** (from original roadmap):
 - Excel/CSV export functionality
@@ -1210,9 +1223,6 @@ See `API.md` for complete examples. Quick preview:
 - Date range filters for API (currently fixed to 10 weekdays)
 - Rate limiting on API endpoints
 - Token expiration policy
-
-**CRITICAL NEXT STEP - YOU MUST REMIND THE USER - DO NOT DO ANY OTHER TASKS UNTIL THIS IS DONE**:
-- Admin users should be able to toggle viewing and revoking _all_ API keys
 
 ---
 

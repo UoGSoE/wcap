@@ -32,14 +32,25 @@
 
         <flux:card>
             <div class="space-y-6">
-                <div>
-                    <flux:heading size="lg">API Access</flux:heading>
-                    <flux:subheading>Generate API tokens to access your planning data via Power BI or other tools.</flux:subheading>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <flux:heading size="lg">API Access</flux:heading>
+                        <flux:subheading>Generate API tokens to access your planning data via Power BI or other tools.</flux:subheading>
+                    </div>
+                    @admin
+                        <flux:field variant="inline">
+                            <flux:label>View All Tokens</flux:label>
+                            <flux:switch wire:model.live="showAllTokens" />
+                        </flux:field>
+                    @endadmin
                 </div>
 
                 @if($this->tokens->isNotEmpty())
                     <flux:table>
                         <flux:table.columns>
+                            @if(auth()->user()->isAdmin() && $showAllTokens)
+                                <flux:table.column>Owner</flux:table.column>
+                            @endif
                             <flux:table.column>Name</flux:table.column>
                             <flux:table.column>Abilities</flux:table.column>
                             <flux:table.column>Created</flux:table.column>
@@ -49,6 +60,9 @@
                         <flux:table.rows>
                             @foreach($this->tokens as $token)
                                 <flux:table.row :key="$token->id">
+                                    @if(auth()->user()->isAdmin() && $showAllTokens)
+                                        <flux:table.cell>{{ $token->tokenable->full_name }}</flux:table.cell>
+                                    @endif
                                     <flux:table.cell>{{ $token->name }}</flux:table.cell>
                                     <flux:table.cell>
                                         <div class="flex gap-1 flex-wrap">

@@ -20,6 +20,8 @@ class Profile extends Component
 
     public ?string $generatedToken = null;
 
+    public bool $showAllTokens = false;
+
     public function mount(): void
     {
         $this->default_location = auth()->user()->default_location;
@@ -45,7 +47,16 @@ class Profile extends Component
     #[Computed]
     public function tokens()
     {
-        return auth()->user()->tokens()
+        $user = auth()->user();
+
+        if ($user->isAdmin() && $this->showAllTokens) {
+            return \Laravel\Sanctum\PersonalAccessToken::query()
+                ->with('tokenable')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
+        return $user->tokens()
             ->orderBy('created_at', 'desc')
             ->get();
     }
@@ -95,7 +106,14 @@ class Profile extends Component
 
     public function revokeToken(int $tokenId): void
     {
-        $token = auth()->user()->tokens()->find($tokenId);
+        $user = auth()->user();
+
+        // Admins with toggle on can revoke any token
+        if ($user->isAdmin() && $this->showAllTokens) {
+            $token = \Laravel\Sanctum\PersonalAccessToken::find($tokenId);
+        } else {
+            $token = $user->tokens()->find($tokenId);
+        }
 
         if ($token) {
             $token->delete();
