@@ -5,6 +5,7 @@ use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Date;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -196,6 +197,21 @@ test('duplicate team members across teams only shown once', function () {
 
     // Should only appear once
     expect(count($component->viewData('teamRows')))->toBe(1);
+});
+
+test('manager can download excel report', function () {
+    Date::setTestNow('2024-01-01 09:00:00');
+
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManagerReport::class)
+        ->call('exportAll')
+        ->assertFileDownloaded('manager-report-20240101-20240112.xlsx');
+
+    Date::setTestNow();
 });
 
 test('toggle switch changes display between location and note', function () {

@@ -3,10 +3,12 @@
 namespace App\Livewire;
 
 use App\Enums\Location;
+use App\Exports\ManagerReportExport;
 use App\Models\Service;
 use App\Models\Team;
 use App\Models\User;
 use Livewire\Component;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ManagerReport extends Component
 {
@@ -32,6 +34,26 @@ class ManagerReport extends Component
 
     public function render()
     {
+        $payload = $this->buildReportPayload();
+
+        return view('livewire.manager-report', $payload);
+    }
+
+    public function exportAll()
+    {
+        $payload = $this->buildReportPayload();
+
+        $start = $payload['days'][0]['date']->format('Ymd');
+        $end = end($payload['days'])['date']->format('Ymd');
+
+        return Excel::download(
+            new ManagerReportExport($payload),
+            "manager-report-{$start}-{$end}.xlsx",
+        );
+    }
+
+    private function buildReportPayload(): array
+    {
         $days = $this->buildDays();
         $teamMembers = $this->getTeamMembersArray();
         $availableTeams = $this->getAvailableTeams();
@@ -42,7 +64,7 @@ class ManagerReport extends Component
         $coverageMatrix = $this->buildCoverageMatrix($days, $locationDays);
         $serviceAvailabilityMatrix = $this->buildServiceAvailabilityMatrix($days);
 
-        return view('livewire.manager-report', [
+        return [
             'days' => $days,
             'teamRows' => $teamRows,
             'locationDays' => $locationDays,
@@ -50,7 +72,7 @@ class ManagerReport extends Component
             'serviceAvailabilityMatrix' => $serviceAvailabilityMatrix,
             'locations' => Location::cases(),
             'availableTeams' => $availableTeams,
-        ]);
+        ];
     }
 
     private function buildDays(): array

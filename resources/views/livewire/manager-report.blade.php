@@ -1,34 +1,39 @@
 <div>
-    <flux:heading size="xl">Team Report</flux:heading>
-    <flux:subheading>View your team's plans for the next two weeks</flux:subheading>
+    <div class="mb-6 flex justify-between items-center gap-4">
+        <div>
+            <flux:heading size="xl">Team Report</flux:heading>
+            <flux:subheading>View your team's plans for the next two weeks</flux:subheading>
+        </div>
+        <flux:button
+            wire:click="exportAll"
+            class="cursor-pointer"
+        >
+            Download Excel
+        </flux:button>
+    </div>
 
     <flux:spacer class="mt-6"/>
 
-        <div class="mb-4 flex justify-between items-center gap-4">
-            <flux:pillbox
-                wire:model.live="selectedTeams"
-                multiple
-                placeholder="Filter by team(s)..."
-                searchable
-                class="flex-1"
-            >
-                @foreach ($availableTeams as $team)
-                    <flux:pillbox.option :value="$team->id">{{ $team->name }}</flux:pillbox.option>
-                @endforeach
-            </flux:pillbox>
-            @admin
-                <flux:field variant="inline" class="">
-                    <flux:label>View All Users</flux:label>
-                    <flux:switch wire:model.live="showAllUsers" />
-                </flux:field>
-            @endadmin
+    <div class="mb-4 flex justify-between items-center gap-4">
+        <flux:pillbox
+            wire:model.live="selectedTeams"
+            multiple
+            placeholder="Filter by team(s)..."
+            searchable
+            class="flex-1"
+        >
+            @foreach ($availableTeams as $team)
+                <flux:pillbox.option :value="$team->id">{{ $team->name }}</flux:pillbox.option>
+            @endforeach
+        </flux:pillbox>
+        @admin
+            <flux:field variant="inline" class="">
+                <flux:label>View All Users</flux:label>
+                <flux:switch wire:model.live="showAllUsers" />
+            </flux:field>
+        @endadmin
 
-        </div>
-
-    @if ($availableTeams->isNotEmpty())
-        <div class="mb-6">
-        </div>
-    @endif
+    </div>
 
     <flux:tab.group>
         <flux:tabs>
