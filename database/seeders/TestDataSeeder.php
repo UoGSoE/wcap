@@ -122,6 +122,9 @@ class TestDataSeeder extends Seeder
 
         // Mark some users as unavailable for random days
         $this->markSomeUsersUnavailable($allUsers);
+
+        // Create demo service with varied coverage scenarios
+        $this->createDemoServiceWithVariedCoverage();
     }
 
     private function generatePlanEntries(array $teamMembers): void
@@ -205,6 +208,113 @@ class TestDataSeeder extends Seeder
                     'note' => $unavailableReasons[array_rand($unavailableReasons)],
                 ]);
             }
+        }
+    }
+
+    private function createDemoServiceWithVariedCoverage(): void
+    {
+        $serviceManager = User::factory()->create([
+            'username' => 'demo.service.manager',
+            'email' => 'demo.service.manager@example.com',
+            'password' => Hash::make('secret'),
+            'surname' => 'Manager',
+            'forenames' => 'Demo Service',
+        ]);
+
+        $serviceMember = User::factory()->create([
+            'username' => 'demo.service.member',
+            'email' => 'demo.service.member@example.com',
+            'password' => Hash::make('secret'),
+            'surname' => 'Member',
+            'forenames' => 'Demo Service',
+        ]);
+
+        $demoService = Service::factory()->create([
+            'name' => 'DEMO: Coverage Scenarios',
+            'manager_id' => $serviceManager->id,
+        ]);
+
+        $demoService->users()->attach($serviceMember->id);
+
+        $startDate = now()->startOfWeek();
+        $weekdayIndex = 0;
+
+        for ($offset = 0; $offset < 14 && $weekdayIndex < 10; $offset++) {
+            $day = $startDate->copy()->addDays($offset);
+
+            if ($day->isWeekend()) {
+                continue;
+            }
+
+            if ($weekdayIndex < 4) {
+                PlanEntry::create([
+                    'user_id' => $serviceMember->id,
+                    'entry_date' => $day,
+                    'location' => Location::JWS,
+                    'note' => 'Normal coverage - member available',
+                    'category' => null,
+                    'is_available' => true,
+                    'is_holiday' => false,
+                    'created_by_manager' => false,
+                ]);
+
+                PlanEntry::create([
+                    'user_id' => $serviceManager->id,
+                    'entry_date' => $day,
+                    'location' => Location::OTHER,
+                    'note' => 'Also available (not needed)',
+                    'category' => null,
+                    'is_available' => true,
+                    'is_holiday' => false,
+                    'created_by_manager' => false,
+                ]);
+            } elseif ($weekdayIndex < 7) {
+                PlanEntry::create([
+                    'user_id' => $serviceMember->id,
+                    'entry_date' => $day,
+                    'location' => null,
+                    'note' => 'On leave',
+                    'category' => null,
+                    'is_available' => false,
+                    'is_holiday' => false,
+                    'created_by_manager' => false,
+                ]);
+
+                PlanEntry::create([
+                    'user_id' => $serviceManager->id,
+                    'entry_date' => $day,
+                    'location' => Location::JWN,
+                    'note' => 'Manager-only coverage',
+                    'category' => null,
+                    'is_available' => true,
+                    'is_holiday' => false,
+                    'created_by_manager' => false,
+                ]);
+            } else {
+                PlanEntry::create([
+                    'user_id' => $serviceMember->id,
+                    'entry_date' => $day,
+                    'location' => null,
+                    'note' => 'Unavailable',
+                    'category' => null,
+                    'is_available' => false,
+                    'is_holiday' => false,
+                    'created_by_manager' => false,
+                ]);
+
+                PlanEntry::create([
+                    'user_id' => $serviceManager->id,
+                    'entry_date' => $day,
+                    'location' => null,
+                    'note' => 'Also unavailable',
+                    'category' => null,
+                    'is_available' => false,
+                    'is_holiday' => false,
+                    'created_by_manager' => false,
+                ]);
+            }
+
+            $weekdayIndex++;
         }
     }
 }

@@ -626,7 +626,7 @@ Added a fourth tab to the Manager Report showing service coverage across the two
 - Where cross-training or backup assignments are needed
 
 **Test Coverage** (tests/Feature/ManagerReportServiceAvailabilityTest.php):
-- 8 tests, 25 assertions ✓
+- 12 tests, 34 assertions ✓
 - Tab visibility and service display
 - Availability filtering (`is_available === true`)
 - Zero/empty state handling
@@ -634,10 +634,33 @@ Added a fourth tab to the Manager Report showing service coverage across the two
 - Admin toggle independence
 - Service with no members
 - All 10 weekdays coverage
+- Manager-only coverage scenarios (added later)
 
 **Test Data Seeder Update**:
 - Expanded from 6 to 20 realistic services (Active Directory, Email, DNS, VPN, Firewall, VLE, etc.)
 - Changed service membership from 2-4 users to 1-3 users per service (realistic for small team)
+- Added demo service "DEMO: Coverage Scenarios" showing all three coverage states
+
+**Manager-Only Coverage Indicator** (Enhancement added 2025-11-06):
+When a service has zero available members but the manager is available, a red "Manager" badge is displayed instead of a blank cell. This provides senior managers with a clear visual indicator of minimal coverage situations where only someone with high-level knowledge is available.
+
+**Visual Hierarchy**:
+- Gray cell with number = Normal coverage (team members available)
+- Red "Manager" badge = Minimal coverage (only manager available, not ideal)
+- Blank cell = No coverage (critical gap)
+
+**Implementation Details**:
+- Added `manager_only` boolean flag to each entry in the matrix
+- Eager loads manager relationship to avoid N+1 queries
+- Logic: If `count === 0` AND manager has entry for day AND `is_available === true`, show red badge
+- 4 additional tests covering all manager-only scenarios
+
+**Demo Service** (database/seeders/TestDataSeeder.php):
+- Creates "DEMO: Coverage Scenarios" service with predictable pattern
+- Days 1-4: Normal coverage (gray cells with "1")
+- Days 5-7: Manager-only coverage (red "Manager" badges)
+- Days 8-10: No coverage (blank cells)
+- Always appears at top of list for easy discovery by new users
 
 **Future Enhancements**:
 - Hierarchical teams (managers of managers) - currently only direct reports

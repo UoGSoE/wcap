@@ -267,3 +267,138 @@ test('service availability counts across all 10 weekdays', function () {
     $availableDays = collect($testServiceRow['entries'])->filter(fn ($entry) => $entry['count'] > 0)->count();
     expect($availableDays)->toBeGreaterThanOrEqual(9);
 });
+
+test('manager only coverage shows manager_only flag', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $serviceManager = User::factory()->create();
+    $service = Service::factory()->create([
+        'name' => 'Test Service',
+        'manager_id' => $serviceManager->id,
+    ]);
+
+    $monday = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $serviceManager->id,
+        'entry_date' => $monday,
+        'location' => Location::JWS,
+        'is_available' => true,
+    ]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
+
+    $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
+
+    expect($testServiceRow['entries'][0]['count'])->toBe(0);
+    expect($testServiceRow['entries'][0]['manager_only'])->toBe(true);
+
+    $component->assertSee('Manager');
+});
+
+test('manager available but members also available shows count not manager_only', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $serviceManager = User::factory()->create();
+    $serviceMember = User::factory()->create();
+
+    $service = Service::factory()->create([
+        'name' => 'Test Service',
+        'manager_id' => $serviceManager->id,
+    ]);
+
+    $service->users()->attach($serviceMember->id);
+
+    $monday = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $serviceManager->id,
+        'entry_date' => $monday,
+        'location' => Location::JWS,
+        'is_available' => true,
+    ]);
+
+    PlanEntry::factory()->create([
+        'user_id' => $serviceMember->id,
+        'entry_date' => $monday,
+        'location' => Location::OTHER,
+        'is_available' => true,
+    ]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
+
+    $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
+
+    expect($testServiceRow['entries'][0]['count'])->toBe(1);
+    expect($testServiceRow['entries'][0]['manager_only'])->toBe(false);
+});
+
+test('manager unavailable when count is zero shows blank cell', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $serviceManager = User::factory()->create();
+    $service = Service::factory()->create([
+        'name' => 'Test Service',
+        'manager_id' => $serviceManager->id,
+    ]);
+
+    $monday = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $serviceManager->id,
+        'entry_date' => $monday,
+        'location' => null,
+        'is_available' => false,
+    ]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
+
+    $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
+
+    expect($testServiceRow['entries'][0]['count'])->toBe(0);
+    expect($testServiceRow['entries'][0]['manager_only'])->toBe(false);
+});
+
+test('manager is also a service member counts in regular count', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $serviceManager = User::factory()->create();
+    $service = Service::factory()->create([
+        'name' => 'Test Service',
+        'manager_id' => $serviceManager->id,
+    ]);
+
+    $service->users()->attach($serviceManager->id);
+
+    $monday = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $serviceManager->id,
+        'entry_date' => $monday,
+        'location' => Location::JWS,
+        'is_available' => true,
+    ]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
+
+    $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
+
+    expect($testServiceRow['entries'][0]['count'])->toBe(1);
+    expect($testServiceRow['entries'][0]['manager_only'])->toBe(false);
+});

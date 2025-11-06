@@ -202,6 +202,8 @@
                         <div class="p-3 text-center text-sm font-medium {{ $entry['count'] > 0 ? 'bg-zinc-300 dark:bg-zinc-700' : '' }}">
                             @if ($entry['count'] > 0)
                                 {{ $entry['count'] }}
+                            @elseif ($entry['manager_only'])
+                                <flux:badge color="red" size="sm" inset="top bottom">Manager</flux:badge>
                             @endif
                         </div>
                     @endforeach

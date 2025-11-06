@@ -197,7 +197,7 @@ class ManagerReport extends Component
 
     private function buildServiceAvailabilityMatrix(array $days): array
     {
-        $services = Service::with('users')->orderBy('name')->get();
+        $services = Service::with(['users', 'manager'])->orderBy('name')->get();
 
         $matrix = [];
         $start = $days[0]['key'];
@@ -217,15 +217,32 @@ class ManagerReport extends Component
                 ->get()
                 ->groupBy(fn ($e) => $e->entry_date->toDateString());
 
+            $managerEntries = collect();
+            if ($service->manager) {
+                $managerEntries = \App\Models\PlanEntry::query()
+                    ->where('user_id', $service->manager->id)
+                    ->whereBetween('entry_date', [$start, $end])
+                    ->get()
+                    ->groupBy(fn ($e) => $e->entry_date->toDateString());
+            }
+
             foreach ($days as $day) {
                 $dateKey = $day['key'];
                 $dayEntries = $serviceEntries->get($dateKey, collect());
 
                 $availableCount = $dayEntries->filter(fn ($e) => $e->is_available === true)->count();
 
+                $managerOnly = false;
+                if ($availableCount === 0 && $service->manager) {
+                    $managerDayEntries = $managerEntries->get($dateKey, collect());
+                    $managerAvailable = $managerDayEntries->first(fn ($e) => $e->is_available === true);
+                    $managerOnly = $managerAvailable !== null;
+                }
+
                 $row['entries'][] = [
                     'date' => $day['date'],
                     'count' => $availableCount,
+                    'manager_only' => $managerOnly,
                 ];
             }
 
