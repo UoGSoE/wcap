@@ -36,6 +36,7 @@ class TestDataSeeder extends Seeder
 
         $managers = [];
         $allUsers = [];
+        $allUsers[] = $admin;
 
         foreach ($teamNames as $teamName) {
             $minTeamMembers = str_starts_with($teamName, 'Principle Engineer') ? 1 : 2;
@@ -49,6 +50,7 @@ class TestDataSeeder extends Seeder
                     'email' => 'manager.'.strtolower($teamName).'2x@example.com',
                     'password' => Hash::make('secret'),
                 ]);
+                $allUsers[] = $manager;
             }
 
             $team = Team::factory()->create([
@@ -94,15 +96,12 @@ class TestDataSeeder extends Seeder
         ];
 
         foreach ($serviceNames as $serviceName) {
-            // Use admin2x as manager for some services
+            // Use admin2x as manager for some services so they always have test data
             if (in_array($serviceName, ['Active Directory Service', 'Network Infrastructure Service'])) {
                 $serviceManager = $admin;
             } else {
-                $serviceManager = User::factory()->create([
-                    'username' => 'manager.'.strtolower(str_replace(' ', '', $serviceName)).'2x',
-                    'email' => 'manager.'.strtolower(str_replace(' ', '', $serviceName)).'2x@example.com',
-                    'password' => Hash::make('secret'),
-                ]);
+                // Pick a random service manager from existing users
+                $serviceManager = collect($allUsers)->random();
             }
 
             $service = Service::factory()->create([
