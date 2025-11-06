@@ -23,6 +23,19 @@ class TestDataSeeder extends Seeder
             'password' => Hash::make('secret'),
         ]);
 
+        // Create API token for admin user (for Power BI demo)
+        $token = $admin->createToken('Power BI - Executive Dashboard', [
+            'view:own-plan',
+            'view:team-plans',
+            'view:all-plans',
+        ]);
+
+        // Output token for easy reference (only visible during seeding)
+        echo "\n===========================================\n";
+        echo "API Token for admin2x:\n";
+        echo $token->plainTextToken."\n";
+        echo "===========================================\n\n";
+
         $teamNames = [
             'Service Operations / Applications & Data',
             'Service Operations / Infrastructure',

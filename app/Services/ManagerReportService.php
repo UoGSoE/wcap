@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\Location;
+use App\Models\PlanEntry;
+use App\Models\Service;
 use App\Models\Team;
 use App\Models\User;
-use App\Enums\Location;
-use App\Models\Service;
-use App\Models\PlanEntry;
 
 class ManagerReportService
 {
@@ -14,15 +14,29 @@ class ManagerReportService
      * Create a new class instance.
      */
     public function __construct(
-        private bool $showLocation,
-        private bool $showAllUsers,
-        private array $selectedTeams,
-    )
-    {
+        private bool $showLocation = true,
+        private bool $showAllUsers = false,
+        private array $selectedTeams = [],
+    ) {
         //
     }
 
-    public  function buildReportPayload(): array
+    /**
+     * Configure the service with specific options.
+     */
+    public function configure(
+        bool $showLocation = true,
+        bool $showAllUsers = false,
+        array $selectedTeams = [],
+    ): self {
+        $this->showLocation = $showLocation;
+        $this->showAllUsers = $showAllUsers;
+        $this->selectedTeams = $selectedTeams;
+
+        return $this;
+    }
+
+    public function buildReportPayload(): array
     {
         $days = $this->buildDays();
         $teamMembers = $this->getTeamMembersArray();
@@ -45,7 +59,7 @@ class ManagerReportService
         ];
     }
 
-    private function buildDays(): array
+    public function buildDays(): array
     {
         $start = now()->startOfWeek();
         $days = [];
@@ -64,7 +78,7 @@ class ManagerReportService
         return $days;
     }
 
-    private function buildEntriesByUser(array $teamMembers, array $days): array
+    public function buildEntriesByUser(array $teamMembers, array $days): array
     {
         $start = $days[0]['key'];
         $end = end($days)['key'];
@@ -91,7 +105,7 @@ class ManagerReportService
         return $indexed;
     }
 
-    private function buildTeamRows(array $teamMembers, array $days, array $entriesByUser): array
+    public function buildTeamRows(array $teamMembers, array $days, array $entriesByUser): array
     {
         $rows = [];
 
@@ -126,7 +140,7 @@ class ManagerReportService
         return $rows;
     }
 
-    private function buildLocationDays(array $days, array $teamMembers, array $entriesByUser): array
+    public function buildLocationDays(array $days, array $teamMembers, array $entriesByUser): array
     {
         $result = [];
         $locations = Location::cases();
@@ -162,7 +176,7 @@ class ManagerReportService
         return $result;
     }
 
-    private function buildCoverageMatrix(array $days, array $locationDays): array
+    public function buildCoverageMatrix(array $days, array $locationDays): array
     {
         $matrix = [];
 
@@ -187,7 +201,7 @@ class ManagerReportService
         return $matrix;
     }
 
-    private function buildServiceAvailabilityMatrix(array $days): array
+    public function buildServiceAvailabilityMatrix(array $days): array
     {
         $services = Service::with(['users', 'manager'])->orderBy('name')->get();
 
@@ -288,5 +302,29 @@ class ManagerReportService
 
         // Otherwise, show only teams managed by this user
         return $user->managedTeams()->orderBy('name')->get();
+    }
+
+    /**
+     * Get scoped user IDs based on token ability (for API use).
+     * Returns array of user IDs that the given user can access based on their token ability.
+     *
+     * @param  User  $user  The authenticated user
+     * @param  string  $tokenAbility  The token ability ('view:own-plan', 'view:team-plans', or 'view:all-plans')
+     * @return array Array of user IDs
+     */
+    public function getScopedUserIds(User $user, string $tokenAbility): array
+    {
+        return match ($tokenAbility) {
+            'view:own-plan' => [$user->id],
+            'view:team-plans' => $user->managedTeams()
+                ->with('users')
+                ->get()
+                ->flatMap(fn ($team) => $team->users)
+                ->unique('id')
+                ->pluck('id')
+                ->toArray(),
+            'view:all-plans' => User::pluck('id')->toArray(),
+            default => [],
+        };
     }
 }

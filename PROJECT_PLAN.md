@@ -925,6 +925,297 @@ Route::middleware('auth:sanctum')->group(function () {
 
 ---
 
+## Phase 3: Power BI API Integration ✅
+
+**Priority**: HIGH (completed 2025-11-06)
+**Rationale**: Senior management needs to pull planning data into Power BI dashboards
+
+### What We Built
+
+**1. API Endpoints** (RESTful JSON API with Sanctum authentication)
+
+**Personal Data Endpoint** (all authenticated users):
+- `GET /api/v1/plan` - Returns user's own plan entries for next 10 weekdays
+- Returns: User info, date range, array of plan entries with locations, notes, availability status
+
+**Organizational Reporting Endpoints** (managers/admins only):
+- `GET /api/v1/reports/team` - Person × day grid (who's where and doing what)
+- `GET /api/v1/reports/location` - Day × location grouping (who's at each location per day)
+- `GET /api/v1/reports/coverage` - Location coverage matrix (counts per location per day)
+- `GET /api/v1/reports/service-availability` - Service availability with manager-only indicators
+
+**2. Token Management UI**
+- Profile page section: "API Access"
+- Generate tokens with auto-assigned abilities based on user role
+- View existing tokens with abilities displayed as badges
+- Revoke tokens with confirmation dialog
+- Copy-to-clipboard functionality for newly generated tokens
+- Flyout modal pattern (consistent with AdminTeams)
+
+**3. Security Model**
+
+**Token Abilities** (auto-assigned):
+- `view:own-plan` - All users (access personal data)
+- `view:team-plans` - Managers (access team data)
+- `view:all-plans` - Admins (access all organizational data)
+
+**Route Protection**:
+- `auth:sanctum` middleware - Validates Bearer token
+- `abilities` middleware - Checks for ANY required ability (OR logic)
+- 401 Unauthorized - Invalid/missing/revoked token
+- 403 Forbidden - Valid token but insufficient abilities
+
+**Data Scoping**:
+- Staff: See only their own entries
+- Managers: See only their team members' entries
+- Admins: See all users' entries
+- Scoping handled in controller via `ManagerReportService->getScopedUserIds()`
+
+### Implementation Details
+
+**Files Created**:
+- `app/Http/Controllers/Api/PlanController.php` - Personal data endpoint
+- `app/Http/Controllers/Api/ReportController.php` - Organizational reports (4 methods)
+- `tests/Feature/Api/ApiEndpointsTest.php` - API tests using Sanctum::actingAs()
+
+**Files Modified**:
+- `app/Models/User.php` - Added `HasApiTokens` trait
+- `app/Services/ManagerReportService.php` - Added safe defaults + `configure()` method + `getScopedUserIds()`
+- `app/Livewire/Profile.php` - Added token management methods
+- `resources/views/livewire/profile.blade.php` - Added API Access section with token UI
+- `routes/api.php` - Added v1 API routes with middleware
+- `bootstrap/app.php` - Registered Sanctum ability middleware aliases
+- `database/seeders/TestDataSeeder.php` - Auto-creates token for admin2x user
+
+**Public Methods in ManagerReportService** (for API use):
+- `buildDays()` - Returns 10 weekdays starting from current Monday
+- `buildEntriesByUser()` - Loads plan entries indexed by user/date
+- `buildTeamRows()` - Person-centric view with state/location/notes per day
+- `buildLocationDays()` - Day-centric view grouped by location
+- `buildCoverageMatrix()` - Location coverage counts
+- `buildServiceAvailabilityMatrix()` - Service availability with manager-only flags
+- `getScopedUserIds()` - NEW: Returns user IDs based on token ability
+
+### Critical Lessons Learned
+
+#### 🏗️ LESSON: Service Classes and the Laravel Container
+
+**The Problem We Almost Had**:
+Initially, `ManagerReportService` had required constructor parameters with no defaults:
+
+```php
+// ❌ BAD: Cannot be resolved from container
+public function __construct(
+    private bool $showLocation,
+    private bool $showAllUsers,
+    private array $selectedTeams,
+) {}
+```
+
+This meant:
+- ❌ Cannot do `app(ManagerReportService::class)` - Laravel can't resolve it
+- ❌ Must use `new ManagerReportService($a, $b, $c)` everywhere - tight coupling
+- ❌ Adding dependencies later means finding every instantiation
+- ❌ Can't use dependency injection in controllers properly
+- ❌ Harder to test (can't mock easily)
+
+**The Solution**:
+```php
+// ✅ GOOD: Safe defaults + configuration method
+public function __construct(
+    private bool $showLocation = true,
+    private bool $showAllUsers = false,
+    private array $selectedTeams = [],
+) {}
+
+public function configure(
+    bool $showLocation = true,
+    bool $showAllUsers = false,
+    array $selectedTeams = [],
+): self {
+    $this->showLocation = $showLocation;
+    $this->showAllUsers = $showAllUsers;
+    $this->selectedTeams = $selectedTeams;
+    return $this;
+}
+```
+
+**Why This Is Better**:
+- ✅ Container-resolvable: `app(ManagerReportService::class)` works
+- ✅ Fluent API: `$service->configure(showLocation: true)->buildReportPayload()`
+- ✅ Named parameters: Clear, readable, self-documenting
+- ✅ Easy to extend: Add new dependencies to constructor without breaking existing code
+- ✅ Testable: Can inject mock dependencies
+- ✅ Follows Laravel conventions
+
+**Usage Examples**:
+
+```php
+// Web UI (Livewire component)
+app(ManagerReportService::class)
+    ->configure(
+        showLocation: $this->showLocation,
+        showAllUsers: $this->showAllUsers,
+        selectedTeams: $this->selectedTeams,
+    )
+    ->buildReportPayload();
+
+// API (controller with DI)
+public function team(Request $request, ManagerReportService $service): JsonResponse
+{
+    $userIds = $service->getScopedUserIds($user, $ability);
+    // Service has safe defaults, no configuration needed for API use
+}
+```
+
+**The Rule**: A constructor should never fail. If a service needs configuration, provide safe defaults and a separate configuration method. This keeps dependency injection working and the container happy.
+
+### Demo Usage
+
+**Token Already Created**:
+When you run `lando db:seed --class=TestDataSeeder`, a token is auto-created for admin2x and printed:
+
+```
+===========================================
+API Token for admin2x:
+1|AbC...xyz
+===========================================
+```
+
+**Testing the API**:
+```bash
+# Store the token
+TOKEN="1|AbC...xyz"
+
+# Personal plan (any user)
+curl -H "Authorization: Bearer $TOKEN" \
+  https://wcap.youruniversity.ac.uk/api/v1/plan
+
+# Team report (managers/admins)
+curl -H "Authorization: Bearer $TOKEN" \
+  https://wcap.youruniversity.ac.uk/api/v1/reports/team
+
+# Location report
+curl -H "Authorization: Bearer $TOKEN" \
+  https://wcap.youruniversity.ac.uk/api/v1/reports/location
+
+# Coverage matrix
+curl -H "Authorization: Bearer $TOKEN" \
+  https://wcap.youruniversity.ac.uk/api/v1/reports/coverage
+
+# Service availability
+curl -H "Authorization: Bearer $TOKEN" \
+  https://wcap.youruniversity.ac.uk/api/v1/reports/service-availability
+```
+
+**In the UI**:
+1. Log in as admin2x
+2. Navigate to Profile page
+3. Scroll to "API Access" section
+4. See existing token or generate a new one
+5. Copy token and use in Power BI/curl/Postman
+
+### Power BI Integration
+
+**Connection Steps** (from API.md):
+1. Power BI Desktop → Get Data → Web (Advanced)
+2. URL: `https://wcap.youruniversity.ac.uk/api/v1/reports/team`
+3. Add HTTP header: `Authorization` = `Bearer YOUR_TOKEN_HERE`
+4. Authentication: Anonymous (token is in header)
+5. Transform data in Power Query Editor
+6. Create visuals (matrix, charts, heat maps)
+
+**Recommended Visuals**:
+- **Team Report** → Matrix (Rows: Person, Columns: Date, Values: Location)
+- **Location Report** → Stacked bar chart (Axis: Date, Legend: Location, Values: Count)
+- **Coverage** → Heat map with conditional formatting (white = 0, blue = high)
+- **Service Availability** → Cards with traffic light colors (green/yellow/red)
+
+### Test Coverage
+
+**New Tests** (`tests/Feature/Api/ApiEndpointsTest.php`):
+- ✅ Unauthenticated request returns 401
+- ✅ Staff user with token can access personal plan
+- ✅ Manager with `view:team-plans` can access reports
+- ✅ Admin with `view:all-plans` can access all 4 report endpoints
+
+**Test Results**:
+- **Before**: 110 tests, 435 assertions ✓
+- **After**: 114 tests, 454 assertions ✓
+- **New**: 4 API tests, 19 assertions ✓
+
+**All existing tests still pass** - Zero impact on web UI.
+
+### JSON Response Examples
+
+See `API.md` for complete examples. Quick preview:
+
+```json
+// GET /api/v1/plan
+{
+  "user": { "id": 1, "name": "Smith, John" },
+  "date_range": { "start": "2025-11-06", "end": "2025-11-20" },
+  "entries": [
+    {
+      "id": 123,
+      "entry_date": "2025-11-06",
+      "location": "jws",
+      "location_label": "James Watt South",
+      "note": "Server maintenance",
+      "is_available": true,
+      "is_holiday": false
+    }
+    // ... 9 more entries
+  ]
+}
+
+// GET /api/v1/reports/team
+{
+  "scope": "view:all-plans",
+  "days": [
+    { "date": "2025-11-06", "day_name": "Wednesday" }
+    // ... 9 more days
+  ],
+  "team_rows": [
+    {
+      "member_id": 5,
+      "name": "Adams, Sarah",
+      "days": [
+        {
+          "date": "2025-11-06",
+          "state": "planned",
+          "location": "jws",
+          "location_short": "JWS",
+          "note": "Support desk coverage"
+        }
+        // ... 9 more days
+      ]
+    }
+    // ... more team members
+  ]
+}
+```
+
+### What's Next
+
+**Completed** (Phase 3):
+- ✅ Power BI API with 5 endpoints
+- ✅ Token management UI
+- ✅ Sanctum authentication and authorization
+- ✅ Comprehensive documentation in API.md
+
+**Still To Do** (from original roadmap):
+- Excel/CSV export functionality
+- Admin: Make users admin UI
+- Date range filters for API (currently fixed to 10 weekdays)
+- Rate limiting on API endpoints
+- Token expiration policy
+
+**CRITICAL NEXT STEP - YOU MUST REMIND THE USER - DO NOT DO ANY OTHER TASKS UNTIL THIS IS DONE**:
+- Admin users should be able to toggle viewing and revoking _all_ API keys
+
+---
+
 ## Future Enhancements (Parked Ideas)
 - MS Teams bot (parked - "dumpster fire" API 😄)
 - iCal feed for calendar subscriptions

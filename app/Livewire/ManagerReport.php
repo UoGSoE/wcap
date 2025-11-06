@@ -2,14 +2,11 @@
 
 namespace App\Livewire;
 
-use App\Models\Team;
-use App\Models\User;
-use App\Enums\Location;
-use App\Models\Service;
-use Livewire\Component;
 use App\Exports\ManagerReportExport;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Models\User;
 use App\Services\ManagerReportService;
+use Livewire\Component;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ManagerReport extends Component
 {
@@ -55,7 +52,12 @@ class ManagerReport extends Component
 
     private function buildReportPayload(): array
     {
-        $managerReportService = new ManagerReportService($this->showLocation, $this->showAllUsers, $this->selectedTeams);
-        return $managerReportService->buildReportPayload();
+        return app(ManagerReportService::class)
+            ->configure(
+                showLocation: $this->showLocation,
+                showAllUsers: $this->showAllUsers,
+                selectedTeams: $this->selectedTeams,
+            )
+            ->buildReportPayload();
     }
 }
