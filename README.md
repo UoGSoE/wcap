@@ -1,59 +1,72 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# WCAP
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+WCAP is the IT team's two-week planning tool for capturing who is working, what they are focusing on, and where they will be located. The MVP delivers a lightweight way for staff to keep their plans up to date, while giving managers visibility into coverage across teams and services.
 
-## About Laravel
+## Highlights
+- **14-day planner** – Weekday-focused grid with live updates, availability toggle, location picker, and quick “copy next/rest” helpers to keep plans fast to update.
+- **Personal defaults** – Profile screen for setting preferred location and task category that pre-fills new plan entries.
+- **Team & service admin** – Flux-powered CRUD for teams, services, managers, and memberships to keep grouping data accurate.
+- **Manager reporting** – Coverage dashboard with location summaries, service availability matrix, and Excel export for sharing snapshots.
+- **Seeded demo data** – `TestDataSeeder` builds realistic teams, services, and plan entries so new installs have something meaningful to explore.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Tech Stack
+- Laravel 12 using the streamlined application structure introduced in recent releases
+- Livewire 3 + Flux UI Pro for reactive Blade components
+- Tailwind CSS 4 for styling
+- Pest 4 for automated testing
+- Lando for the local development environment
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Getting Started
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Prerequisites
+- [Lando](https://lando.dev/) (which in turn requires Docker Desktop or a compatible Docker engine)
+- Node.js 20+ and npm (only needed for building assets before the first `lando start`)
 
-## Learning Laravel
+### First-time Setup
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/UoGSoE/wcap.git
+   cd wcap
+   ```
+2. Create your environment file:
+   ```bash
+   cp .env.example .env
+   ```
+3. Install PHP dependencies (on the host machine):
+   ```bash
+   composer install
+   ```
+4. Install frontend dependencies and build the production assets:
+   ```bash
+   npm install
+   npm run build
+   ```
+5. Start the Lando environment:
+   ```bash
+   lando start
+   ```
+6. Run migrations and seed the demo data (the custom `mfs` tooling command runs `migrate:fresh` and the `TestDataSeeder`):
+   ```bash
+   lando mfs
+   ```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Lando will print the accessible URLs when the stack boots (by default `https://wcap.lndo.site`). MailHog is available for local email testing as part of the recipe.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### First Login
+- **Username**: `admin2x`
+- **Password**: `secret`
 
-## Laravel Sponsors
+Use this account to explore the planner, admin consoles, and manager tools. Update the credentials in your local database if you need alternative logins.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Day-to-Day Development
+- Start/stop the environment with `lando start` / `lando stop`.
+- Run Laravel commands inside the container, e.g. `lando artisan test` or the shortcut `lando test` for the full parallel suite.
+- Keep code style aligned with `lando vendor/bin/pint -- --dirty` before committing.
+- Watch assets during development with either `npm run dev` on the host or `lando npm run dev` inside the Node service.
+- Reset data at any time with `lando mfs`.
 
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Roadmap & Planning
+The active roadmap lives in [`PROJECT_PLAN.md`](PROJECT_PLAN.md) and service work is tracked in [`SERVICE_PLAN.md`](SERVICE_PLAN.md). These documents outline completed milestones, upcoming features (like API endpoints and expanded reporting), and nice-to-have ideas for future phases.
 
 ## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is licensed under the [MIT License](LICENSE).
