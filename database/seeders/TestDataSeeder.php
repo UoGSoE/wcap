@@ -77,6 +77,20 @@ class TestDataSeeder extends Seeder
             'Network Infrastructure Service',
             'Database Service',
             'Web Hosting Service',
+            'DNS Service',
+            'DHCP Service',
+            'VPN Service',
+            'Firewall Management',
+            'Storage Management',
+            'Virtualization Platform',
+            'Research Computing',
+            'VLE (Moodle)',
+            'Student Portal',
+            'Staff Portal',
+            'Printing Services',
+            'Telephony Service',
+            'Wireless Network',
+            'CCTV & Security Systems',
         ];
 
         foreach ($serviceNames as $serviceName) {
@@ -96,8 +110,8 @@ class TestDataSeeder extends Seeder
                 'manager_id' => $serviceManager->id,
             ]);
 
-            // Attach 2-4 random users from existing team members to each service
-            $serviceMembers = collect($allUsers)->random(rand(2, min(4, count($allUsers))));
+            // Attach 1-3 random users from existing team members to each service
+            $serviceMembers = collect($allUsers)->random(rand(1, min(3, count($allUsers))));
             foreach ($serviceMembers as $member) {
                 $service->users()->attach($member->id);
             }

@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Enums\Location;
+use App\Models\Service;
 use App\Models\Team;
 use App\Models\User;
 use Livewire\Component;
@@ -39,12 +40,14 @@ class ManagerReport extends Component
         $teamRows = $this->buildTeamRows($teamMembers, $days, $entriesByUser);
         $locationDays = $this->buildLocationDays($days, $teamMembers, $entriesByUser);
         $coverageMatrix = $this->buildCoverageMatrix($days, $locationDays);
+        $serviceAvailabilityMatrix = $this->buildServiceAvailabilityMatrix($days);
 
         return view('livewire.manager-report', [
             'days' => $days,
             'teamRows' => $teamRows,
             'locationDays' => $locationDays,
             'coverageMatrix' => $coverageMatrix,
+            'serviceAvailabilityMatrix' => $serviceAvailabilityMatrix,
             'locations' => Location::cases(),
             'availableTeams' => $availableTeams,
         ]);
@@ -183,6 +186,46 @@ class ManagerReport extends Component
                 $row['entries'][] = [
                     'date' => $days[$index]['date'],
                     'count' => count($members),
+                ];
+            }
+
+            $matrix[] = $row;
+        }
+
+        return $matrix;
+    }
+
+    private function buildServiceAvailabilityMatrix(array $days): array
+    {
+        $services = Service::with('users')->orderBy('name')->get();
+
+        $matrix = [];
+        $start = $days[0]['key'];
+        $end = end($days)['key'];
+
+        foreach ($services as $service) {
+            $row = [
+                'label' => $service->name,
+                'entries' => [],
+            ];
+
+            $serviceMemberIds = $service->users->pluck('id')->toArray();
+
+            $serviceEntries = \App\Models\PlanEntry::query()
+                ->whereIn('user_id', $serviceMemberIds)
+                ->whereBetween('entry_date', [$start, $end])
+                ->get()
+                ->groupBy(fn ($e) => $e->entry_date->toDateString());
+
+            foreach ($days as $day) {
+                $dateKey = $day['key'];
+                $dayEntries = $serviceEntries->get($dateKey, collect());
+
+                $availableCount = $dayEntries->filter(fn ($e) => $e->is_available === true)->count();
+
+                $row['entries'][] = [
+                    'date' => $day['date'],
+                    'count' => $availableCount,
                 ];
             }
 

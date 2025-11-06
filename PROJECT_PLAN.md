@@ -598,6 +598,47 @@ Added an admin-only toggle that allows admins to view all users in the system, n
 - 16 tests total, 60 assertions ✓
 - Added 4 new tests for admin toggle functionality
 
+**Post-Implementation Enhancement #4: Service Availability Tab** ✅
+Added a fourth tab to the Manager Report showing service coverage across the two-week period.
+
+**Implementation**:
+- Added `buildServiceAvailabilityMatrix()` method to ManagerReport component (app/Livewire/ManagerReport.php:196-234)
+  - Loads all services (ordered by name)
+  - Counts only plan entries where `is_available === true`
+  - Returns matrix structure matching Coverage tab pattern
+- Updated `render()` method to pass `$serviceAvailabilityMatrix` to view
+- Added "Service Availability" tab to Blade view (resources/views/livewire/manager-report.blade.php:38, 179-210)
+  - Visual grid layout with 200px first column (wider for service names)
+  - Gray cells when people available, blank when no coverage
+  - Same design pattern as Coverage tab for consistency
+
+**Key Design Decisions**:
+- Shows **all services** in the system (not filtered by manager's teams)
+- Admin "Show All Users" toggle does **not** affect service list
+- Counts **all service members** (not just team members visible in report)
+- Only counts entries where `is_available === true`
+
+**Why this is useful**: Managers can quickly spot:
+- Services with no coverage on specific days
+- Consistently understaffed services
+- Days where multiple services have reduced capacity
+- Patterns in service availability over time
+- Where cross-training or backup assignments are needed
+
+**Test Coverage** (tests/Feature/ManagerReportServiceAvailabilityTest.php):
+- 8 tests, 25 assertions ✓
+- Tab visibility and service display
+- Availability filtering (`is_available === true`)
+- Zero/empty state handling
+- Multiple available people counts
+- Admin toggle independence
+- Service with no members
+- All 10 weekdays coverage
+
+**Test Data Seeder Update**:
+- Expanded from 6 to 20 realistic services (Active Directory, Email, DNS, VPN, Firewall, VLE, etc.)
+- Changed service membership from 2-4 users to 1-3 users per service (realistic for small team)
+
 **Future Enhancements**:
 - Hierarchical teams (managers of managers) - currently only direct reports
 - Date range selector to view beyond current 2 weeks
