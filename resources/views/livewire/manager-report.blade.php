@@ -203,7 +203,9 @@
                             @if ($entry['count'] > 0)
                                 {{ $entry['count'] }}
                             @elseif ($entry['manager_only'])
-                                <flux:badge color="red" size="sm" inset="top bottom">Manager</flux:badge>
+                                <flux:tooltip content="Coverage is only by the service manager">
+                                    <flux:badge color="red" size="sm" inset="top bottom">Manager</flux:badge>
+                                </flux:tooltip>
                             @endif
                         </div>
                     @endforeach
