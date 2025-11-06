@@ -124,6 +124,9 @@ class TestDataSeeder extends Seeder
 
         // Create demo service with varied coverage scenarios
         $this->createDemoServiceWithVariedCoverage();
+
+        // Ensure at least 2 days have zero coverage at Boyd-Orr for demo purposes
+        $this->ensureLocationCoverageGaps();
     }
 
     private function generatePlanEntries(array $teamMembers): void
@@ -314,6 +317,49 @@ class TestDataSeeder extends Seeder
             }
 
             $weekdayIndex++;
+        }
+    }
+
+    private function ensureLocationCoverageGaps(): void
+    {
+        $startDate = now()->startOfWeek();
+        $targetLocation = Location::BO;
+        $gapDayIndices = [2, 7]; // Wednesday of week 1, Wednesday of week 2
+
+        $alternativeLocations = [
+            Location::OTHER,
+            Location::JWS,
+            Location::JWN,
+            Location::RANKINE,
+        ];
+
+        foreach ($gapDayIndices as $weekdayIndex) {
+            $offset = 0;
+            $currentWeekdayIndex = 0;
+
+            while ($currentWeekdayIndex < $weekdayIndex) {
+                $day = $startDate->copy()->addDays($offset);
+                $offset++;
+
+                if ($day->isWeekend()) {
+                    continue;
+                }
+
+                $currentWeekdayIndex++;
+            }
+
+            $targetDay = $startDate->copy()->addDays($offset);
+
+            $entries = PlanEntry::where('entry_date', $targetDay)
+                ->where('location', $targetLocation)
+                ->where('is_available', true)
+                ->get();
+
+            foreach ($entries as $entry) {
+                $entry->update([
+                    'location' => $alternativeLocations[array_rand($alternativeLocations)],
+                ]);
+            }
         }
     }
 }
