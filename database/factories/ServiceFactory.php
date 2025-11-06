@@ -17,7 +17,15 @@ class ServiceFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'name' => fake()->randomElement([
+                'Active Directory Service',
+                'Email Service',
+                'Backup Service',
+                'Network Infrastructure Service',
+                'Database Service',
+                'Web Hosting Service',
+            ]),
+            'manager_id' => \App\Models\User::factory(),
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\Location;
 use App\Models\PlanEntry;
+use App\Models\Service;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -65,6 +66,40 @@ class TestDataSeeder extends Seeder
 
                 // Track all users for plan entry generation
                 $allUsers[] = $user;
+            }
+        }
+
+        // Create services with members
+        $serviceNames = [
+            'Active Directory Service',
+            'Email Service',
+            'Backup Service',
+            'Network Infrastructure Service',
+            'Database Service',
+            'Web Hosting Service',
+        ];
+
+        foreach ($serviceNames as $serviceName) {
+            // Use admin2x as manager for some services
+            if (in_array($serviceName, ['Active Directory Service', 'Network Infrastructure Service'])) {
+                $serviceManager = $admin;
+            } else {
+                $serviceManager = User::factory()->create([
+                    'username' => 'manager.'.strtolower(str_replace(' ', '', $serviceName)).'2x',
+                    'email' => 'manager.'.strtolower(str_replace(' ', '', $serviceName)).'2x@example.com',
+                    'password' => Hash::make('secret'),
+                ]);
+            }
+
+            $service = Service::factory()->create([
+                'name' => $serviceName,
+                'manager_id' => $serviceManager->id,
+            ]);
+
+            // Attach 2-4 random users from existing team members to each service
+            $serviceMembers = collect($allUsers)->random(rand(2, min(4, count($allUsers))));
+            foreach ($serviceMembers as $member) {
+                $service->users()->attach($member->id);
             }
         }
 

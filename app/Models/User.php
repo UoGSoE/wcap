@@ -71,6 +71,16 @@ class User extends Authenticatable
         return $this->hasMany(Team::class, 'manager_id');
     }
 
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class);
+    }
+
+    public function managedServices(): HasMany
+    {
+        return $this->hasMany(Service::class, 'manager_id');
+    }
+
     public function isManager(): bool
     {
         return $this->managedTeams->count() > 0;
