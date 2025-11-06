@@ -32,11 +32,17 @@ Our applications are important but do not contain a lot of data.  So we do not w
 
 We like early returns and guard clauses.  Avoid nesting if statements or using `else` whereever possible.
 
+You will be aware the you should have the laravel boost tool avaiable to you.  Please use it to look up documentation.  New
+libraries, versions, syntax etc are all documented there.
+
 ### Seeding data for local development
 
 When developing locally, we use a seeder called 'TestDataSeeder' to seed the database with data.  This avoids any potential issues with running laravel's default seeder by accident.
 
 So if you have created/modified a model or factory, please check that seeder file matches your changes.
+
+Note: you cannot run database commands in this environment.  If you need to explore the database, read the migrations or stop
+and ask the user to run the command you need.
 
 ### Eloquent model class conventions
 

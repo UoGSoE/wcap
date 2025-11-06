@@ -61,41 +61,42 @@
                 </flux:heading>
             </div>
 
-            <flux:field>
-                <flux:label>Team Name</flux:label>
-                <flux:description>A unique name for this team.</flux:description>
-                <flux:input wire:model.live="teamName" placeholder="e.g., Infrastructure Team" />
-            </flux:field>
+            <form wire:submit="save">
+                <flux:field>
+                    <flux:label>Team Name</flux:label>
+                    <flux:description>A unique name for this team.</flux:description>
+                    <flux:input wire:model="teamName" placeholder="e.g., Infrastructure Team" />
+                </flux:field>
 
-            <flux:field>
-                <flux:label>Manager</flux:label>
-                <flux:description>The person who manages this team.</flux:description>
-                <flux:select variant="combobox" placeholder="Select a manager..." wire:model.live="managerId">
-                    @foreach ($users as $user)
-                        <flux:select.option value="{{ $user->id }}">{{ $user->full_name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-            </flux:field>
+                <flux:field>
+                    <flux:label>Manager</flux:label>
+                    <flux:description>The person who manages this team.</flux:description>
+                    <flux:select variant="combobox" placeholder="Select a manager..." wire:model="managerId">
+                        @foreach ($users as $user)
+                            <flux:select.option value="{{ $user->id }}">{{ $user->full_name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </flux:field>
 
-            <flux:field>
-                <flux:label>Team Members</flux:label>
-                <flux:description>Select all members who belong to this team.</flux:description>
-                <flux:pillbox wire:model.live="selectedUserIds" multiple placeholder="Select team members...">
-                    @foreach ($users as $user)
-                        <flux:pillbox.option :value="$user->id">{{ $user->full_name }}</flux:pillbox.option>
-                    @endforeach
-                </flux:pillbox>
-            </flux:field>
+                <flux:field>
+                    <flux:label>Team Members</flux:label>
+                    <flux:description>Select all members who belong to this team.</flux:description>
+                    <flux:pillbox wire:model="selectedUserIds" multiple placeholder="Select team members...">
+                        @foreach ($users as $user)
+                            <flux:pillbox.option :value="$user->id">{{ $user->full_name }}</flux:pillbox.option>
+                        @endforeach
+                    </flux:pillbox>
+                </flux:field>
 
-            <div class="flex gap-2">
-                <flux:button variant="primary" wire:click="save" wire:loading.attr="disabled">
-                    <span wire:loading.remove>{{ $editingTeamId === -1 ? 'Create Team' : 'Save Changes' }}</span>
-                    <span wire:loading>Saving...</span>
-                </flux:button>
-                <flux:button variant="ghost" wire:click="cancelEdit">
-                    Cancel
-                </flux:button>
-            </div>
+                <div class="flex gap-2">
+                    <flux:button variant="primary" type="submit">
+                        <span wire:loading.remove>{{ $editingTeamId === -1 ? 'Create Team' : 'Save Changes' }}</span>
+                    </flux:button>
+                    <flux:button variant="ghost" wire:click="cancelEdit">
+                        Cancel
+                    </flux:button>
+                </div>
+            </form>
         </div>
     </flux:modal>
 
@@ -112,7 +113,7 @@
             <flux:field>
                 <flux:label>Transfer Members To (Optional)</flux:label>
                 <flux:description>Select a team to transfer all members to, or leave empty to just remove the team.</flux:description>
-                <flux:select variant="combobox" placeholder="No transfer (just delete team)" wire:model.live="transferTeamId">
+                <flux:select variant="combobox" placeholder="No transfer (just delete team)" wire:model="transferTeamId">
                     @foreach ($teams->where('id', '!=', $deletingTeamId) as $team)
                         <flux:select.option value="{{ $team->id }}">{{ $team->name }}</flux:select.option>
                     @endforeach
