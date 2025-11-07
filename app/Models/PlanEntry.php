@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Category;
 use App\Enums\Location;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,6 +29,7 @@ class PlanEntry extends Model
         return [
             'entry_date' => 'date',
             'location' => Location::class,
+            'category' => Category::class,
             'is_available' => 'boolean',
             'is_holiday' => 'boolean',
             'created_by_manager' => 'boolean',

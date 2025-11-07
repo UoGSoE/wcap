@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\Location;
+use App\Http\Requests\UpsertPlanEntriesRequest;
 use App\Models\PlanEntry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class PlanController
 {
@@ -32,7 +32,7 @@ class PlanController
         }
 
         // Load user's plan entries
-        $entries = PlanEntry::where('user_id', $user->id)
+        $entries = $user->planEntries()
             ->whereIn('entry_date', $weekdayDates)
             ->orderBy('entry_date')
             ->get()
@@ -67,24 +67,10 @@ class PlanController
      * Create or update plan entries for the authenticated user.
      * Always expects an entries array. Matches by id (if provided) or entry_date.
      */
-    public function upsert(Request $request): JsonResponse
+    public function upsert(UpsertPlanEntriesRequest $request): JsonResponse
     {
         $user = $request->user();
-
-        $validated = $request->validate([
-            'entries' => 'required|array',
-            'entries.*.id' => [
-                'nullable',
-                'integer',
-                Rule::exists('plan_entries', 'id')->where('user_id', $user->id),
-            ],
-            'entries.*.entry_date' => 'required|date',
-            'entries.*.location' => ['required', 'string', Rule::enum(Location::class)],
-            'entries.*.note' => 'nullable|string',
-            'entries.*.is_available' => 'nullable|boolean',
-            'entries.*.is_holiday' => 'nullable|boolean',
-            'entries.*.category' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $processedEntries = collect($validated['entries'])->map(function ($entry) use ($user) {
             $attributes = [
@@ -106,7 +92,7 @@ class PlanController
                 );
             } else {
                 // Find by entry_date or create new
-                $planEntry = PlanEntry::where('user_id', $user->id)
+                $planEntry = $user->planEntries()
                     ->whereDate('entry_date', $entry['entry_date'])
                     ->first();
 
@@ -144,7 +130,7 @@ class PlanController
     {
         $user = $request->user();
 
-        $entry = PlanEntry::where('user_id', $user->id)
+        $entry = $user->planEntries()
             ->where('id', $id)
             ->first();
 
