@@ -179,11 +179,11 @@ class Profile extends Component
             ];
 
             $endpoints[] = [
-                'name' => 'Create/Update Plan Entry',
+                'name' => 'Create/Update Plan Entries',
                 'method' => 'POST',
                 'path' => '/api/v1/plan',
                 'ability' => 'view:own-plan',
-                'description' => 'Create or update plan entries (single or batch). Match by id or entry_date.',
+                'description' => 'Create or update plan entries. Always send an entries array. Match by id or entry_date.',
             ];
 
             $endpoints[] = [
@@ -192,6 +192,14 @@ class Profile extends Component
                 'path' => '/api/v1/plan/{id}',
                 'ability' => 'view:own-plan',
                 'description' => 'Delete a specific plan entry by id',
+            ];
+
+            $endpoints[] = [
+                'name' => 'List Locations',
+                'method' => 'GET',
+                'path' => '/api/v1/locations',
+                'ability' => 'view:own-plan',
+                'description' => 'Get all available locations with their values, labels, and short labels',
             ];
         }
 

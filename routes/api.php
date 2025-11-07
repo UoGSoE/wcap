@@ -18,6 +18,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('/plan', [PlanController::class, 'upsert']);
     Route::delete('/plan/{id}', [PlanController::class, 'destroy']);
 
+    // Reference Data
+    Route::get('/locations', [PlanController::class, 'locations']);
+
     // Organizational Reporting
     // Accessible by: Managers and Admins only (requires view:team-plans OR view:all-plans)
     Route::prefix('reports')

@@ -81,21 +81,27 @@ test('user can create a new plan entry via API', function () {
     Sanctum::actingAs($user, ['view:own-plan']);
 
     $response = $this->postJson('/api/v1/plan', [
-        'entry_date' => '2025-11-10',
-        'location' => 'jws',
-        'note' => 'API testing',
-        'is_available' => true,
-        'is_holiday' => false,
+        'entries' => [
+            [
+                'entry_date' => '2025-11-10',
+                'location' => 'jws',
+                'note' => 'API testing',
+                'is_available' => true,
+                'is_holiday' => false,
+            ],
+        ],
     ]);
 
     $response->assertOk();
     $response->assertJsonStructure([
         'message',
-        'entry' => ['id', 'entry_date', 'location', 'location_label', 'note', 'is_available', 'is_holiday'],
+        'entries' => [
+            '*' => ['id', 'entry_date', 'location', 'location_label', 'note', 'is_available', 'is_holiday'],
+        ],
     ]);
 
-    expect($response->json('entry.location'))->toBe('jws');
-    expect($response->json('entry.note'))->toBe('API testing');
+    expect($response->json('entries.0.location'))->toBe('jws');
+    expect($response->json('entries.0.note'))->toBe('API testing');
 
     $this->assertDatabaseHas('plan_entries', [
         'user_id' => $user->id,
@@ -154,17 +160,21 @@ test('user can update plan entry by id via API', function () {
     Sanctum::actingAs($user, ['view:own-plan']);
 
     $response = $this->postJson('/api/v1/plan', [
-        'id' => $entry->id,
-        'entry_date' => '2025-11-10',
-        'location' => 'jwn',
-        'note' => 'Updated note',
+        'entries' => [
+            [
+                'id' => $entry->id,
+                'entry_date' => '2025-11-10',
+                'location' => 'jwn',
+                'note' => 'Updated note',
+            ],
+        ],
     ]);
 
     $response->assertOk();
 
-    expect($response->json('entry.id'))->toBe($entry->id);
-    expect($response->json('entry.location'))->toBe('jwn');
-    expect($response->json('entry.note'))->toBe('Updated note');
+    expect($response->json('entries.0.id'))->toBe($entry->id);
+    expect($response->json('entries.0.location'))->toBe('jwn');
+    expect($response->json('entries.0.note'))->toBe('Updated note');
 
     $this->assertDatabaseHas('plan_entries', [
         'id' => $entry->id,
@@ -184,15 +194,19 @@ test('user can update plan entry by entry_date via API', function () {
     Sanctum::actingAs($user, ['view:own-plan']);
 
     $response = $this->postJson('/api/v1/plan', [
-        'entry_date' => '2025-11-10',
-        'location' => 'rankine',
-        'note' => 'Updated via date',
+        'entries' => [
+            [
+                'entry_date' => '2025-11-10',
+                'location' => 'rankine',
+                'note' => 'Updated via date',
+            ],
+        ],
     ]);
 
     $response->assertOk();
 
-    expect($response->json('entry.location'))->toBe('rankine');
-    expect($response->json('entry.note'))->toBe('Updated via date');
+    expect($response->json('entries.0.location'))->toBe('rankine');
+    expect($response->json('entries.0.note'))->toBe('Updated via date');
 
     $this->assertDatabaseHas('plan_entries', [
         'user_id' => $user->id,
@@ -217,14 +231,18 @@ test('user cannot update another users plan entry', function () {
     Sanctum::actingAs($user, ['view:own-plan']);
 
     $response = $this->postJson('/api/v1/plan', [
-        'id' => $otherEntry->id,
-        'entry_date' => '2025-11-10',
-        'location' => 'jwn',
-        'note' => 'Trying to hack',
+        'entries' => [
+            [
+                'id' => $otherEntry->id,
+                'entry_date' => '2025-11-10',
+                'location' => 'jwn',
+                'note' => 'Trying to hack',
+            ],
+        ],
     ]);
 
     $response->assertUnprocessable();
-    $response->assertJsonValidationErrors(['id']);
+    $response->assertJsonValidationErrors(['entries.0.id']);
 
     // Original entry should be unchanged
     $this->assertDatabaseHas('plan_entries', [
@@ -282,13 +300,17 @@ test('API validates location enum values', function () {
     Sanctum::actingAs($user, ['view:own-plan']);
 
     $response = $this->postJson('/api/v1/plan', [
-        'entry_date' => '2025-11-10',
-        'location' => 'invalid-location',
-        'note' => 'Testing validation',
+        'entries' => [
+            [
+                'entry_date' => '2025-11-10',
+                'location' => 'invalid-location',
+                'note' => 'Testing validation',
+            ],
+        ],
     ]);
 
     $response->assertUnprocessable();
-    $response->assertJsonValidationErrors(['location']);
+    $response->assertJsonValidationErrors(['entries.0.location']);
 });
 
 test('API requires location field', function () {
@@ -297,12 +319,16 @@ test('API requires location field', function () {
     Sanctum::actingAs($user, ['view:own-plan']);
 
     $response = $this->postJson('/api/v1/plan', [
-        'entry_date' => '2025-11-10',
-        'note' => 'Missing location',
+        'entries' => [
+            [
+                'entry_date' => '2025-11-10',
+                'note' => 'Missing location',
+            ],
+        ],
     ]);
 
     $response->assertUnprocessable();
-    $response->assertJsonValidationErrors(['location']);
+    $response->assertJsonValidationErrors(['entries.0.location']);
 });
 
 test('API allows optional note field', function () {
@@ -311,8 +337,12 @@ test('API allows optional note field', function () {
     Sanctum::actingAs($user, ['view:own-plan']);
 
     $response = $this->postJson('/api/v1/plan', [
-        'entry_date' => '2025-11-10',
-        'location' => 'jws',
+        'entries' => [
+            [
+                'entry_date' => '2025-11-10',
+                'location' => 'jws',
+            ],
+        ],
     ]);
 
     $response->assertOk();
@@ -322,4 +352,37 @@ test('API allows optional note field', function () {
         'location' => 'jws',
         'note' => null,
     ]);
+});
+
+// Reference Data Tests
+
+test('authenticated user can retrieve locations list', function () {
+    $user = User::factory()->create();
+
+    Sanctum::actingAs($user, ['view:own-plan']);
+
+    $response = $this->getJson('/api/v1/locations');
+
+    $response->assertOk();
+    $response->assertJsonStructure([
+        'locations' => [
+            '*' => ['value', 'label', 'short_label'],
+        ],
+    ]);
+
+    $locations = $response->json('locations');
+    expect($locations)->toBeArray();
+    expect(count($locations))->toBeGreaterThan(0);
+
+    // Check that JWS location exists with expected structure
+    $jws = collect($locations)->firstWhere('value', 'jws');
+    expect($jws)->not->toBeNull();
+    expect($jws['label'])->toBe('JWS');
+    expect($jws['short_label'])->toBe('JWS');
+});
+
+test('unauthenticated request to locations endpoint returns 401', function () {
+    $response = $this->getJson('/api/v1/locations');
+
+    $response->assertUnauthorized();
 });

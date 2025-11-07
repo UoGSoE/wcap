@@ -65,20 +65,14 @@ class PlanController
 
     /**
      * Create or update plan entries for the authenticated user.
-     * Supports both single entry and batch operations.
-     * Matches by id (if provided) or entry_date.
+     * Always expects an entries array. Matches by id (if provided) or entry_date.
      */
     public function upsert(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        // Support both single entry and array of entries
-        $isBatch = is_array($request->input('entries'));
-        $entries = $isBatch ? $request->input('entries') : [$request->all()];
-
-        // Validate entries
         $validated = $request->validate([
-            'entries' => 'sometimes|array',
+            'entries' => 'required|array',
             'entries.*.id' => [
                 'nullable',
                 'integer',
@@ -90,22 +84,9 @@ class PlanController
             'entries.*.is_available' => 'nullable|boolean',
             'entries.*.is_holiday' => 'nullable|boolean',
             'entries.*.category' => 'nullable|string',
-
-            // Single entry mode validation
-            'id' => [
-                'nullable',
-                'integer',
-                Rule::exists('plan_entries', 'id')->where('user_id', $user->id),
-            ],
-            'entry_date' => 'required_without:entries|date',
-            'location' => ['required_without:entries', 'string', Rule::enum(Location::class)],
-            'note' => 'nullable|string',
-            'is_available' => 'nullable|boolean',
-            'is_holiday' => 'nullable|boolean',
-            'category' => 'nullable|string',
         ]);
 
-        $processedEntries = collect($entries)->map(function ($entry) use ($user) {
+        $processedEntries = collect($validated['entries'])->map(function ($entry) use ($user) {
             $attributes = [
                 'user_id' => $user->id,
                 'entry_date' => $entry['entry_date'],
@@ -149,16 +130,9 @@ class PlanController
             ];
         });
 
-        if ($isBatch) {
-            return response()->json([
-                'message' => 'Plan entries saved successfully',
-                'entries' => $processedEntries,
-            ]);
-        }
-
         return response()->json([
-            'message' => 'Plan entry saved successfully',
-            'entry' => $processedEntries->first(),
+            'message' => 'Plan entries saved successfully',
+            'entries' => $processedEntries,
         ]);
     }
 
@@ -184,6 +158,25 @@ class PlanController
 
         return response()->json([
             'message' => 'Plan entry deleted successfully',
+        ]);
+    }
+
+    /**
+     * Get all available locations.
+     * Useful for building forms or validation in external applications.
+     */
+    public function locations(Request $request): JsonResponse
+    {
+        $locations = collect(Location::cases())->map(function ($location) {
+            return [
+                'value' => $location->value,
+                'label' => $location->label(),
+                'short_label' => $location->shortLabel(),
+            ];
+        });
+
+        return response()->json([
+            'locations' => $locations,
         ]);
     }
 }

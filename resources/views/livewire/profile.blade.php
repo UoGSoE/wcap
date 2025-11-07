@@ -139,34 +139,42 @@
                                         </flux:field>
                                     @elseif($endpoint['method'] === 'POST')
                                         <flux:field>
-                                            <flux:label>Create Single Entry</flux:label>
+                                            <flux:label>Create New Entry</flux:label>
                                             <flux:textarea
                                                 readonly
-                                                rows="5"
+                                                rows="7"
                                                 class="font-mono text-xs"
                                             >curl -X POST '{{ $this->baseUrl }}{{ $endpoint['path'] }}' \
   -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
   -H 'Content-Type: application/json' \
-  -d '{"entry_date":"2025-11-10","location":"jws","note":"Working on API integration","is_available":true}'</flux:textarea>
+  -d '{
+  "entries": [
+    {"entry_date":"2025-11-10","location":"jws","note":"Working on API integration"}
+  ]
+}'</flux:textarea>
                                         </flux:field>
 
                                         <flux:field>
-                                            <flux:label>Update by ID</flux:label>
+                                            <flux:label>Update Existing Entry (by ID)</flux:label>
                                             <flux:textarea
                                                 readonly
-                                                rows="5"
+                                                rows="7"
                                                 class="font-mono text-xs"
                                             >curl -X POST '{{ $this->baseUrl }}{{ $endpoint['path'] }}' \
   -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
   -H 'Content-Type: application/json' \
-  -d '{"id":123,"entry_date":"2025-11-10","location":"jwn","note":"Updated location"}'</flux:textarea>
+  -d '{
+  "entries": [
+    {"id":123,"entry_date":"2025-11-10","location":"jwn","note":"Updated location"}
+  ]
+}'</flux:textarea>
                                         </flux:field>
 
                                         <flux:field>
-                                            <flux:label>Batch Create/Update</flux:label>
+                                            <flux:label>Multiple Entries at Once</flux:label>
                                             <flux:textarea
                                                 readonly
-                                                rows="8"
+                                                rows="9"
                                                 class="font-mono text-xs"
                                             >curl -X POST '{{ $this->baseUrl }}{{ $endpoint['path'] }}' \
   -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
@@ -174,7 +182,8 @@
   -d '{
   "entries": [
     {"entry_date":"2025-11-10","location":"jws","note":"Day 1"},
-    {"entry_date":"2025-11-11","location":"jwn","note":"Day 2"}
+    {"entry_date":"2025-11-11","location":"jwn","note":"Day 2"},
+    {"entry_date":"2025-11-12","location":"rankine","note":"Day 3"}
   ]
 }'</flux:textarea>
                                         </flux:field>
