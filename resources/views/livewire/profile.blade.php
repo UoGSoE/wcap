@@ -51,8 +51,7 @@
                                 <flux:table.column>Owner</flux:table.column>
                             @endif
                             <flux:table.column>Name</flux:table.column>
-                            <flux:table.column>Abilities</flux:table.column>
-                            <flux:table.column>Created</flux:table.column>
+                            <flux:table.column>Last Used</flux:table.column>
                             <flux:table.column></flux:table.column>
                         </flux:table.columns>
 
@@ -63,28 +62,21 @@
                                         <flux:table.cell>{{ $token->tokenable->full_name }}</flux:table.cell>
                                     @endif
                                     <flux:table.cell>
-                                        <span wire:click="selectToken({{ $token->id }})" class="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline">
+                                        <flux:text variant="strong" wire:click="selectToken({{ $token->id }})" class="cursor-pointer text-bold">
                                             {{ $token->name }}
-                                        </span>
+                                        </flux:text>
                                     </flux:table.cell>
                                     <flux:table.cell>
-                                        <div class="flex gap-1 flex-wrap">
-                                            @foreach($token->abilities as $ability)
-                                                <flux:badge size="sm" variant="subtle">{{ $ability }}</flux:badge>
-                                            @endforeach
-                                        </div>
-                                    </flux:table.cell>
-                                    <flux:table.cell>
-                                        {{ $token->created_at->format('M j, Y') }}
+                                        {{ $token->last_used_at ? $token->last_used_at->format('M j, Y') : 'Never' }}
                                     </flux:table.cell>
                                     <flux:table.cell>
                                         <flux:button
                                             size="sm"
+                                            icon="trash"
                                             variant="danger"
                                             wire:click="revokeToken({{ $token->id }})"
                                             wire:confirm="Are you sure you want to revoke this token? Any applications using it will lose access."
                                         >
-                                            Revoke
                                         </flux:button>
                                     </flux:table.cell>
                                 </flux:table.row>
