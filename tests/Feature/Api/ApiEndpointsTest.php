@@ -93,21 +93,14 @@ test('user can create a new plan entry via API', function () {
     ]);
 
     $response->assertOk();
-    $response->assertJsonStructure([
-        'message',
-        'entries' => [
-            '*' => ['id', 'entry_date', 'location', 'location_label', 'note', 'is_available', 'is_holiday'],
-        ],
-    ]);
+    $response->assertJson(['message' => 'Plan entries saved successfully']);
 
-    expect($response->json('entries.0.location'))->toBe('jws');
-    expect($response->json('entries.0.note'))->toBe('API testing');
-
-    $this->assertDatabaseHas('plan_entries', [
-        'user_id' => $user->id,
-        'location' => 'jws',
-        'note' => 'API testing',
-    ]);
+    $entry = $user->planEntries()->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->location->value)->toBe('jws');
+    expect($entry->note)->toBe('API testing');
+    expect($entry->is_available)->toBeTrue();
+    expect($entry->is_holiday)->toBeFalse();
 });
 
 test('user can create multiple plan entries in batch via API', function () {
@@ -131,22 +124,18 @@ test('user can create multiple plan entries in batch via API', function () {
     ]);
 
     $response->assertOk();
-    $response->assertJsonStructure([
-        'message',
-        'entries',
-    ]);
+    $response->assertJson(['message' => 'Plan entries saved successfully']);
 
-    expect($response->json('entries'))->toHaveCount(2);
+    $entries = $user->planEntries()->get();
+    expect($entries)->toHaveCount(2);
 
-    $this->assertDatabaseHas('plan_entries', [
-        'user_id' => $user->id,
-        'location' => 'jws',
-    ]);
+    $entry1 = $entries->where('location', Location::JWS)->first();
+    expect($entry1)->not->toBeNull();
+    expect($entry1->note)->toBe('Day 1');
 
-    $this->assertDatabaseHas('plan_entries', [
-        'user_id' => $user->id,
-        'location' => 'jwn',
-    ]);
+    $entry2 = $entries->where('location', Location::JWN)->first();
+    expect($entry2)->not->toBeNull();
+    expect($entry2->note)->toBe('Day 2');
 });
 
 test('user can update plan entry by id via API', function () {
@@ -171,16 +160,11 @@ test('user can update plan entry by id via API', function () {
     ]);
 
     $response->assertOk();
+    $response->assertJson(['message' => 'Plan entries saved successfully']);
 
-    expect($response->json('entries.0.id'))->toBe($entry->id);
-    expect($response->json('entries.0.location'))->toBe('jwn');
-    expect($response->json('entries.0.note'))->toBe('Updated note');
-
-    $this->assertDatabaseHas('plan_entries', [
-        'id' => $entry->id,
-        'location' => 'jwn',
-        'note' => 'Updated note',
-    ]);
+    $entry->refresh();
+    expect($entry->location)->toBe(Location::JWN);
+    expect($entry->note)->toBe('Updated note');
 });
 
 test('user can update plan entry by entry_date via API', function () {
@@ -204,18 +188,15 @@ test('user can update plan entry by entry_date via API', function () {
     ]);
 
     $response->assertOk();
+    $response->assertJson(['message' => 'Plan entries saved successfully']);
 
-    expect($response->json('entries.0.location'))->toBe('rankine');
-    expect($response->json('entries.0.note'))->toBe('Updated via date');
-
-    $this->assertDatabaseHas('plan_entries', [
-        'user_id' => $user->id,
-        'location' => 'rankine',
-        'note' => 'Updated via date',
-    ]);
+    $entry = $user->planEntries()->whereDate('entry_date', '2025-11-10')->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->location)->toBe(Location::RANKINE);
+    expect($entry->note)->toBe('Updated via date');
 
     // Should only have one entry for this date
-    expect($user->fresh()->planEntries()->whereDate('entry_date', '2025-11-10')->count())->toBe(1);
+    expect($user->planEntries()->whereDate('entry_date', '2025-11-10')->count())->toBe(1);
 });
 
 test('user cannot update another users plan entry', function () {

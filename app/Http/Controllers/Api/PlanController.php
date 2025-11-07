@@ -72,7 +72,7 @@ class PlanController
         $user = $request->user();
         $validated = $request->validated();
 
-        $processedEntries = collect($validated['entries'])->map(function ($entry) use ($user) {
+        foreach ($validated['entries'] as $entry) {
             $attributes = [
                 'user_id' => $user->id,
                 'entry_date' => $entry['entry_date'],
@@ -83,42 +83,23 @@ class PlanController
                 'category' => $entry['category'] ?? null,
             ];
 
-            // Match by id or find by entry_date
             if (! empty($entry['id'])) {
-                // Update existing entry by id
-                $planEntry = PlanEntry::updateOrCreate(
-                    ['id' => $entry['id']],
-                    $attributes
-                );
+                PlanEntry::updateOrCreate(['id' => $entry['id']], $attributes);
             } else {
-                // Find by entry_date or create new
-                $planEntry = $user->planEntries()
+                $existing = $user->planEntries()
                     ->whereDate('entry_date', $entry['entry_date'])
                     ->first();
 
-                if ($planEntry) {
-                    $planEntry->update($attributes);
+                if ($existing) {
+                    $existing->update($attributes);
                 } else {
-                    $planEntry = PlanEntry::create($attributes);
+                    PlanEntry::create($attributes);
                 }
             }
-
-            return [
-                'id' => $planEntry->id,
-                'entry_date' => $planEntry->entry_date->toDateString(),
-                'location' => $planEntry->location?->value,
-                'location_label' => $planEntry->location?->label(),
-                'note' => $planEntry->note,
-                'is_available' => $planEntry->is_available,
-                'is_holiday' => $planEntry->is_holiday,
-                'category' => $planEntry->category?->value,
-                'category_label' => $planEntry->category?->label(),
-            ];
-        });
+        }
 
         return response()->json([
             'message' => 'Plan entries saved successfully',
-            'entries' => $processedEntries,
         ]);
     }
 
