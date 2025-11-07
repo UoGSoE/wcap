@@ -85,16 +85,21 @@ class PlanController
 
             if (! empty($entry['id'])) {
                 PlanEntry::updateOrCreate(['id' => $entry['id']], $attributes);
-            } else {
-                $existing = $user->planEntries()
-                    ->whereDate('entry_date', $entry['entry_date'])
-                    ->first();
 
-                if ($existing) {
-                    $existing->update($attributes);
-                } else {
-                    PlanEntry::create($attributes);
-                }
+                continue;
+            }
+
+            unset($attributes['user_id']);
+
+            // Can't use updateOrCreate due to SQLite vs MySQL date handling
+            $existing = $user->planEntries()
+                ->whereDate('entry_date', $entry['entry_date'])
+                ->first();
+
+            if ($existing) {
+                $existing->update($attributes);
+            } else {
+                $user->planEntries()->create($attributes);
             }
         }
 
@@ -109,18 +114,7 @@ class PlanController
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-
-        $entry = $user->planEntries()
-            ->where('id', $id)
-            ->first();
-
-        if (! $entry) {
-            return response()->json([
-                'message' => 'Plan entry not found',
-            ], 404);
-        }
-
+        $entry = $request->user()->planEntries()->findOrFail($id);
         $entry->delete();
 
         return response()->json([
@@ -134,13 +128,7 @@ class PlanController
      */
     public function locations(Request $request): JsonResponse
     {
-        $locations = collect(Location::cases())->map(function ($location) {
-            return [
-                'value' => $location->value,
-                'label' => $location->label(),
-                'short_label' => $location->shortLabel(),
-            ];
-        });
+        $locations = collect(Location::cases())->map(fn ($location) => $location->toArray());
 
         return response()->json([
             'locations' => $locations,

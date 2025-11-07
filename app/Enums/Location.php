@@ -46,4 +46,13 @@ enum Location: string
             self::MATHS => 'Maths',
         };
     }
+
+    public function toArray(): array
+    {
+        return [
+            'value' => $this->value,
+            'label' => $this->label(),
+            'short_label' => $this->shortLabel(),
+        ];
+    }
 }
