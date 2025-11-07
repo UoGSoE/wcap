@@ -138,6 +138,10 @@
                                             />
                                         </flux:field>
                                     @elseif($endpoint['method'] === 'POST')
+                                        <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400 mb-4">
+                                            All requests use the same format: an <code class="px-1 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded">entries</code> array. Send one or more entries in a single request.
+                                        </flux:text>
+
                                         <flux:field>
                                             <flux:label>Create New Entry</flux:label>
                                             <flux:textarea
@@ -155,7 +159,7 @@
                                         </flux:field>
 
                                         <flux:field>
-                                            <flux:label>Update Existing Entry (by ID)</flux:label>
+                                            <flux:label>Update Entry by ID</flux:label>
                                             <flux:textarea
                                                 readonly
                                                 rows="7"
@@ -171,7 +175,26 @@
                                         </flux:field>
 
                                         <flux:field>
-                                            <flux:label>Multiple Entries at Once</flux:label>
+                                            <flux:label>Update Entry by Date</flux:label>
+                                            <flux:textarea
+                                                readonly
+                                                rows="7"
+                                                class="font-mono text-xs"
+                                            >curl -X POST '{{ $this->baseUrl }}{{ $endpoint['path'] }}' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "entries": [
+    {"entry_date":"2025-11-10","location":"rankine","note":"Updated via date matching"}
+  ]
+}'</flux:textarea>
+                                            <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400 mt-2">
+                                                If an entry exists for this date, it will be updated. Otherwise, a new entry is created.
+                                            </flux:text>
+                                        </flux:field>
+
+                                        <flux:field>
+                                            <flux:label>Create/Update Multiple Entries</flux:label>
                                             <flux:textarea
                                                 readonly
                                                 rows="9"
@@ -183,7 +206,7 @@
   "entries": [
     {"entry_date":"2025-11-10","location":"jws","note":"Day 1"},
     {"entry_date":"2025-11-11","location":"jwn","note":"Day 2"},
-    {"entry_date":"2025-11-12","location":"rankine","note":"Day 3"}
+    {"id":456,"entry_date":"2025-11-12","location":"rankine","note":"Day 3 (update by ID)"}
   ]
 }'</flux:textarea>
                                         </flux:field>
