@@ -1204,18 +1204,69 @@ See `API.md` for complete examples. Quick preview:
 - ✅ Sanctum authentication and authorization
 - ✅ Comprehensive documentation in API.md
 - ✅ Admin API key management toggle (admins can view/revoke all tokens)
+- ✅ Dynamic API documentation on Profile page
 
 **Test Results**:
-- **Total**: 122 tests, 483 assertions ✓
-- **Profile Tests**: 11 tests, 29 assertions ✓
+- **Total**: 129 tests, 505 assertions ✓
+- **Profile Tests**: 18 tests, 55 assertions ✓
 
-**Quality of Life Enhancements**:
-- **Dynamic API Documentation on Profile Page** - When a user clicks an API token name, show contextual documentation below the token table:
-  - Display `curl` examples that work with their specific token abilities
-  - Show PowerBI connection setup with their token
-  - Examples should be scope-aware (only show endpoints they have access to)
-  - Should appear under the current grid layout
-  - Make it interactive/copyable for easy use
+---
+
+### Phase 3 Enhancements (Completed 2025-11-06)
+
+#### Admin API Key Management Toggle
+
+Added admin-only toggle on Profile page for viewing and revoking all API tokens across the organization.
+
+**Features**:
+- "View All Tokens" toggle (visible only to admins via `@admin` directive)
+- When enabled, admins see every token in the system with owner information
+- Owner column shows token creator's full name
+- Admins can revoke any user's token when toggle is enabled
+- Non-admins always see only their own tokens (toggle not visible)
+- Toggle defaults to `false` for security
+
+**Implementation**:
+- `showAllTokens` property on Profile component
+- Updated `tokens()` computed to query all tokens when admin toggle is on
+- Updated `revokeToken()` to allow admins to revoke any token
+- Conditional "Owner" column in token table
+- 7 new tests covering admin/non-admin scenarios
+
+**Files Modified**:
+- `app/Livewire/Profile.php` - Added toggle logic and scoped queries
+- `resources/views/livewire/profile.blade.php` - Added toggle switch and owner column
+- `tests/Feature/ProfileTest.php` - Added admin token management tests
+
+#### Dynamic API Documentation Feature
+Added interactive, scope-aware documentation directly on the Profile page. When users click an API token name, contextual documentation appears below the token table with two tabs:
+
+**CLI Tab** (for technical users):
+- Scope-aware endpoint listing (only shows accessible endpoints)
+- Copy-paste ready `curl` examples
+- Endpoint descriptions and required abilities
+- Token placeholder with clear instructions
+
+**PowerBI Tab** (for non-technical users):
+- Step-by-step connection guide
+- Numbered instructions for "Get Data → Web → Advanced" flow
+- Copyable URLs for each accessible endpoint
+- Clear instructions for adding Authorization header
+- Data transformation guidance (Power Query Editor)
+- Visual creation suggestions based on user's access level
+- Available data sources summary
+
+**Implementation Details**:
+- Click token name → toggle documentation
+- Only visible when user has tokens
+- Uses `YOUR_TOKEN_HERE` placeholder (tokens can't be retrieved after creation)
+- Fully responsive with Flux UI components
+- 7 new tests covering all interaction scenarios
+
+**Files Modified**:
+- `app/Livewire/Profile.php` - Added `selectedTokenId`, `selectToken()`, `selectedToken()`, `baseUrl()`, `getAvailableEndpoints()`
+- `resources/views/livewire/profile.blade.php` - Added clickable token names, documentation section with tabs
+- `tests/Feature/ProfileTest.php` - Added 7 tests for documentation features
 
 **Still To Do** (from original roadmap):
 - Excel/CSV export functionality

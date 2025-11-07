@@ -23,9 +23,8 @@
                     <flux:input wire:model.live="default_category" placeholder="e.g., Active Directory, Support Tickets..." />
                 </flux:field>
 
-                <flux:button variant="primary" wire:click="save" wire:loading.attr="disabled">
-                    <span wire:loading.remove>Save Defaults</span>
-                    <span wire:loading>Saving...</span>
+                <flux:button variant="primary" wire:click="save">
+                    Save Defaults
                 </flux:button>
             </div>
         </flux:card>
@@ -63,7 +62,11 @@
                                     @if(auth()->user()->isAdmin() && $showAllTokens)
                                         <flux:table.cell>{{ $token->tokenable->full_name }}</flux:table.cell>
                                     @endif
-                                    <flux:table.cell>{{ $token->name }}</flux:table.cell>
+                                    <flux:table.cell>
+                                        <span wire:click="selectToken({{ $token->id }})" class="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline">
+                                            {{ $token->name }}
+                                        </span>
+                                    </flux:table.cell>
                                     <flux:table.cell>
                                         <div class="flex gap-1 flex-wrap">
                                             @foreach($token->abilities as $ability)
@@ -98,6 +101,183 @@
             </div>
         </flux:card>
     </div>
+
+    {{-- API Documentation Section --}}
+    @if($this->tokens->isNotEmpty() && $this->selectedToken)
+        <flux:spacer class="mt-6" />
+
+        <flux:card>
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">How to Use Your API Token</flux:heading>
+                    <flux:subheading>Using token: <span class="font-semibold">{{ $this->selectedToken->name }}</span></flux:subheading>
+                </div>
+
+                <flux:tab.group>
+                    <flux:tabs>
+                        <flux:tab name="cli">CLI</flux:tab>
+                        <flux:tab name="powerbi">PowerBI</flux:tab>
+                    </flux:tabs>
+
+                    {{-- CLI Tab --}}
+                    <flux:tab.panel name="cli">
+                        <div class="space-y-6">
+                            <flux:text>Copy and paste these examples to access your planning data from the command line.</flux:text>
+
+                            @foreach($this->getAvailableEndpoints($this->selectedToken->abilities) as $endpoint)
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <flux:heading size="md">{{ $endpoint['name'] }}</flux:heading>
+                                        <flux:badge size="sm" variant="subtle">{{ $endpoint['ability'] }}</flux:badge>
+                                    </div>
+                                    <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400">{{ $endpoint['description'] }}</flux:text>
+
+                                    <flux:field>
+                                        <flux:label>Request</flux:label>
+                                        <flux:input
+                                            value="curl -H 'Authorization: Bearer YOUR_TOKEN_HERE' {{ $this->baseUrl }}{{ $endpoint['path'] }}"
+                                            readonly
+                                            copyable
+                                            class="font-mono text-sm"
+                                        />
+                                    </flux:field>
+                                    <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400">
+                                        Replace <code class="px-1 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded">YOUR_TOKEN_HERE</code> with your actual token. You received this when you first created the token.
+                                    </flux:text>
+                                </div>
+
+                                @if(!$loop->last)
+                                    <flux:separator />
+                                @endif
+                            @endforeach
+                        </div>
+                    </flux:tab.panel>
+
+                    {{-- PowerBI Tab --}}
+                    <flux:tab.panel name="powerbi">
+                        <div class="space-y-6">
+                            {{-- Getting Started --}}
+                            <div>
+                                <flux:heading size="md">Getting Started</flux:heading>
+                                <flux:text>Power BI lets you create dashboards and reports from your planning data. If you don't have Power BI Desktop installed, you can download it from the Microsoft website.</flux:text>
+                            </div>
+
+                            <flux:separator />
+
+                            {{-- Connect to Your Data --}}
+                            <div class="space-y-4">
+                                <flux:heading size="md">Connect to Your Data</flux:heading>
+                                <flux:text>Follow these steps to connect Power BI to your planning data:</flux:text>
+
+                                <div class="space-y-3 ml-4">
+                                    <flux:text><strong>1.</strong> Open Power BI Desktop</flux:text>
+                                    <flux:text><strong>2.</strong> Click <strong>"Get Data"</strong> in the ribbon</flux:text>
+                                    <flux:text><strong>3.</strong> Select <strong>"Web"</strong> from the list</flux:text>
+                                    <flux:text><strong>4.</strong> Click <strong>"Advanced"</strong></flux:text>
+                                    <flux:text><strong>5.</strong> Enter the URL for the data you want:</flux:text>
+
+                                    <div class="ml-6 space-y-2">
+                                        @foreach($this->getAvailableEndpoints($this->selectedToken->abilities) as $endpoint)
+                                            <flux:field>
+                                                <flux:label>{{ $endpoint['name'] }}</flux:label>
+                                                <flux:input
+                                                    value="{{ $this->baseUrl }}{{ $endpoint['path'] }}"
+                                                    readonly
+                                                    copyable
+                                                    class="font-mono text-sm"
+                                                />
+                                            </flux:field>
+                                        @endforeach
+                                    </div>
+
+                                    <flux:text><strong>6.</strong> In the <strong>"HTTP request header parameters"</strong> section, click <strong>"Add header"</strong></flux:text>
+                                    <flux:text class="ml-6">• Header name: <code class="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded">Authorization</code></flux:text>
+                                    <div class="ml-6">
+                                        <flux:field>
+                                            <flux:label>Header value (use your actual token):</flux:label>
+                                            <flux:input
+                                                value="Bearer YOUR_TOKEN_HERE"
+                                                readonly
+                                                copyable
+                                                class="font-mono text-sm"
+                                            />
+                                        </flux:field>
+                                        <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400 mt-1">
+                                            Replace <code class="px-1 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded">YOUR_TOKEN_HERE</code> with the token you received when you created it (starts with a number like "1|...")
+                                        </flux:text>
+                                    </div>
+
+                                    <flux:text><strong>7.</strong> For authentication, select <strong>"Anonymous"</strong> (the token is in the header above)</flux:text>
+                                    <flux:text><strong>8.</strong> Click <strong>"OK"</strong></flux:text>
+                                </div>
+                            </div>
+
+                            <flux:separator />
+
+                            {{-- Transform Your Data --}}
+                            <div class="space-y-4">
+                                <flux:heading size="md">Transform Your Data</flux:heading>
+                                <flux:text>After connecting, the Power Query Editor will open automatically. Here's how to work with your data:</flux:text>
+
+                                <div class="space-y-3 ml-4">
+                                    <flux:text><strong>1.</strong> You'll see your data as JSON. Look for columns with <strong>Table</strong> or <strong>Record</strong> values</flux:text>
+                                    <flux:text><strong>2.</strong> Click the <strong>expand icon</strong> (two arrows) next to column headers like "days" or "team_rows"</flux:text>
+                                    <flux:text><strong>3.</strong> Select which columns you want to include in your data</flux:text>
+                                    <flux:text><strong>4.</strong> Click <strong>"OK"</strong> to expand the data</flux:text>
+                                    <flux:text><strong>5.</strong> Repeat for any nested columns</flux:text>
+                                    <flux:text><strong>6.</strong> When you're happy with your data, click <strong>"Close & Apply"</strong> in the ribbon</flux:text>
+                                </div>
+                            </div>
+
+                            <flux:separator />
+
+                            {{-- Create Your First Visual --}}
+                            <div class="space-y-4">
+                                <flux:heading size="md">Create Your First Visual</flux:heading>
+                                <flux:text>Now you can create reports! Here are some suggestions based on your access:</flux:text>
+
+                                <div class="space-y-3 ml-4">
+                                    @if(in_array('view:own-plan', $this->selectedToken->abilities) && !in_array('view:team-plans', $this->selectedToken->abilities) && !in_array('view:all-plans', $this->selectedToken->abilities))
+                                        <flux:text><strong>Personal Calendar:</strong> Use a calendar visual to show your locations over the next two weeks</flux:text>
+                                    @else
+                                        <flux:text><strong>Team Matrix:</strong> Create a matrix visual with team members as rows and dates as columns, showing locations</flux:text>
+                                        <flux:text><strong>Location Chart:</strong> Use a stacked bar chart to show how many people are at each location per day</flux:text>
+                                        <flux:text><strong>Coverage Heatmap:</strong> Create a matrix with conditional formatting to highlight days with low coverage</flux:text>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <flux:separator />
+
+                            {{-- Your Available Data Sources --}}
+                            <div class="space-y-4">
+                                <flux:heading size="md">Your Available Data Sources</flux:heading>
+                                <flux:text>Based on your token permissions, you have access to the following data sources:</flux:text>
+
+                                <div class="space-y-3">
+                                    @foreach($this->getAvailableEndpoints($this->selectedToken->abilities) as $endpoint)
+                                        <div class="p-4 bg-zinc-50 dark:bg-zinc-900 rounded">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <flux:text class="font-semibold">{{ $endpoint['name'] }}</flux:text>
+                                                <flux:badge size="sm" variant="subtle">{{ $endpoint['ability'] }}</flux:badge>
+                                            </div>
+                                            <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400 mb-2">{{ $endpoint['description'] }}</flux:text>
+                                            <flux:input
+                                                value="{{ $this->baseUrl }}{{ $endpoint['path'] }}"
+                                                readonly
+                                                copyable
+                                                class="font-mono text-xs"
+                                            />
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </flux:tab.panel>
+                </flux:tab.group>
+            </div>
+        </flux:card>
+    @endif
 
     {{-- Token Creation Modal --}}
     <flux:modal name="create-token" variant="flyout" wire:model="showTokenModal">

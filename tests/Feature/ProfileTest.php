@@ -175,3 +175,99 @@ test('admin users cannot revoke other tokens when toggle is off', function () {
     expect($admin->tokens()->count())->toBe(1);
     expect($otherUser->tokens()->count())->toBe(1);
 });
+
+test('clicking token name sets selectedTokenId', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('Test Token', ['view:own-plan']);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->assertSet('selectedTokenId', null)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSet('selectedTokenId', $token->accessToken->id);
+});
+
+test('clicking same token again clears selectedTokenId', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('Test Token', ['view:own-plan']);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSet('selectedTokenId', $token->accessToken->id)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSet('selectedTokenId', null);
+});
+
+test('documentation shows correct endpoints for view:own-plan only', function () {
+    $user = User::factory()->create(['is_admin' => false]);
+    $token = $user->createToken('Staff Token', ['view:own-plan']);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSee('Personal Plan')
+        ->assertSee('/api/v1/plan')
+        ->assertDontSee('/api/v1/reports/team')
+        ->assertDontSee('Team Report');
+});
+
+test('documentation shows all endpoints for view:team-plans ability', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+    $token = $manager->createToken('Manager Token', ['view:own-plan', 'view:team-plans']);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSee('Personal Plan')
+        ->assertSee('/api/v1/plan')
+        ->assertSee('Team Report')
+        ->assertSee('/api/v1/reports/team')
+        ->assertSee('Location Report')
+        ->assertSee('/api/v1/reports/location')
+        ->assertSee('Coverage Report')
+        ->assertSee('/api/v1/reports/coverage')
+        ->assertSee('Service Availability')
+        ->assertSee('/api/v1/reports/service-availability');
+});
+
+test('no documentation section when user has no tokens', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->assertDontSee('How to Use Your API Token');
+});
+
+test('token placeholder appears in CLI examples', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('Test Token', ['view:own-plan']);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSee('Authorization: Bearer YOUR_TOKEN_HERE')
+        ->assertSee('Replace')
+        ->assertSee('YOUR_TOKEN_HERE')
+        ->assertSee('curl -H');
+});
+
+test('token placeholder appears in PowerBI examples', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('Test Token', ['view:own-plan']);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSee('Bearer YOUR_TOKEN_HERE')
+        ->assertSee('Replace')
+        ->assertSee('with the token you received when you created it');
+});

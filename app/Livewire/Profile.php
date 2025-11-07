@@ -22,6 +22,8 @@ class Profile extends Component
 
     public bool $showAllTokens = false;
 
+    public ?int $selectedTokenId = null;
+
     public function mount(): void
     {
         $this->default_location = auth()->user()->default_location;
@@ -131,6 +133,88 @@ class Profile extends Component
         $this->showTokenModal = false;
         $this->generatedToken = null;
         $this->newTokenName = '';
+    }
+
+    public function selectToken(int $tokenId): void
+    {
+        // Toggle: if clicking the same token, deselect it
+        if ($this->selectedTokenId === $tokenId) {
+            $this->selectedTokenId = null;
+        } else {
+            $this->selectedTokenId = $tokenId;
+        }
+    }
+
+    #[Computed]
+    public function selectedToken()
+    {
+        if (! $this->selectedTokenId) {
+            return null;
+        }
+
+        return $this->tokens->firstWhere('id', $this->selectedTokenId);
+    }
+
+    #[Computed]
+    public function baseUrl(): string
+    {
+        return url('/');
+    }
+
+    /**
+     * Get available endpoints based on token abilities.
+     */
+    public function getAvailableEndpoints(array $abilities): array
+    {
+        $endpoints = [];
+
+        // Everyone with a token can access their own plan
+        if (in_array('view:own-plan', $abilities)) {
+            $endpoints[] = [
+                'name' => 'Personal Plan',
+                'method' => 'GET',
+                'path' => '/api/v1/plan',
+                'ability' => 'view:own-plan',
+                'description' => 'Get your own plan entries for the next 10 weekdays',
+            ];
+        }
+
+        // Managers and admins can access reporting endpoints
+        if (in_array('view:team-plans', $abilities) || in_array('view:all-plans', $abilities)) {
+            $endpoints[] = [
+                'name' => 'Team Report',
+                'method' => 'GET',
+                'path' => '/api/v1/reports/team',
+                'ability' => 'view:team-plans or view:all-plans',
+                'description' => 'Get person × day grid showing team member locations and work',
+            ];
+
+            $endpoints[] = [
+                'name' => 'Location Report',
+                'method' => 'GET',
+                'path' => '/api/v1/reports/location',
+                'ability' => 'view:team-plans or view:all-plans',
+                'description' => 'Get day × location grouping showing who is at each location',
+            ];
+
+            $endpoints[] = [
+                'name' => 'Coverage Report',
+                'method' => 'GET',
+                'path' => '/api/v1/reports/coverage',
+                'ability' => 'view:team-plans or view:all-plans',
+                'description' => 'Get location coverage matrix with people counts per day',
+            ];
+
+            $endpoints[] = [
+                'name' => 'Service Availability',
+                'method' => 'GET',
+                'path' => '/api/v1/reports/service-availability',
+                'ability' => 'view:team-plans or view:all-plans',
+                'description' => 'Get service availability with manager-only indicators',
+            ];
+        }
+
+        return $endpoints;
     }
 
     public function render()
