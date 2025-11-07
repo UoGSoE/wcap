@@ -120,19 +120,79 @@
                                 <div class="space-y-2">
                                     <div class="flex items-center justify-between">
                                         <flux:heading size="md">{{ $endpoint['name'] }}</flux:heading>
-                                        <flux:badge size="sm" variant="subtle">{{ $endpoint['ability'] }}</flux:badge>
+                                        <div class="flex gap-2 items-center">
+                                            <flux:badge size="sm" variant="outline">{{ $endpoint['method'] }}</flux:badge>
+                                            <flux:badge size="sm" variant="subtle">{{ $endpoint['ability'] }}</flux:badge>
+                                        </div>
                                     </div>
                                     <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400">{{ $endpoint['description'] }}</flux:text>
 
-                                    <flux:field>
-                                        <flux:label>Request</flux:label>
-                                        <flux:input
-                                            value="curl -H 'Authorization: Bearer YOUR_TOKEN_HERE' {{ $this->baseUrl }}{{ $endpoint['path'] }}"
-                                            readonly
-                                            copyable
-                                            class="font-mono text-sm"
-                                        />
-                                    </flux:field>
+                                    @if($endpoint['method'] === 'GET')
+                                        <flux:field>
+                                            <flux:label>Request</flux:label>
+                                            <flux:input
+                                                value="curl -H 'Authorization: Bearer YOUR_TOKEN_HERE' {{ $this->baseUrl }}{{ $endpoint['path'] }}"
+                                                readonly
+                                                copyable
+                                                class="font-mono text-sm"
+                                            />
+                                        </flux:field>
+                                    @elseif($endpoint['method'] === 'POST')
+                                        <flux:field>
+                                            <flux:label>Create Single Entry</flux:label>
+                                            <flux:textarea
+                                                readonly
+                                                rows="5"
+                                                class="font-mono text-xs"
+                                            >curl -X POST '{{ $this->baseUrl }}{{ $endpoint['path'] }}' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -H 'Content-Type: application/json' \
+  -d '{"entry_date":"2025-11-10","location":"jws","note":"Working on API integration","is_available":true}'</flux:textarea>
+                                        </flux:field>
+
+                                        <flux:field>
+                                            <flux:label>Update by ID</flux:label>
+                                            <flux:textarea
+                                                readonly
+                                                rows="5"
+                                                class="font-mono text-xs"
+                                            >curl -X POST '{{ $this->baseUrl }}{{ $endpoint['path'] }}' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -H 'Content-Type: application/json' \
+  -d '{"id":123,"entry_date":"2025-11-10","location":"jwn","note":"Updated location"}'</flux:textarea>
+                                        </flux:field>
+
+                                        <flux:field>
+                                            <flux:label>Batch Create/Update</flux:label>
+                                            <flux:textarea
+                                                readonly
+                                                rows="8"
+                                                class="font-mono text-xs"
+                                            >curl -X POST '{{ $this->baseUrl }}{{ $endpoint['path'] }}' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "entries": [
+    {"entry_date":"2025-11-10","location":"jws","note":"Day 1"},
+    {"entry_date":"2025-11-11","location":"jwn","note":"Day 2"}
+  ]
+}'</flux:textarea>
+                                        </flux:field>
+                                    @elseif($endpoint['method'] === 'DELETE')
+                                        <flux:field>
+                                            <flux:label>Request</flux:label>
+                                            <flux:textarea
+                                                readonly
+                                                rows="3"
+                                                class="font-mono text-xs"
+                                            >curl -X DELETE '{{ $this->baseUrl }}/api/v1/plan/123' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE'</flux:textarea>
+                                        </flux:field>
+                                        <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400">
+                                            Replace <code class="px-1 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded">123</code> with the entry ID you want to delete.
+                                        </flux:text>
+                                    @endif
+
                                     <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400">
                                         Replace <code class="px-1 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded">YOUR_TOKEN_HERE</code> with your actual token. You received this when you first created the token.
                                     </flux:text>

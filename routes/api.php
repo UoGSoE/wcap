@@ -15,6 +15,8 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Personal Planning Data
     // Accessible by: ALL authenticated users with valid token
     Route::get('/plan', [PlanController::class, 'myPlan']);
+    Route::post('/plan', [PlanController::class, 'upsert']);
+    Route::delete('/plan/{id}', [PlanController::class, 'destroy']);
 
     // Organizational Reporting
     // Accessible by: Managers and Admins only (requires view:team-plans OR view:all-plans)

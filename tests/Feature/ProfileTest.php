@@ -271,3 +271,25 @@ test('token placeholder appears in PowerBI examples', function () {
         ->assertSee('Replace')
         ->assertSee('with the token you received when you created it');
 });
+
+test('documentation shows CRUD endpoints for view:own-plan', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('Test Token', ['view:own-plan']);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSee('Personal Plan')
+        ->assertSee('Create/Update Plan Entry')
+        ->assertSee('Delete Plan Entry')
+        ->assertSee('POST')
+        ->assertSee('DELETE')
+        ->assertSee('Create Single Entry')
+        ->assertSee('Update by ID')
+        ->assertSee('Batch Create/Update')
+        ->assertSee('curl -X POST')
+        ->assertSee('curl -X DELETE')
+        ->assertSee('entry_date')
+        ->assertSee('location');
+});

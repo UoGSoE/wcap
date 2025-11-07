@@ -177,6 +177,22 @@ class Profile extends Component
                 'ability' => 'view:own-plan',
                 'description' => 'Get your own plan entries for the next 10 weekdays',
             ];
+
+            $endpoints[] = [
+                'name' => 'Create/Update Plan Entry',
+                'method' => 'POST',
+                'path' => '/api/v1/plan',
+                'ability' => 'view:own-plan',
+                'description' => 'Create or update plan entries (single or batch). Match by id or entry_date.',
+            ];
+
+            $endpoints[] = [
+                'name' => 'Delete Plan Entry',
+                'method' => 'DELETE',
+                'path' => '/api/v1/plan/{id}',
+                'ability' => 'view:own-plan',
+                'description' => 'Delete a specific plan entry by id',
+            ];
         }
 
         // Managers and admins can access reporting endpoints
