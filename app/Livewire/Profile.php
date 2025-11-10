@@ -229,13 +229,14 @@ class Profile extends Component
                 'description' => 'Get location coverage matrix with people counts per day',
             ];
 
-            $endpoints[] = [
+/**            $endpoints[] = [
                 'name' => 'Service Availability',
                 'method' => 'GET',
                 'path' => '/api/v1/reports/service-availability',
                 'ability' => 'view:team-plans or view:all-plans',
                 'description' => 'Get service availability with manager-only indicators',
             ];
+*/
         }
 
         return $endpoints;

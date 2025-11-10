@@ -40,7 +40,7 @@
             <flux:tab name="team">My Reports</flux:tab>
             <flux:tab name="location">By Location</flux:tab>
             <flux:tab name="coverage">Coverage</flux:tab>
-            <flux:tab name="service-availability">Service Availability</flux:tab>
+            {{-- <flux:tab name="service-availability">Service Availability</flux:tab> --}}
         </flux:tabs>
 
         <flux:tab.panel name="team">
@@ -173,7 +173,6 @@
                 @endforeach
             </div>
         </flux:tab.panel>
-
         <flux:tab.panel name="service-availability">
             <flux:subheading>Service availability at a glance</flux:subheading>
             <flux:text class="text-sm text-zinc-600 dark:text-zinc-400 mt-2 mb-6">
