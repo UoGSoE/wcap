@@ -21,7 +21,7 @@ test('service availability tab is visible', function () {
     Livewire::test(\App\Livewire\ManagerReport::class)
         ->assertOk()
         ->assertSee('Service Availability');
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service availability tab displays all services', function () {
     $manager = User::factory()->create();
@@ -41,7 +41,7 @@ test('service availability tab displays all services', function () {
     expect($serviceAvailabilityMatrix[0]['label'])->toBe('Active Directory');
     expect($serviceAvailabilityMatrix[1]['label'])->toBe('Backup Service');
     expect($serviceAvailabilityMatrix[2]['label'])->toBe('Email Service');
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('only counts entries where is_available is true', function () {
     $manager = User::factory()->create();
@@ -77,7 +77,7 @@ test('only counts entries where is_available is true', function () {
     $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
 
     expect($testServiceRow['entries'][0]['count'])->toBe(1);
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('shows zero when no one is available', function () {
     $manager = User::factory()->create();
@@ -105,7 +105,7 @@ test('shows zero when no one is available', function () {
     $emptyServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Empty Service');
 
     expect($emptyServiceRow['entries'][0]['count'])->toBe(0);
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('shows correct counts with multiple available people', function () {
     $manager = User::factory()->create();
@@ -165,7 +165,7 @@ test('shows correct counts with multiple available people', function () {
 
     expect($popularServiceRow['entries'][0]['count'])->toBe(3);
     expect($popularServiceRow['entries'][1]['count'])->toBe(1);
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('services always show all members regardless of admin toggle', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -212,7 +212,7 @@ test('services always show all members regardless of admin toggle', function () 
     $testServiceRowToggleOff = collect($serviceMatrixToggleOff)->firstWhere('label', 'Test Service');
 
     expect($testServiceRowToggleOff['entries'][0]['count'])->toBe(2);
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service with no members shows zero availability', function () {
     $manager = User::factory()->create();
@@ -230,7 +230,7 @@ test('service with no members shows zero availability', function () {
     foreach ($unmannedServiceRow['entries'] as $entry) {
         expect($entry['count'])->toBe(0);
     }
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service availability counts across all 10 weekdays', function () {
     $manager = User::factory()->create();
@@ -266,7 +266,7 @@ test('service availability counts across all 10 weekdays', function () {
 
     $availableDays = collect($testServiceRow['entries'])->filter(fn ($entry) => $entry['count'] > 0)->count();
     expect($availableDays)->toBeGreaterThanOrEqual(9);
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('manager only coverage shows manager_only flag', function () {
     $manager = User::factory()->create();
@@ -298,7 +298,7 @@ test('manager only coverage shows manager_only flag', function () {
     expect($testServiceRow['entries'][0]['manager_only'])->toBe(true);
 
     $component->assertSee('Manager');
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('manager available but members also available shows count not manager_only', function () {
     $manager = User::factory()->create();
@@ -339,7 +339,7 @@ test('manager available but members also available shows count not manager_only'
 
     expect($testServiceRow['entries'][0]['count'])->toBe(1);
     expect($testServiceRow['entries'][0]['manager_only'])->toBe(false);
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('manager unavailable when count is zero shows blank cell', function () {
     $manager = User::factory()->create();
@@ -369,7 +369,7 @@ test('manager unavailable when count is zero shows blank cell', function () {
 
     expect($testServiceRow['entries'][0]['count'])->toBe(0);
     expect($testServiceRow['entries'][0]['manager_only'])->toBe(false);
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('manager is also a service member counts in regular count', function () {
     $manager = User::factory()->create();
@@ -401,4 +401,4 @@ test('manager is also a service member counts in regular count', function () {
 
     expect($testServiceRow['entries'][0]['count'])->toBe(1);
     expect($testServiceRow['entries'][0]['manager_only'])->toBe(false);
-});
+})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
