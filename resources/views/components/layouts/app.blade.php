@@ -24,9 +24,7 @@
                 </flux:sidebar.header>
                 <flux:sidebar.nav>
                     <flux:sidebar.item icon="home" href="/" wire:navigate>Home</flux:sidebar.item>
-                    <flux:sidebar.item icon="plus-circle" href="" wire:navigate>New</flux:sidebar.item>
                     <flux:separator class="my-2" />
-                    <flux:sidebar.item badge="3" icon="list-bullet" href="" wire:navigate>List things</flux:sidebar.item>
                     <flux:sidebar.item icon="user-group" href="{{ route('manager.report') }}" wire:navigate>Team Report</flux:sidebar.item>
                     @admin
                         <flux:separator class="my-2" />
