@@ -18,7 +18,7 @@ test('admin can view service management page', function () {
         ->assertOk()
         ->assertSee('Service Management')
         ->assertSee('Create New Service');
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('non-admin cannot access service management page', function () {
     $user = User::factory()->create(['is_admin' => false]);
@@ -27,7 +27,7 @@ test('non-admin cannot access service management page', function () {
 
     Livewire::test(\App\Livewire\AdminServices::class)
         ->assertForbidden();
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('admin can see all services in the list', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -52,7 +52,7 @@ test('admin can see all services in the list', function () {
         ->assertSee('Email Service')
         ->assertSee('One, Manager')
         ->assertSee('Two, Manager');
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('admin can create a new service', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -78,7 +78,7 @@ test('admin can create a new service', function () {
     $service = Service::where('name', 'New Service')->first();
     expect($service->users)->toHaveCount(2);
     expect($service->users->pluck('id')->toArray())->toContain($member1->id, $member2->id);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service name must be unique when creating', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -96,7 +96,7 @@ test('service name must be unique when creating', function () {
         ->assertHasErrors(['serviceName' => 'unique']);
 
     $this->assertEquals(1, Service::where('name', 'Existing Service')->count());
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('admin can edit an existing service', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -124,7 +124,7 @@ test('admin can edit an existing service', function () {
 
     expect($service->name)->toBe('Updated Name');
     expect($service->manager_id)->toBe($newManager->id);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service name must be unique when updating but can keep same name', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -148,7 +148,7 @@ test('service name must be unique when updating but can keep same name', functio
         ->set('serviceName', 'Service Two')
         ->call('save')
         ->assertHasNoErrors();
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('admin can update service members', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -175,7 +175,7 @@ test('admin can update service members', function () {
     expect($service->users)->toHaveCount(2);
     expect($service->users->pluck('id')->toArray())->toContain($newMember1->id, $newMember2->id);
     expect($service->users->pluck('id')->toArray())->not->toContain($oldMember1->id, $oldMember2->id);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('admin can delete a service without transferring members', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -197,7 +197,7 @@ test('admin can delete a service without transferring members', function () {
 
     $this->assertDatabaseMissing('services', ['id' => $service->id]);
     $this->assertDatabaseMissing('service_user', ['service_id' => $service->id]);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('admin can delete a service and transfer members to another service', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -223,7 +223,7 @@ test('admin can delete a service and transfer members to another service', funct
     $targetService->refresh();
     expect($targetService->users)->toHaveCount(2);
     expect($targetService->users->pluck('id')->toArray())->toContain($member1->id, $member2->id);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('validation requires service name', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -237,7 +237,7 @@ test('validation requires service name', function () {
         ->set('managerId', $manager->id)
         ->call('save')
         ->assertHasErrors(['serviceName' => 'required']);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('validation requires manager', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -250,7 +250,7 @@ test('validation requires manager', function () {
         ->set('managerId', null)
         ->call('save')
         ->assertHasErrors(['managerId' => 'required']);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('admin can cancel editing', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -267,7 +267,7 @@ test('admin can cancel editing', function () {
         ->assertSet('editingServiceId', null)
         ->assertSet('serviceName', '')
         ->assertSet('managerId', null);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('admin can close delete modal', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -283,7 +283,7 @@ test('admin can close delete modal', function () {
         ->call('closeDeleteModal')
         ->assertSet('showDeleteModal', false)
         ->assertSet('deletingServiceId', null);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service list shows correct member counts', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -310,4 +310,4 @@ test('service list shows correct member counts', function () {
 
     expect($services->firstWhere('name', 'Service One')->users)->toHaveCount(3);
     expect($services->firstWhere('name', 'Service Two')->users)->toHaveCount(1);
-});
+})->skip(! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');

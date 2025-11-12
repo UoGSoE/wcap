@@ -27,6 +27,10 @@ class AdminServices extends Component
 
     public function mount(): void
     {
+        if (! config('wcap.services_enabled')) {
+            abort(404);
+        }
+
         $user = auth()->user();
 
         if (! $user->isAdmin()) {

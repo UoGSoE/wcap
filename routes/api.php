@@ -29,6 +29,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
             Route::get('/team', [ReportController::class, 'team']);
             Route::get('/location', [ReportController::class, 'location']);
             Route::get('/coverage', [ReportController::class, 'coverage']);
-            Route::get('/service-availability', [ReportController::class, 'serviceAvailability']);
+
+            if (config('wcap.services_enabled')) {
+                Route::get('/service-availability', [ReportController::class, 'serviceAvailability']);
+            }
         });
 });

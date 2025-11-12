@@ -40,7 +40,9 @@
             <flux:tab name="team">My Reports</flux:tab>
             <flux:tab name="location">By Location</flux:tab>
             <flux:tab name="coverage">Coverage</flux:tab>
-            {{-- <flux:tab name="service-availability">Service Availability</flux:tab> --}}
+            @servicesEnabled
+                <flux:tab name="service-availability">Service Availability</flux:tab>
+            @endservicesEnabled
         </flux:tabs>
 
         <flux:tab.panel name="team">
@@ -173,41 +175,44 @@
                 @endforeach
             </div>
         </flux:tab.panel>
-        <flux:tab.panel name="service-availability">
-            <flux:subheading>Service availability at a glance</flux:subheading>
-            <flux:text class="text-sm text-zinc-600 dark:text-zinc-400 mt-2 mb-6">
-                Shows how many people on each service are available each day. Gray cells indicate at least one person available.
-            </flux:text>
 
-            <div class="grid gap-2 p-0.5 rounded-lg" style="grid-template-columns: 200px repeat(10, 1fr);">
-                {{-- Header row --}}
-                <div>
-                    <flux:text variant="strong"></flux:text>
-                </div>
-                @foreach ($days as $day)
-                    <div class="text-center">
-                        <flux:text variant="strong">{{ $day['date']->format('D') }} {{ $day['date']->format('jS') }}</flux:text>
-                    </div>
-                @endforeach
+        @servicesEnabled
+            <flux:tab.panel name="service-availability">
+                <flux:subheading>Service availability at a glance</flux:subheading>
+                <flux:text class="text-sm text-zinc-600 dark:text-zinc-400 mt-2 mb-6">
+                    Shows how many people on each service are available each day. Gray cells indicate at least one person available.
+                </flux:text>
 
-                {{-- Service rows --}}
-                @foreach ($serviceAvailabilityMatrix as $row)
+                <div class="grid gap-2 p-0.5 rounded-lg" style="grid-template-columns: 200px repeat(10, 1fr);">
+                    {{-- Header row --}}
                     <div>
-                        <flux:text variant="strong">{{ $row['label'] }}</flux:text>
+                        <flux:text variant="strong"></flux:text>
                     </div>
-                    @foreach ($row['entries'] as $entry)
-                        <div class="p-3 text-center text-sm font-medium {{ $entry['count'] > 0 ? 'bg-zinc-300 dark:bg-zinc-700' : '' }}">
-                            @if ($entry['count'] > 0)
-                                {{ $entry['count'] }}
-                            @elseif ($entry['manager_only'])
-                                <flux:tooltip content="Coverage is only by the service manager">
-                                    <flux:badge color="red" size="sm" inset="top bottom">Manager</flux:badge>
-                                </flux:tooltip>
-                            @endif
+                    @foreach ($days as $day)
+                        <div class="text-center">
+                            <flux:text variant="strong">{{ $day['date']->format('D') }} {{ $day['date']->format('jS') }}</flux:text>
                         </div>
                     @endforeach
-                @endforeach
-            </div>
-        </flux:tab.panel>
+
+                    {{-- Service rows --}}
+                    @foreach ($serviceAvailabilityMatrix as $row)
+                        <div>
+                            <flux:text variant="strong">{{ $row['label'] }}</flux:text>
+                        </div>
+                        @foreach ($row['entries'] as $entry)
+                            <div class="p-3 text-center text-sm font-medium {{ $entry['count'] > 0 ? 'bg-zinc-300 dark:bg-zinc-700' : '' }}">
+                                @if ($entry['count'] > 0)
+                                    {{ $entry['count'] }}
+                                @elseif ($entry['manager_only'])
+                                    <flux:tooltip content="Coverage is only by the service manager">
+                                        <flux:badge color="red" size="sm" inset="top bottom">Manager</flux:badge>
+                                    </flux:tooltip>
+                                @endif
+                            </div>
+                        @endforeach
+                    @endforeach
+                </div>
+            </flux:tab.panel>
+        @endservicesEnabled
     </flux:tab.group>
 </div>

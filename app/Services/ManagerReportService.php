@@ -46,17 +46,21 @@ class ManagerReportService
         $teamRows = $this->buildTeamRows($teamMembers, $days, $entriesByUser);
         $locationDays = $this->buildLocationDays($days, $teamMembers, $entriesByUser);
         $coverageMatrix = $this->buildCoverageMatrix($days, $locationDays);
-        $serviceAvailabilityMatrix = $this->buildServiceAvailabilityMatrix($days);
 
-        return [
+        $payload = [
             'days' => $days,
             'teamRows' => $teamRows,
             'locationDays' => $locationDays,
             'coverageMatrix' => $coverageMatrix,
-            'serviceAvailabilityMatrix' => $serviceAvailabilityMatrix,
             'locations' => Location::cases(),
             'availableTeams' => $availableTeams,
         ];
+
+        if (config('wcap.services_enabled')) {
+            $payload['serviceAvailabilityMatrix'] = $this->buildServiceAvailabilityMatrix($days);
+        }
+
+        return $payload;
     }
 
     public function buildDays(): array

@@ -21,5 +21,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Blade::if('admin', fn () => auth()->check() && auth()->user()->isAdmin());
+        Blade::if('servicesEnabled', fn () => config('wcap.services_enabled'));
     }
 }
