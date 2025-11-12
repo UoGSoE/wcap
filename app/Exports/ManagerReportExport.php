@@ -14,12 +14,17 @@ class ManagerReportExport implements WithMultipleSheets
 
     public function sheets(): array
     {
-        return [
+        $sheets = [
             new TeamReportSheet($this->payload['days'], $this->payload['teamRows']),
             new LocationReportSheet($this->payload['locationDays']),
             new CoverageReportSheet($this->payload['days'], $this->payload['coverageMatrix']),
-            new ServiceAvailabilitySheet($this->payload['days'], $this->payload['serviceAvailabilityMatrix']),
         ];
+
+        if (config('wcap.services_enabled') && isset($this->payload['serviceAvailabilityMatrix'])) {
+            $sheets[] = new ServiceAvailabilitySheet($this->payload['days'], $this->payload['serviceAvailabilityMatrix']);
+        }
+
+        return $sheets;
     }
 }
 

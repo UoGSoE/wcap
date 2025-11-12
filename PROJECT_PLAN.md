@@ -1277,6 +1277,47 @@ Added interactive, scope-aware documentation directly on the Profile page. When 
 
 ---
 
+## Configuration: Services Feature Flag
+
+**Overview**: The Services feature (service management and service availability reporting) can be toggled on/off via environment variable for easy stakeholder demos.
+
+**Environment Variable**: `WCAP_SERVICES_ENABLED` (in `.env` file)
+- Default: `false` (in `config/wcap.php`)
+- Example setting: `true` (in `.env.example`)
+
+**What Gets Hidden When Disabled**:
+- "Manage Services" link in admin sidebar
+- "Service Availability" tab in Manager Report
+- Service availability data in Excel exports
+- Service availability API endpoint (`/api/v1/reports/service-availability`)
+- Service availability endpoint in API documentation
+
+**Implementation Details**:
+- **Blade Directive**: `@servicesEnabled` for clean template conditionals (in `AppServiceProvider`)
+- **Routes**: Service availability API route conditionally registered
+- **Components**: AdminServices returns 404 when disabled
+- **Service Layer**: `ManagerReportService` only builds service data when enabled
+- **Excel Export**: `ManagerReportExport` conditionally includes ServiceAvailabilitySheet
+- **Tests**: 28 service tests automatically skip when disabled using `->skip(fn() => ! config('wcap.services_enabled'))`
+
+**Files Implementing Gates**:
+- `app/Providers/AppServiceProvider.php` - Blade directive
+- `resources/views/components/layouts/app.blade.php` - Sidebar link
+- `resources/views/livewire/manager-report.blade.php` - Tab header and content
+- `app/Services/ManagerReportService.php` - Conditional data loading
+- `app/Livewire/AdminServices.php` - 404 when disabled
+- `routes/api.php` - Conditional route registration
+- `app/Livewire/Profile.php` - Conditional API docs
+- `app/Exports/ManagerReportExport.php` - Conditional sheet inclusion
+- `tests/Feature/AdminServicesTest.php` - 16 tests with skip conditions
+- `tests/Feature/ManagerReportServiceAvailabilityTest.php` - 12 tests with skip conditions
+- `tests/Feature/Api/ApiEndpointsTest.php` - Conditional service endpoint test
+- `tests/Feature/ProfileTest.php` - Conditional service docs assertions
+
+**Usage**: Simply toggle `WCAP_SERVICES_ENABLED=true/false` in `.env` to show/hide the entire Services feature.
+
+---
+
 ## Future Enhancements (Parked Ideas)
 - MS Teams bot (parked - "dumpster fire" API 😄)
 - iCal feed for calendar subscriptions

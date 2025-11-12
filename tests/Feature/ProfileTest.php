@@ -222,7 +222,7 @@ test('documentation shows all endpoints for view:team-plans ability', function (
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    $component = Livewire::test(\App\Livewire\Profile::class)
         ->call('selectToken', $token->accessToken->id)
         ->assertSee('Personal Plan')
         ->assertSee('/api/v1/plan')
@@ -231,9 +231,12 @@ test('documentation shows all endpoints for view:team-plans ability', function (
         ->assertSee('Location Report')
         ->assertSee('/api/v1/reports/location')
         ->assertSee('Coverage Report')
-        ->assertSee('/api/v1/reports/coverage')
-        ->assertSee('Service Availability')
-        ->assertSee('/api/v1/reports/service-availability');
+        ->assertSee('/api/v1/reports/coverage');
+
+    if (config('wcap.services_enabled')) {
+        $component->assertSee('Service Availability')
+            ->assertSee('/api/v1/reports/service-availability');
+    }
 });
 
 test('no documentation section when user has no tokens', function () {
@@ -287,8 +290,7 @@ test('documentation shows CRUD endpoints for view:own-plan', function () {
         ->assertSee('POST')
         ->assertSee('DELETE')
         ->assertSee('Create New Entry')
-        ->assertSee('Update Existing Entry')
-        ->assertSee('Multiple Entries at Once')
+        ->assertSee('Create/Update Plan Entries')
         ->assertSee('curl -X POST')
         ->assertSee('curl -X DELETE')
         ->assertSee('entries')

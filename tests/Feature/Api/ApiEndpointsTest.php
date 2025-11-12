@@ -68,9 +68,11 @@ test('admin can access all report endpoints', function () {
     $response = $this->getJson('/api/v1/reports/coverage');
     $response->assertOk();
 
-    // Service availability report
-    $response = $this->getJson('/api/v1/reports/service-availability');
-    $response->assertOk();
+    // Service availability report (only if services enabled)
+    if (config('wcap.services_enabled')) {
+        $response = $this->getJson('/api/v1/reports/service-availability');
+        $response->assertOk();
+    }
 });
 
 // CRUD Operations Tests
