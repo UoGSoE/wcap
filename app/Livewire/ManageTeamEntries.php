@@ -23,16 +23,17 @@ class ManageTeamEntries extends Component
             abort(403, 'You do not manage any teams.');
         }
 
-        // Default to first team if manager has only one
-        $managedTeams = $user->managedTeams;
-        if ($managedTeams->count() === 1 && $this->selectedTeamId === null) {
-            $this->selectedTeamId = $managedTeams->first()->id;
+        if ($this->selectedTeamId === null) {
+            $this->selectedTeamId = $user->managedTeams()->orderBy('name')->first()->id;
+        }
+        if ($this->selectedUserId === null) {
+            $this->selectedUserId = Team::find($this->selectedTeamId)->users()->orderBy('surname')->first()->id;
         }
     }
 
     public function updatedSelectedTeamId(): void
     {
-        $this->selectedUserId = null;
+        $this->selectedUserId = Team::find($this->selectedTeamId)->users()->orderBy('surname')->first()->id;
     }
 
     public function render()
