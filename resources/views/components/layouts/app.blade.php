@@ -26,6 +26,9 @@
                     <flux:sidebar.item icon="home" href="/" wire:navigate>Home</flux:sidebar.item>
                     <flux:separator class="my-2" />
                     <flux:sidebar.item icon="user-group" href="{{ route('manager.report') }}" wire:navigate>Team Report</flux:sidebar.item>
+                    @if (auth()->user()->isManager())
+                        <flux:sidebar.item icon="pencil-square" href="{{ route('manager.entries') }}" wire:navigate>Edit Team Plans</flux:sidebar.item>
+                    @endif
                     @admin
                         <flux:separator class="my-2" />
                         <flux:sidebar.item icon="cog-6-tooth" href="{{ route('admin.teams') }}" wire:navigate>Manage Teams</flux:sidebar.item>
