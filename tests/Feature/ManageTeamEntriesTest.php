@@ -46,7 +46,7 @@ test('manager sees their teams in selector when multiple teams', function () {
         ->assertSee('Beta Team');
 });
 
-test('team selector hidden when manager has only one team', function () {
+test('team selector always shows with My Plan and real teams', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id, 'name' => 'Only Team']);
     $member = User::factory()->create();
@@ -54,11 +54,13 @@ test('team selector hidden when manager has only one team', function () {
 
     actingAs($manager);
 
+    // With My Plan + one real team = 2 options, selector should show
     Livewire::test(\App\Livewire\ManageTeamEntries::class)
-        ->assertDontSee('Select a team');
+        ->assertSee('My Plan')
+        ->assertSee('Only Team');
 });
 
-test('manager sees team members as tabs', function () {
+test('manager sees team members as tabs when real team selected', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
@@ -69,11 +71,12 @@ test('manager sees team members as tabs', function () {
     actingAs($manager);
 
     Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id) // Switch to real team
         ->assertSee('Adams, A')
         ->assertSee('Brown, B');
 });
 
-test('defaults to first team ordered by name', function () {
+test('real teams are ordered by name in selector', function () {
     $manager = User::factory()->create();
     $teamZ = Team::factory()->create(['manager_id' => $manager->id, 'name' => 'Zebra Team']);
     $teamA = Team::factory()->create(['manager_id' => $manager->id, 'name' => 'Alpha Team']);
@@ -85,11 +88,12 @@ test('defaults to first team ordered by name', function () {
 
     actingAs($manager);
 
+    // My Plan appears first, then real teams alphabetically
     Livewire::test(\App\Livewire\ManageTeamEntries::class)
-        ->assertSet('selectedTeamId', $teamA->id);
+        ->assertSeeInOrder(['My Plan', 'Alpha Team', 'Zebra Team']);
 });
 
-test('defaults to first user ordered by surname', function () {
+test('selecting real team defaults to first user ordered by surname', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
@@ -100,6 +104,7 @@ test('defaults to first user ordered by surname', function () {
     actingAs($manager);
 
     Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
         ->assertSet('selectedUserId', $memberA->id);
 });
 
@@ -116,7 +121,8 @@ test('changing team resets to first user of new team', function () {
     actingAs($manager);
 
     Livewire::test(\App\Livewire\ManageTeamEntries::class)
-        ->assertSet('selectedTeamId', $teamA->id)
+        ->assertSet('selectedTeamId', 0) // Defaults to My Plan
+        ->set('selectedTeamId', $teamA->id)
         ->assertSet('selectedUserId', $memberA->id)
         ->set('selectedTeamId', $teamB->id)
         ->assertSet('selectedUserId', $memberB->id);
@@ -130,6 +136,7 @@ test('shows warning when team has no members', function () {
     actingAs($manager);
 
     Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id) // Switch to the empty team
         ->assertSee('This team has no members');
 });
 
@@ -202,4 +209,127 @@ test('saving via editor sets created_by_manager flag', function () {
 
     $entry = PlanEntry::where('user_id', $member->id)->first();
     expect($entry->created_by_manager)->toBeTrue();
+});
+
+// Self-team tests
+
+test('manager sees My Plan in team selector', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id, 'name' => 'Real Team']);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->assertSee('My Plan')
+        ->assertSee('Real Team');
+});
+
+test('manager defaults to My Plan on mount', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->assertSet('selectedTeamId', 0)
+        ->assertSet('selectedUserId', $manager->id);
+});
+
+test('manager can save their own entries via My Plan', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => 'My own task',
+            'location' => Location::JWS->value,
+            'is_available' => true,
+        ];
+    })->toArray();
+
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, [
+        'user' => $manager,
+        'readOnly' => false,
+        'createdByManager' => false,
+    ])
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertOk();
+
+    expect(PlanEntry::where('user_id', $manager->id)->count())->toBe(14);
+});
+
+test('own entries have created_by_manager false', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => 'My own task',
+            'location' => Location::JWS->value,
+            'is_available' => true,
+        ];
+    })->toArray();
+
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, [
+        'user' => $manager,
+        'readOnly' => false,
+        'createdByManager' => false,
+    ])
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertOk();
+
+    $entry = PlanEntry::where('user_id', $manager->id)->first();
+    expect($entry->created_by_manager)->toBeFalse();
+});
+
+test('switching from My Plan to real team selects first team member', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create(['surname' => 'Adams']);
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->assertSet('selectedTeamId', 0)
+        ->assertSet('selectedUserId', $manager->id)
+        ->set('selectedTeamId', $team->id)
+        ->assertSet('selectedUserId', $member->id);
+});
+
+test('switching back to My Plan selects manager', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
+        ->assertSet('selectedUserId', $member->id)
+        ->set('selectedTeamId', 0)
+        ->assertSet('selectedUserId', $manager->id);
 });

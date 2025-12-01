@@ -31,7 +31,7 @@
                 <livewire:plan-entry-editor
                     :user="$selectedUser"
                     :read-only="false"
-                    :created-by-manager="true"
+                    :created-by-manager="$selectedUser->id !== auth()->id()"
                     :key="$selectedUserId"
                 />
             </div>

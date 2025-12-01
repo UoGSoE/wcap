@@ -10,7 +10,7 @@ use Livewire\Component;
 class ManageTeamEntries extends Component
 {
     #[Url]
-    public ?int $selectedTeamId = null;
+    public ?int $selectedTeamId = 0;
 
     #[Url]
     public ?int $selectedUserId = null;
@@ -23,23 +23,25 @@ class ManageTeamEntries extends Component
             abort(403, 'You do not manage any teams.');
         }
 
-        if ($this->selectedTeamId === null) {
-            $this->selectedTeamId = $user->managedTeams()->orderBy('name')->first()->id;
-        }
         if ($this->selectedUserId === null) {
-            $this->selectedUserId = Team::find($this->selectedTeamId)->users()->orderBy('surname')->first()?->id;
+            $this->selectedUserId = $this->editingMyOwnPlan()
+                ? $user->id
+                : Team::find($this->selectedTeamId)?->users()->orderBy('surname')->first()?->id;
         }
     }
 
     public function updatedSelectedTeamId(): void
     {
-        $this->selectedUserId = Team::find($this->selectedTeamId)->users()->orderBy('surname')->first()?->id;
+        $this->selectedUserId = $this->editingMyOwnPlan()
+            ? auth()->id()
+            : Team::find($this->selectedTeamId)?->users()->orderBy('surname')->first()?->id;
     }
 
     public function render()
     {
         $user = auth()->user();
-        $managedTeams = $user->managedTeams()->orderBy('name')->get();
+        $selfTeam = Team::make(['id' => 0, 'name' => 'My Plan']);
+        $managedTeams = $user->managedTeams()->orderBy('name')->get()->prepend($selfTeam);
         $teamMembers = $this->getTeamMembers();
         $selectedUser = $this->getSelectedUser();
 
@@ -52,6 +54,10 @@ class ManageTeamEntries extends Component
 
     private function getTeamMembers()
     {
+        if ($this->editingMyOwnPlan()) {
+            return collect([auth()->user()]);
+        }
+
         if (! $this->selectedTeamId) {
             return collect();
         }
@@ -89,8 +95,17 @@ class ManageTeamEntries extends Component
 
     private function canManageUser(User $targetUser): bool
     {
+        if ($targetUser->id === auth()->id()) {
+            return true;
+        }
+
         return auth()->user()->managedTeams()
             ->whereHas('users', fn ($q) => $q->where('users.id', $targetUser->id))
             ->exists();
+    }
+
+    private function editingMyOwnPlan(): bool
+    {
+        return (int) $this->selectedTeamId === 0;
     }
 }
