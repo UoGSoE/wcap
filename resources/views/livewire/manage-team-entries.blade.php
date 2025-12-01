@@ -1,14 +1,8 @@
 <div>
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
         <flux:heading size="xl">Edit Team Plans</flux:heading>
-        <flux:button size="sm" variant="ghost" href="{{ route('manager.report') }}" wire:navigate icon="arrow-left">Back to Report</flux:button>
-    </div>
-
-    <flux:spacer class="mt-6"/>
-
-    {{-- Team selector (only shown if manager has multiple teams) --}}
-    @if ($managedTeams->count() > 1)
-        <div class="mb-6">
+        @if ($managedTeams->count() > 1)
+        <div class="w-full md:w-1/4">
             <flux:select
                 wire:model.live="selectedTeamId"
                 placeholder="Select a team..."
@@ -19,9 +13,11 @@
                 @endforeach
             </flux:select>
         </div>
-    @endif
+        @endif
+    </div>
 
-    {{-- Team member tabs --}}
+    <flux:spacer class="mt-6"/>
+
     @if ($teamMembers->isNotEmpty())
         <flux:tabs variant="segmented" size="sm" scrollable wire:model.live="selectedUserId">
             @foreach ($teamMembers as $member)
@@ -32,10 +28,6 @@
         {{-- Plan entry editor for selected user --}}
         @if ($selectedUser)
             <div class="mt-6">
-                <flux:callout icon="user" class="mb-4">
-                    <flux:text>Editing plan for <strong>{{ $selectedUser->full_name }}</strong></flux:text>
-                </flux:callout>
-
                 <livewire:plan-entry-editor
                     :user="$selectedUser"
                     :read-only="false"

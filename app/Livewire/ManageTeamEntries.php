@@ -27,13 +27,13 @@ class ManageTeamEntries extends Component
             $this->selectedTeamId = $user->managedTeams()->orderBy('name')->first()->id;
         }
         if ($this->selectedUserId === null) {
-            $this->selectedUserId = Team::find($this->selectedTeamId)->users()->orderBy('surname')->first()->id;
+            $this->selectedUserId = Team::find($this->selectedTeamId)->users()->orderBy('surname')->first()?->id;
         }
     }
 
     public function updatedSelectedTeamId(): void
     {
-        $this->selectedUserId = Team::find($this->selectedTeamId)->users()->orderBy('surname')->first()->id;
+        $this->selectedUserId = Team::find($this->selectedTeamId)->users()->orderBy('surname')->first()?->id;
     }
 
     public function render()

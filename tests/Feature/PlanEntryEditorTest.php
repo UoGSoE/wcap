@@ -1,13 +1,13 @@
 <?php
 
-use App\Models\Team;
-use App\Models\User;
-use Livewire\Livewire;
 use App\Enums\Location;
 use App\Models\PlanEntry;
+use App\Models\Team;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
@@ -47,7 +47,7 @@ test('saving new entries creates database records', function () {
         ];
     })->toArray();
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('save')
         ->assertOk();
@@ -85,7 +85,7 @@ test('saving updates existing entries', function () {
     // Set the id for the first entry (the one we created above)
     $entries[0]['id'] = $created->id;
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('save')
         ->assertOk();
@@ -121,7 +121,7 @@ test('copy next copies entry to next day only', function () {
     $entries[0]['note'] = 'First day task';
     $entries[0]['location'] = Location::OTHER->value;
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('copyNext', 0)
         ->assertSet('entries.1.note', 'First day task')
@@ -149,7 +149,7 @@ test('copy rest copies entry to all remaining days', function () {
     $entries[0]['note'] = 'Same task all week';
     $entries[0]['location'] = Location::RANKINE->value;
 
-    $component = Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    $component = Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('copyRest', 0);
 
@@ -177,7 +177,7 @@ test('validation requires location field when available', function () {
         ];
     })->toArray();
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('save')
         ->assertHasErrors(['entries.0.location']);
@@ -200,7 +200,7 @@ test('validation skips location when unavailable', function () {
         ];
     })->toArray();
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('save')
         ->assertHasNoErrors();
@@ -229,7 +229,7 @@ test('validation allows empty note field', function () {
         ];
     })->toArray();
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('save')
         ->assertHasNoErrors();
@@ -250,7 +250,7 @@ test('existing entries are loaded on mount', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->assertSet('entries.0.note', 'Existing task')
         ->assertSet('entries.0.location', Location::BO->value);
 });
@@ -263,7 +263,7 @@ test('new entries use user defaults', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->assertSet('entries.0.note', 'Support Tickets')
         ->assertSet('entries.0.location', Location::OTHER->value)
         ->assertSet('entries.13.note', 'Support Tickets')
@@ -287,7 +287,7 @@ test('existing entries override user defaults', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->assertSet('entries.0.note', 'Specific task')
         ->assertSet('entries.0.location', Location::JWS->value)
         ->assertSet('entries.1.note', 'Support Tickets')
@@ -311,7 +311,7 @@ test('is_available checkbox saves correctly', function () {
         ];
     })->toArray();
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('save')
         ->assertOk();
@@ -346,7 +346,7 @@ test('copy next includes is_available', function () {
     $entries[0]['location'] = Location::OTHER->value;
     $entries[0]['is_available'] = false;
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('copyNext', 0)
         ->assertSet('entries.1.note', 'First day task')
@@ -376,7 +376,7 @@ test('copy rest includes is_available', function () {
     $entries[0]['location'] = Location::RANKINE->value;
     $entries[0]['is_available'] = false;
 
-    $component = Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    $component = Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('copyRest', 0);
 
@@ -401,7 +401,58 @@ test('existing entries load is_available value', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class)
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->assertSet('entries.0.is_available', false)
         ->assertSet('entries.1.is_available', true);
+});
+
+test('read-only mode prevents saving', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => 'Should not save',
+            'location' => Location::OTHER->value,
+            'is_available' => true,
+        ];
+    })->toArray();
+
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user, 'readOnly' => true])
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertOk();
+
+    expect(PlanEntry::where('user_id', $user->id)->count())->toBe(0);
+});
+
+test('read-only mode prevents copy next', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user, 'readOnly' => true])
+        ->set('entries.0.note', 'First day')
+        ->set('entries.0.location', Location::JWS->value)
+        ->set('entries.1.note', 'Original')
+        ->call('copyNext', 0)
+        ->assertSet('entries.1.note', 'Original');
+});
+
+test('read-only mode prevents copy rest', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user, 'readOnly' => true])
+        ->set('entries.0.note', 'First day')
+        ->set('entries.0.location', Location::JWS->value)
+        ->set('entries.5.note', 'Original')
+        ->call('copyRest', 0)
+        ->assertSet('entries.5.note', 'Original');
 });
