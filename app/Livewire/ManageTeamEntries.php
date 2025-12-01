@@ -40,7 +40,9 @@ class ManageTeamEntries extends Component
     public function render()
     {
         $user = auth()->user();
-        $selfTeam = Team::make(['id' => 0, 'name' => 'My Plan']);
+        $selfTeam = new Team();
+        $selfTeam->id = 0;
+        $selfTeam->name = 'My Plan';
         $managedTeams = $user->managedTeams()->orderBy('name')->get()->prepend($selfTeam);
         $teamMembers = $this->getTeamMembers();
         $selectedUser = $this->getSelectedUser();

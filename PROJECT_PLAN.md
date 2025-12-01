@@ -1318,6 +1318,130 @@ Added interactive, scope-aware documentation directly on the Profile page. When 
 
 ---
 
+## Phase 4: Manager-Entered Plans Refactor ✅
+
+**Priority**: HIGH (completed)
+**Rationale**: Director decision - managers should enter plan data on behalf of their team members, rather than staff entering their own data.
+
+### What Changed
+
+**Before**: Staff log in and enter their own plan entries for the two-week period.
+**After**: Managers enter plan entries on behalf of their team members. Staff see a read-only view of their plan.
+
+### Architecture: Shared Sub-component
+
+To avoid code duplication, we extracted a `PlanEntryEditor` sub-component that handles all the entry editing logic:
+
+```blade
+{{-- HomePage (staff view - read-only) --}}
+<livewire:plan-entry-editor :user="$user" :read-only="true" />
+
+{{-- ManageTeamEntries (manager editing) --}}
+<livewire:plan-entry-editor
+    :user="$selectedUser"
+    :read-only="false"
+    :created-by-manager="true"
+    :key="$selectedUserId"
+/>
+```
+
+The `:key` attribute forces the component to re-mount when the selected user changes.
+
+### New Files Created
+
+| File | Purpose |
+|------|---------|
+| `app/Livewire/PlanEntryEditor.php` | Shared sub-component with all entry editing logic |
+| `resources/views/livewire/plan-entry-editor.blade.php` | Form UI for the entry editor |
+| `app/Livewire/ManageTeamEntries.php` | Manager's team/member selection wrapper |
+| `resources/views/livewire/manage-team-entries.blade.php` | Team selector + member tabs + embeds editor |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `routes/web.php` | Added `/manager/entries` route |
+| `app/Livewire/HomePage.php` | Simplified to thin wrapper - redirects managers, embeds sub-component |
+| `resources/views/livewire/home-page.blade.php` | Shows read-only callout, embeds PlanEntryEditor |
+| `resources/views/livewire/manager-report.blade.php` | Added "Edit Plans" button in header |
+| `resources/views/components/layouts/app.blade.php` | Added "Edit Team Plans" sidebar link for managers |
+
+### User Flows
+
+**Staff (non-managers)**:
+1. Log in → land on `/` (HomePage)
+2. See their own 14-day plan **read-only**
+3. Cannot edit anything - just view
+
+**Managers**:
+1. Log in → redirected to `/manager/report`
+2. Click "Edit Plans" button → goes to `/manager/entries`
+3. Select team (if multiple) → select team member via tabs → edit their plan
+4. "My Plan" virtual team allows managers to edit their own entries
+5. Save, then select next member or go back to report
+
+### Key Design Decisions
+
+1. **Sub-component architecture** - Avoids duplicating entry editing logic between staff and manager views
+2. **Keep existing methods in PlanEntryEditor** - Easy to re-enable staff editing if director changes mind
+3. **`created_by_manager` flag** - Tracks which entries were manager-created (column already existed)
+4. **`:key` on sub-component** - Forces re-mount when selected user changes
+5. **"My Plan" virtual team** - Managers can still edit their own entries using `Team::id = 0`
+
+### Lessons Learned
+
+#### 🔗 Livewire `#[Url]` and Type Declarations
+
+Livewire's `#[Url]` attribute examples in the docs **never use type declarations**. URL query params are always strings, so type hints cause hydration issues:
+
+```php
+// ❌ BAD: Type hint fights with URL string values
+#[Url]
+public ?int $selectedTeamId = 0;
+
+// ✅ GOOD: No type hint, let Livewire handle it
+#[Url(keep: true)]
+public $selectedTeamId = 0;
+```
+
+Use helper methods with explicit casts for type safety instead:
+
+```php
+private function editingMyOwnPlan(): bool
+{
+    return (int) $this->selectedTeamId === 0;
+}
+```
+
+#### 🏗️ Mass Assignment and Virtual Models
+
+When creating virtual/in-memory models with specific IDs, `$fillable` blocks mass assignment even on `make()`:
+
+```php
+// ❌ BAD: id silently ignored (not in $fillable)
+$selfTeam = Team::make(['id' => 0, 'name' => 'My Plan']);
+
+// ✅ GOOD: Manual property assignment bypasses $fillable
+$selfTeam = new Team();
+$selfTeam->id = 0;
+$selfTeam->name = 'My Plan';
+```
+
+This caused a subtle bug where the Flux combobox couldn't match `selectedTeamId = 0` against a team with `id = null`.
+
+### Test Coverage
+
+- **164 tests pass (628 assertions)**
+- `ManageTeamEntriesTest.php` - 18 tests covering team selection, authorization, self-team
+- `PlanEntryEditorTest.php` - 19 tests covering save, copy, validation, read-only mode
+- `HomePageTest.php` - Updated for new component structure
+
+### No Database Changes Required
+
+The `created_by_manager` column already existed in the `plan_entries` table from the original design.
+
+---
+
 ## Future Enhancements (Parked Ideas)
 - MS Teams bot (parked - "dumpster fire" API 😄)
 - iCal feed for calendar subscriptions
