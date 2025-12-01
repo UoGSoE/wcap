@@ -3,9 +3,43 @@
 ## Summary
 Change the app so managers enter plan data on behalf of their team members, instead of staff entering their own data.
 
-## Progress: ✅ Implementation Complete (Untested)
+## Progress: ✅ Tests Passing, Minor UI Bug Remaining
 
-All code has been written. Tests need to be run and potentially updated.
+All code written and tested. **164 tests pass (628 assertions)**.
+
+---
+
+## Session Notes (Latest)
+
+### What We Fixed
+
+1. **"My Plan" Self-Team Feature** - Managers can now edit their own plan entries
+   - Added virtual "My Plan" team using `Team::make(['id' => 0, 'name' => 'My Plan'])`
+   - Defaults to self-team on mount
+   - `editingMyOwnPlan()` helper handles type coercion (strings from URL vs ints)
+   - `created_by_manager = false` when editing own plan, `true` for team members
+
+2. **Type Coercion Bug** - Fixed `#[Url]` property fighting with Flux select
+   - Livewire's `#[Url]` examples don't use type hints (URL params are always strings)
+   - Changed `public ?int $selectedTeamId = 0;` → `public $selectedTeamId = 0;`
+   - Page refresh now shows correct state
+
+3. **Test Updates** - Updated 5 existing tests, added 6 new tests for self-team feature
+
+### What's Still Broken (Minor UI Issues)
+
+1. **First visit shows `0` in dropdown** - Flux select not matching initial value to "My Plan" option
+2. **URL doesn't show `selectedTeamId=0`** - Livewire excludes default values from URL
+
+These are cosmetic issues - the functionality works correctly. Likely needs investigation into Flux combobox + Livewire `#[Url]` interaction.
+
+### Key Lesson Learned
+
+> Livewire's `#[Url]` attribute examples in the docs **never use type declarations**.
+> URL query params are always strings, so type hints cause hydration issues.
+> Trust your tests and helper methods to handle type safety instead.
+
+---
 
 ---
 
@@ -55,43 +89,20 @@ The `:key` forces re-mount when selected user changes.
 
 ## Next Steps (For Next Session)
 
-### 1. Run Existing Tests
-```bash
-lando php artisan test
-```
-Some HomePage tests will likely fail since the component structure changed significantly.
+### ✅ DONE: Tests
+- All 164 tests pass (628 assertions)
+- `ManageTeamEntriesTest.php` - 18 tests covering team selection, authorization, self-team
+- `PlanEntryEditorTest.php` - 19 tests covering save, copy, validation, read-only mode
+- `HomePageTest.php` - Updated for new component structure
 
-### 2. Update HomePage Tests
-The existing `tests/Feature/HomePageTest.php` needs updating:
-- Tests for manager redirect
-- Tests for staff read-only view
-- Remove/update tests that call `save()`, `copyNext()`, `copyRest()` directly on HomePage (those methods are now in PlanEntryEditor)
+### 🔧 TODO: Fix Remaining UI Issues
+The Flux combobox doesn't show "My Plan" on initial page load (shows `0` instead).
+URL also doesn't include `selectedTeamId=0` in query string.
 
-### 3. Write New Tests
-Create `tests/Feature/ManageTeamEntriesTest.php`:
-- Non-manager cannot access page (403)
-- Manager sees their teams and members
-- Manager can save entries for team member
-- Entries saved with `created_by_manager = true`
-- Manager cannot edit user outside their teams
-
-Create `tests/Feature/PlanEntryEditorTest.php`:
-- Entry loading with user defaults
-- Save functionality
-- Copy buttons work
-- Read-only mode prevents saves
-
-### 4. Manual Testing
-Visit these URLs to verify:
-- `/` as staff → should see read-only plan
-- `/` as manager → should redirect to `/manager/report`
-- `/manager/report` → should have "Edit Plans" button
-- `/manager/entries` → should show team selector and member tabs
-
-### 5. Run Pint
-```bash
-vendor/bin/pint --dirty
-```
+Investigate:
+- Flux combobox initial value matching with Livewire `#[Url]` properties
+- May need to use `#[Url(except: -1)]` to force `0` into URL
+- Or find Flux-specific way to set initial selected value
 
 ---
 

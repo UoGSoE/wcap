@@ -10,7 +10,7 @@ use Livewire\Component;
 class ManageTeamEntries extends Component
 {
     #[Url]
-    public ?int $selectedTeamId = 0;
+    public $selectedTeamId = 0;
 
     #[Url]
     public ?int $selectedUserId = null;
