@@ -9,8 +9,8 @@ use Livewire\Component;
 
 class ManageTeamEntries extends Component
 {
-    #[Url]
-    public $selectedTeamId = 0;
+    #[Url(keep: true)]
+    public $selectedTeamId = -1;
 
     #[Url]
     public ?int $selectedUserId = null;
@@ -40,7 +40,7 @@ class ManageTeamEntries extends Component
     public function render()
     {
         $user = auth()->user();
-        $selfTeam = Team::make(['id' => 0, 'name' => 'My Plan']);
+        $selfTeam = Team::make(['id' => -1, 'name' => 'My Plan']);
         $managedTeams = $user->managedTeams()->orderBy('name')->get()->prepend($selfTeam);
         $teamMembers = $this->getTeamMembers();
         $selectedUser = $this->getSelectedUser();
@@ -106,6 +106,6 @@ class ManageTeamEntries extends Component
 
     private function editingMyOwnPlan(): bool
     {
-        return (int) $this->selectedTeamId === 0;
+        return (int) $this->selectedTeamId === -1;
     }
 }
