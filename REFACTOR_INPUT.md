@@ -458,3 +458,183 @@ This means managers with only one team don't need to manually select it - small 
 4. Fill in forenames, surname, username (optionally location/category)
 5. Save → user created → `parseFile()` re-runs
 6. Row disappears from errors, valid count increases
+
+---
+
+# Phase 4: Manager API for Team Plan Entries
+
+## Summary
+
+Create API endpoints for managers to CRUD plan entries for their team members (similar to existing `PlanController` but for managing others). Admins can manage any user.
+
+## Progress: ✅ Complete
+
+**20 tests pass (69 assertions)**
+
+---
+
+## Requirements
+
+- **Full CRUD endpoints**: List team members, get/upsert/delete entries
+- **New token ability**: `manage:team-plans` (separate from `view:team-plans`)
+- **Admin scope**: Admins can edit ANY user's plan entries
+- **Manager scope**: Managers can only edit users in teams they manage
+
+---
+
+## Design Decisions
+
+### 1. No Trait Extraction
+
+After reviewing the existing code, extracting shared logic into a Trait would be over-engineering:
+- Date calculation: Reuse `ManagerReportService::buildDays()`
+- Entry transformation: ~15 lines, acceptable to copy
+- Upsert logic: Similar but different enough (target user vs self)
+
+**Keep it simple** - follow the existing patterns.
+
+### 2. Authorization on User Model
+
+Add `canManagePlanFor(User $target)` method to the User model. This is reusable across both web (Livewire) and API contexts, and reads naturally:
+
+```php
+if ($user->canManagePlanFor($targetUser)) { ... }
+```
+
+### 3. Double Authorization
+
+1. **Middleware** checks token has `manage:team-plans` ability
+2. **Controller** checks user relationship via `canManagePlanFor()`
+
+Both must pass. This follows the existing pattern in `ReportController`.
+
+---
+
+## API Endpoints
+
+```
+GET    /api/v1/manager/team-members                    - List users the manager can edit
+GET    /api/v1/manager/team-members/{userId}/plan      - Get a team member's plan entries
+POST   /api/v1/manager/team-members/{userId}/plan      - Upsert entries for a team member
+DELETE /api/v1/manager/team-members/{userId}/plan/{id} - Delete a specific entry
+```
+
+All routes use `abilities:manage:team-plans` middleware.
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `app/Http/Controllers/Api/ManagerPlanController.php` | Controller with `teamMembers()`, `show()`, `upsert()`, `destroy()` |
+| `app/Http/Requests/ManagerUpsertPlanEntriesRequest.php` | Validation - validates entry IDs belong to target user |
+| `tests/Feature/Api/ManagerPlanControllerTest.php` | ~15 tests covering auth, CRUD, edge cases |
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `app/Models/User.php` | Add `canManagePlanFor(User $target): bool` method |
+| `routes/api.php` | Add manager route group with 4 routes |
+| `app/Livewire/Profile.php` | Add `manage:team-plans` to token abilities, document new endpoints |
+
+---
+
+## Implementation Order
+
+1. Add `canManagePlanFor()` to User model
+2. Create `ManagerUpsertPlanEntriesRequest` via `php artisan make:request`
+3. Create `ManagerPlanController` via `php artisan make:controller`
+4. Add routes to `api.php`
+5. Update Profile token abilities and endpoint documentation
+6. Write tests
+7. Run pint
+
+---
+
+## Key Code Snippets
+
+### Authorization Method (User model)
+
+```php
+public function canManagePlanFor(User $targetUser): bool
+{
+    if ($this->isAdmin()) {
+        return true;
+    }
+
+    if ($targetUser->id === $this->id) {
+        return true;
+    }
+
+    return $this->managedTeams()
+        ->whereHas('users', fn ($q) => $q->where('users.id', $targetUser->id))
+        ->exists();
+}
+```
+
+### Token Abilities (Profile component)
+
+```php
+// In determineTokenAbilities()
+if ($user->isManager()) {
+    $abilities[] = 'view:team-plans';
+    $abilities[] = 'manage:team-plans';  // NEW
+}
+```
+
+---
+
+## Reference Files
+
+- `app/Http/Controllers/Api/PlanController.php` - Upsert pattern to follow
+- `app/Http/Requests/UpsertPlanEntriesRequest.php` - Validation rules to adapt
+- `app/Livewire/ManageTeamEntries.php` - Has similar `canManageUser()` logic
+
+---
+
+## Test Plan
+
+### Authorization Tests
+- Unauthenticated request returns 401
+- Token without `manage:team-plans` ability returns 403
+- Manager cannot access non-team member (403)
+- Manager can access own team member
+- Admin can access any user
+
+### CRUD Tests
+- Manager can list team members
+- Admin lists all users
+- Manager can view team member plan
+- Manager can create entry for team member
+- Manager can update entry by ID
+- Manager can update entry by date (upsert)
+- Manager can delete entry for team member
+- Created entries have `created_by_manager = true`
+
+### Edge Cases
+- Cannot update entry belonging to non-team member
+- Cannot delete entry belonging to non-team member
+- Validation rejects invalid location enum
+- Validation rejects entry ID belonging to different user
+
+---
+
+## Lessons Learned
+
+### 🗓️ SQLite Date Comparisons with `whereIn`
+
+**The Problem**: Using `whereIn('entry_date', $arrayOfDateStrings)` doesn't work reliably in SQLite tests when the column has a `date` cast.
+
+**The Fix**: Use `whereBetween` instead - it's more SQLite-compatible and actually more appropriate for a contiguous date range:
+
+```php
+// ❌ BAD: SQLite date comparison issues
+->whereIn('entry_date', $weekdayDates)
+
+// ✅ GOOD: Works in both MySQL and SQLite
+->whereBetween('entry_date', [$weekdayDates[0], end($weekdayDates)])
+```
+
+**Note**: This returns entries for ALL days in the range (including weekends if any exist). Since we're querying a 2-week weekday range with no weekend gaps in the middle dates, this works fine for our use case.

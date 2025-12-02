@@ -73,9 +73,10 @@ class Profile extends Component
         // Start with base ability (everyone gets this)
         $abilities = ['view:own-plan'];
 
-        // Managers get team viewing ability
+        // Managers get team viewing and management abilities
         if ($user->isManager()) {
             $abilities[] = 'view:team-plans';
+            $abilities[] = 'manage:team-plans';
         }
 
         // Admins get all abilities
@@ -238,6 +239,41 @@ class Profile extends Component
                     'description' => 'Get service availability with manager-only indicators',
                 ];
             }
+        }
+
+        // Managers and admins can manage team members' plans
+        if (in_array('manage:team-plans', $abilities)) {
+            $endpoints[] = [
+                'name' => 'List Team Members',
+                'method' => 'GET',
+                'path' => '/api/v1/manager/team-members',
+                'ability' => 'manage:team-plans',
+                'description' => 'List users you can manage',
+            ];
+
+            $endpoints[] = [
+                'name' => 'Get Team Member Plan',
+                'method' => 'GET',
+                'path' => '/api/v1/manager/team-members/{userId}/plan',
+                'ability' => 'manage:team-plans',
+                'description' => 'Get a team member\'s plan entries for the next 10 weekdays',
+            ];
+
+            $endpoints[] = [
+                'name' => 'Update Team Member Plan',
+                'method' => 'POST',
+                'path' => '/api/v1/manager/team-members/{userId}/plan',
+                'ability' => 'manage:team-plans',
+                'description' => 'Create or update plan entries for a team member',
+            ];
+
+            $endpoints[] = [
+                'name' => 'Delete Team Member Entry',
+                'method' => 'DELETE',
+                'path' => '/api/v1/manager/team-members/{userId}/plan/{entryId}',
+                'ability' => 'manage:team-plans',
+                'description' => 'Delete a specific plan entry for a team member',
+            ];
         }
 
         return $endpoints;

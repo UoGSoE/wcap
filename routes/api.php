@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ManagerPlanController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\ReportController;
 use Illuminate\Http\Request;
@@ -33,5 +34,16 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
             if (config('wcap.services_enabled')) {
                 Route::get('/service-availability', [ReportController::class, 'serviceAvailability']);
             }
+        });
+
+    // Manager Plan Management
+    // Accessible by: Managers and Admins with manage:team-plans ability
+    Route::prefix('manager')
+        ->middleware('abilities:manage:team-plans')
+        ->group(function () {
+            Route::get('/team-members', [ManagerPlanController::class, 'teamMembers']);
+            Route::get('/team-members/{userId}/plan', [ManagerPlanController::class, 'show']);
+            Route::post('/team-members/{userId}/plan', [ManagerPlanController::class, 'upsert']);
+            Route::delete('/team-members/{userId}/plan/{entryId}', [ManagerPlanController::class, 'destroy']);
         });
 });

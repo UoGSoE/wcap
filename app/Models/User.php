@@ -92,6 +92,21 @@ class User extends Authenticatable
         return $this->is_admin;
     }
 
+    public function canManagePlanFor(User $targetUser): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        if ($targetUser->id === $this->id) {
+            return true;
+        }
+
+        return $this->managedTeams()
+            ->whereHas('users', fn ($q) => $q->where('users.id', $targetUser->id))
+            ->exists();
+    }
+
     public function getFullNameAttribute(): string
     {
         return $this->surname.', '.$this->forenames;
