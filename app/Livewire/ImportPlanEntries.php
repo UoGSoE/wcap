@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\User;
 use App\Services\PlanEntryImport;
 use App\Services\PlanEntryRowValidator;
+use DateTimeImmutable;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -50,10 +51,11 @@ class ImportPlanEntries extends Component
             $result = $validator->validate($row);
 
             if ($result->fails()) {
-                if ($index === 0) {
+                if ($index === 0 && (! str_contains($row[0], '@'))) {
+                    // probably a header row
                     continue;
                 }
-
+                $row[1] = $row[1] instanceof DateTimeImmutable ? $row[1]->format('d/m/Y') : $row[1];
                 $this->errorRows[] = [
                     'row' => $index + 1,
                     'data' => $row,
