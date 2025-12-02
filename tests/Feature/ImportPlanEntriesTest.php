@@ -200,3 +200,137 @@ test('import updates existing entries with same user and date', function () {
     expect($entry->note)->toBe('Updated note');
     expect($entry->location->value)->toBe('jwn');
 });
+
+// Quick-create user tests
+
+test('isEmailNotFoundError returns true for email not found error', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+        ->assertSet('showCreateUserModal', false)
+        ->call('isEmailNotFoundError', 'The selected email is invalid.')
+        ->assertReturned(true);
+});
+
+test('isEmailNotFoundError returns false for other email errors', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+        ->call('isEmailNotFoundError', 'The email field must be a valid email address.')
+        ->assertReturned(false);
+});
+
+test('openCreateUserModal sets email and shows modal with team pre-selected', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+        ->call('openCreateUserModal', 0, 'NewUser@Example.com')
+        ->assertSet('showCreateUserModal', true)
+        ->assertSet('newUserEmail', 'newuser@example.com')
+        ->assertSet('creatingForRowIndex', 0)
+        ->assertSet('newUserTeamId', $team->id);
+});
+
+test('saveNewUser creates user and attaches to team', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    // Create a real Excel file with unknown email
+    $data = [['john.smith@example.com', '15/12/2025', 'jws', 'Note', 'Y']];
+    $tempPath = (new \Ohffs\SimpleSpout\ExcelSheet)->generate($data);
+    $file = (new \Illuminate\Http\Testing\FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+        ->set('file', $file)
+        ->call('parseFile')
+        ->set('newUserForenames', 'John')
+        ->set('newUserSurname', 'Smith')
+        ->set('newUserEmail', 'john.smith@example.com')
+        ->set('newUserUsername', 'jsmith')
+        ->set('newUserTeamId', $team->id)
+        ->call('saveNewUser')
+        ->assertSet('showCreateUserModal', false);
+
+    $newUser = User::where('email', 'john.smith@example.com')->first();
+
+    expect($newUser)->not->toBeNull();
+    expect($newUser->forenames)->toBe('John');
+    expect($newUser->surname)->toBe('Smith');
+    expect($newUser->username)->toBe('jsmith');
+    expect($newUser->is_staff)->toBeTrue();
+    expect($newUser->is_admin)->toBeFalse();
+    expect($team->fresh()->users->pluck('id'))->toContain($newUser->id);
+});
+
+test('saveNewUser lowercases the email', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    // Create a real Excel file with unknown email (uppercase)
+    $data = [['Jane.Doe@EXAMPLE.COM', '15/12/2025', 'jws', 'Note', 'Y']];
+    $tempPath = (new \Ohffs\SimpleSpout\ExcelSheet)->generate($data);
+    $file = (new \Illuminate\Http\Testing\FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+        ->set('file', $file)
+        ->call('parseFile')
+        ->set('newUserForenames', 'Jane')
+        ->set('newUserSurname', 'Doe')
+        ->set('newUserEmail', 'Jane.Doe@EXAMPLE.COM')
+        ->set('newUserUsername', 'jdoe')
+        ->set('newUserTeamId', $team->id)
+        ->call('saveNewUser');
+
+    expect(User::where('email', 'jane.doe@example.com')->exists())->toBeTrue();
+});
+
+test('saveNewUser validates required fields', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+        ->set('showCreateUserModal', true)
+        ->set('newUserForenames', '')
+        ->set('newUserSurname', '')
+        ->set('newUserEmail', '')
+        ->set('newUserUsername', '')
+        ->set('newUserTeamId', null)
+        ->call('saveNewUser')
+        ->assertHasErrors(['newUserForenames', 'newUserSurname', 'newUserEmail', 'newUserUsername', 'newUserTeamId']);
+});
+
+test('saveNewUser validates unique email and username', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $existingUser = User::factory()->create([
+        'email' => 'existing@example.com',
+        'username' => 'existinguser',
+    ]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+        ->set('showCreateUserModal', true)
+        ->set('newUserForenames', 'Test')
+        ->set('newUserSurname', 'User')
+        ->set('newUserEmail', 'existing@example.com')
+        ->set('newUserUsername', 'existinguser')
+        ->set('newUserTeamId', $team->id)
+        ->call('saveNewUser')
+        ->assertHasErrors(['newUserEmail', 'newUserUsername']);
+});

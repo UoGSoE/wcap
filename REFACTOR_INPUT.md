@@ -328,3 +328,133 @@ If an API endpoint is requested later, it would be straightforward:
 3. Return JSON with results
 
 But don't build it until it's asked for. **YAGNI.**
+
+---
+
+# Phase 3: Quick-Create User from Import Errors
+
+## Summary
+
+When importing an Excel file with an unknown email address, managers can now create that user inline via a flyout modal, without leaving the import page.
+
+## Progress: ✅ Complete
+
+**20 import tests pass (71 assertions)**
+
+---
+
+## What We Built
+
+A `+` button appears next to "email not found" error rows. Clicking it opens a flyout modal to create the user with:
+- Pre-filled email (lowercased automatically)
+- Team pre-selected (first managed team alphabetically)
+- Required: forenames, surname, username, team
+- Optional: default location, default category
+
+After saving, `parseFile()` re-runs and the row moves from errors to valid.
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `app/Livewire/ImportPlanEntries.php` | Added ~70 lines: modal state, form fields, `isEmailNotFoundError()`, `openCreateUserModal()`, `saveNewUser()` |
+| `resources/views/livewire/import-plan-entries.blade.php` | Added `+` button in error table, flyout modal (~35 lines) |
+| `tests/Feature/ImportPlanEntriesTest.php` | Added 7 new tests for quick-create flow |
+
+---
+
+## Key Lessons Learned
+
+### ✨ Flux UI Does the Heavy Lifting
+
+**Labels on inputs** - No need for `<flux:field>` wrapper with separate `<flux:label>`:
+```blade
+{{-- ❌ Verbose --}}
+<flux:field>
+    <flux:label>Forenames</flux:label>
+    <flux:input wire:model="forenames" />
+</flux:field>
+
+{{-- ✅ Simple --}}
+<flux:input wire:model="forenames" label="Forenames" />
+```
+
+**Automatic loading states** - Buttons with `type="submit"` in a `<form wire:submit>` get loading indicators automatically:
+```blade
+{{-- No wire:loading.attr or manual "Saving..." text needed! --}}
+<form wire:submit="saveNewUser">
+    ...
+    <flux:button type="submit" variant="primary">Create User</flux:button>
+</form>
+```
+
+### 🧪 Testing with Real Excel Files
+
+**The Problem**: Tests for `saveNewUser()` failed because `parseFile()` is called after creating the user, but there was no file in the test context.
+
+**The Solution**: Create real temporary Excel files using the `ExcelSheet` wrapper and Laravel's undocumented `FileFactory`:
+
+```php
+use Illuminate\Http\Testing\FileFactory;
+use Ohffs\SimpleSpout\ExcelSheet;
+
+// Create a real .xlsx file with test data
+$data = [['unknown@example.com', '15/12/2025', 'jws', 'Note', 'Y']];
+$tempPath = (new ExcelSheet)->generate($data);
+
+// Wrap it as an "uploaded" file for Livewire
+$file = (new FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
+
+Livewire::test(ImportPlanEntries::class)
+    ->set('file', $file)
+    ->call('parseFile')  // NOT updatedFile - see below!
+    ->set('newUserForenames', 'John')
+    // ...
+```
+
+### 🚫 Can't Call Lifecycle Hooks Directly in Tests
+
+Livewire 3 throws `DirectlyCallingLifecycleHooksNotAllowedException` if you try to call lifecycle methods like `updatedFile()` directly:
+
+```php
+// ❌ BAD: Throws exception
+->call('updatedFile')
+
+// ✅ GOOD: Call the actual method instead
+->call('parseFile')
+```
+
+The lifecycle hook (`updatedFile`) is triggered automatically by Livewire when the property changes in a real browser. In tests, just call the underlying method directly.
+
+### 🎯 Pre-select Sensible Defaults
+
+When the modal opens, we pre-select the manager's first team:
+```php
+$this->newUserTeamId = auth()->user()->managedTeams()->orderBy('name')->first()?->id;
+```
+
+This means managers with only one team don't need to manually select it - small UX win!
+
+---
+
+## Test Coverage
+
+7 new tests covering:
+- `isEmailNotFoundError()` returns true/false correctly
+- Modal opens with email pre-filled and team pre-selected
+- User creation with valid data succeeds
+- New user is attached to selected team
+- Email is lowercased on save
+- Validation errors for missing required fields
+- Validation errors for duplicate email/username
+
+---
+
+## User Flow
+
+1. Manager uploads Excel with unknown email
+2. Error row shows "The selected email is invalid." with `+` button
+3. Click `+` → flyout opens with email pre-filled, team pre-selected
+4. Fill in forenames, surname, username (optionally location/category)
+5. Save → user created → `parseFile()` re-runs
+6. Row disappears from errors, valid count increases
