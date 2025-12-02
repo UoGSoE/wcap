@@ -1,6 +1,11 @@
 <div>
     <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
-        <flux:heading size="xl">Edit Team Plans</flux:heading>
+        <div class="flex items-center gap-4">
+            <flux:heading size="xl">Edit Team Plans</flux:heading>
+            <flux:button href="{{ route('manager.import') }}" variant="ghost" size="sm" icon="arrow-up-tray">
+                Import
+            </flux:button>
+        </div>
         @if ($managedTeams->count() > 1)
         <div class="w-full md:w-1/4">
             <flux:select

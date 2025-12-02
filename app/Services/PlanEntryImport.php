@@ -2,63 +2,37 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Enums\Location;
 use App\Models\PlanEntry;
+use App\Models\User;
 use Illuminate\Support\Carbon;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Validator;
 
 class PlanEntryImport
 {
-    /**
-     * Create a new class instance.
-     */
-    public function __construct(protected array $rows)
-    {
-    }
+    public function __construct(protected array $rows) {}
 
     public function import(): array
     {
         $errors = [];
+        $validator = new PlanEntryRowValidator;
 
         foreach ($this->rows as $index => $row) {
-            $rowData = [
-                'email' => $row[0] ?? '',
-                'date' => $row[1] ?? '',
-                'location' => $row[2] ?? '',
-                'note' => $row[3] ?? '',
-                'is_available' => $row[4] ?? '',
-            ];
-            if ($rowData['date'] instanceof Carbon) {
-                $rowData['date'] = $rowData['date']->format('d/m/Y');
-            }
+            $result = $validator->validate($row);
 
-            $validator = Validator::make(
-                $rowData,
-                [
-                    'email' => 'required|email|exists:users,email',
-                    'date' => 'required|date_format:d/m/Y',
-                    'location' => ['required', Rule::enum(Location::class)],
-                    'note' => 'nullable',
-                    'is_available' => 'required|in:Y,N',
-                ],
-            );
-
-            if ($validator->fails()) {
+            if ($result->fails()) {
                 if ($index === 0) {
                     continue;
                 }
-                $errors[] = "Row {$index}: " . $validator->errors()->first();
+                $errors[] = "Row {$index}: ".$result->errors()->first();
+
                 continue;
             }
 
-            $validated = $validator->safe();
-
+            $validated = $result->safe();
             $user = User::where('email', $validated['email'])->first();
+            $entryDate = Carbon::createFromFormat('d/m/Y', $validated['date']);
 
             PlanEntry::updateOrCreate(
-                ['user_id' => $user->id, 'entry_date' => $validated['date']],
+                ['user_id' => $user->id, 'entry_date' => $entryDate],
                 [
                     'note' => $validated['note'],
                     'location' => $validated['location'],
