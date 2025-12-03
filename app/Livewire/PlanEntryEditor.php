@@ -8,6 +8,7 @@ use App\Models\User;
 use Flux\Flux;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Fluent;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -40,7 +41,11 @@ class PlanEntryEditor extends Component
         $validator = Validator::make(
             ['entries' => $this->entries],
             [
-                'entries.*.id' => 'nullable|integer|exists:plan_entries,id',
+                'entries.*.id' => [
+                    'nullable',
+                    'integer',
+                    Rule::exists('plan_entries', 'id')->where('user_id', $this->userId),
+                ],
                 'entries.*.note' => 'nullable|string',
                 'entries.*.location' => 'string',
                 'entries.*.entry_date' => 'required|date',

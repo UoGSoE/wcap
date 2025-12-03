@@ -1431,14 +1431,76 @@ This caused a subtle bug where the Flux combobox couldn't match `selectedTeamId 
 
 ### Test Coverage
 
-- **164 tests pass (628 assertions)**
+- **205 tests pass (773 assertions)**
 - `ManageTeamEntriesTest.php` - 18 tests covering team selection, authorization, self-team
-- `PlanEntryEditorTest.php` - 19 tests covering save, copy, validation, read-only mode
+- `PlanEntryEditorTest.php` - 20 tests covering save, copy, validation, read-only mode, ownership validation
 - `HomePageTest.php` - Updated for new component structure
 
 ### No Database Changes Required
 
 The `created_by_manager` column already existed in the `plan_entries` table from the original design.
+
+---
+
+## Security Lessons Learned
+
+#### 🔒 LESSON: Always Scope `exists` Validation to Ownership
+
+**The Problem (found via code review):**
+When validating that an ID exists in the database, a simple `exists:table,id` rule only checks the record exists - not that the current user owns it.
+
+```php
+// ❌ BAD: Only checks the ID exists
+'entries.*.id' => 'nullable|integer|exists:plan_entries,id',
+```
+
+A malicious request could reference another user's entry ID. The subsequent `updateOrCreate` would then reassign that entry to a different user.
+
+**The Fix:**
+Use `Rule::exists()` with a `where` clause to scope to ownership:
+
+```php
+// ✅ GOOD: Scoped to user ownership
+use Illuminate\Validation\Rule;
+
+'entries.*.id' => [
+    'nullable',
+    'integer',
+    Rule::exists('plan_entries', 'id')->where('user_id', $this->userId),
+],
+```
+
+**The Pattern:**
+Whenever validating that an ID "exists" for update/edit operations, ask: "Does it matter *whose* record this is?" If yes, scope the validation.
+
+**Test It:**
+Always write a test that attempts to reference another user's record and asserts validation fails:
+
+```php
+test('cannot update another users entry', function () {
+    $userA = User::factory()->create();
+    $userB = User::factory()->create();
+
+    $userAEntry = PlanEntry::factory()->create(['user_id' => $userA->id]);
+
+    actingAs($userB);
+
+    // Attempt to hijack user A's entry
+    $entries[0]['id'] = $userAEntry->id;
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $userB])
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertHasErrors(['entries.0.id']);
+
+    // Verify user A's entry was not modified
+    expect($userAEntry->fresh()->user_id)->toBe($userA->id);
+});
+```
+
+**Where This Pattern Is Used:**
+- `app/Livewire/PlanEntryEditor.php` - Entry ownership validation
+- `app/Http/Requests/ManagerUpsertPlanEntriesRequest.php` - API entry ownership validation
 
 ---
 

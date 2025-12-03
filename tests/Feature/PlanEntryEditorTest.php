@@ -456,3 +456,41 @@ test('read-only mode prevents copy rest', function () {
         ->call('copyRest', 0)
         ->assertSet('entries.5.note', 'Original');
 });
+
+test('cannot update another users entry', function () {
+    $userA = User::factory()->create();
+    $userB = User::factory()->create();
+    $date = now()->startOfWeek();
+
+    $userAEntry = PlanEntry::factory()->create([
+        'user_id' => $userA->id,
+        'entry_date' => $date,
+        'note' => 'User A task',
+        'location' => Location::JWS,
+    ]);
+
+    actingAs($userB);
+
+    $entries = collect(range(0, 13))->map(function ($offset) use ($date) {
+        return [
+            'id' => null,
+            'entry_date' => $date->copy()->addDays($offset)->format('Y-m-d'),
+            'note' => 'User B task',
+            'location' => Location::OTHER->value,
+            'is_available' => true,
+        ];
+    })->toArray();
+
+    // Attempt to hijack user A's entry
+    $entries[0]['id'] = $userAEntry->id;
+
+    Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $userB])
+        ->set('entries', $entries)
+        ->call('save')
+        ->assertHasErrors(['entries.0.id']);
+
+    // Verify user A's entry was not modified
+    $userAEntry->refresh();
+    expect($userAEntry->user_id)->toBe($userA->id);
+    expect($userAEntry->note)->toBe('User A task');
+});
