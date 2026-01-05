@@ -1,4 +1,4 @@
-name: wcap
+name: workday
 recipe: laravel
 config:
   webroot: public
