@@ -583,3 +583,32 @@ test('unavailable users do not appear in coverage counts', function () {
     // Coverage should only count member1, not member2 (Monday is index 0)
     expect($otherRow['entries'][0]['count'])->toBe(1);
 });
+
+test('coverage matrix only shows physical locations', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    $physicalLocation = Location::factory()->create(['name' => 'Office A', 'is_physical' => true]);
+    $nonPhysicalLocation = Location::factory()->nonPhysical()->create(['name' => 'Other']);
+
+    $monday = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $member->id,
+        'entry_date' => $monday,
+        'location_id' => $physicalLocation->id,
+    ]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $coverageMatrix = $component->viewData('coverageMatrix');
+
+    $labels = collect($coverageMatrix)->pluck('label')->toArray();
+
+    expect($labels)->toContain('Office A');
+    expect($labels)->not->toContain('Other');
+});

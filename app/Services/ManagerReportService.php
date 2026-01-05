@@ -42,6 +42,7 @@ class ManagerReportService
         $teamMembers = $this->getTeamMembersArray();
         $availableTeams = $this->getAvailableTeams();
         $locations = Location::orderBy('name')->get();
+        $physicalLocations = Location::physical()->orderBy('name')->get();
 
         // Collect all user IDs we'll need entries for (team members + service members/managers)
         $teamMemberIds = array_map(fn ($m) => $m->id, $teamMembers);
@@ -67,7 +68,7 @@ class ManagerReportService
         $entriesByUser = $this->indexEntriesByUser($allEntries, $teamMemberIds);
         $teamRows = $this->buildTeamRows($teamMembers, $days, $entriesByUser);
         $locationDays = $this->buildLocationDays($days, $teamMembers, $entriesByUser, $locations);
-        $coverageMatrix = $this->buildCoverageMatrix($days, $locationDays, $locations);
+        $coverageMatrix = $this->buildCoverageMatrix($days, $locationDays, $physicalLocations);
 
         $payload = [
             'days' => $days,

@@ -46,7 +46,7 @@
     </div>
 
     <flux:tab.group>
-        <flux:tabs>
+        <flux:tabs wire:model.live="tab">
             <flux:tab name="team">My Reports</flux:tab>
             <flux:tab name="location">By Location</flux:tab>
             <flux:tab name="coverage">Coverage</flux:tab>
@@ -131,9 +131,9 @@
                                 @endphp
                                 <flux:callout :icon="$showDanger ? 'x-circle' : 'check-circle'" :heading="$location['label']" :variant="$showDanger ? 'danger' : 'secondary'">
                                     <flux:callout.text>
-                                        @if (empty($location['members']))
+                                        @if (empty($location['members']) && $location['is_physical'])
                                             <flux:text variant="strong">No staff</flux:text>
-                                        @else
+                                        @elseif (!empty($location['members']))
                                             <ul class="space-y-1">
                                                 @foreach ($location['members'] as $memberData)
                                                     <li>

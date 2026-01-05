@@ -5,11 +5,15 @@ namespace App\Livewire;
 use App\Exports\ManagerReportExport;
 use App\Models\User;
 use App\Services\ManagerReportService;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ManagerReport extends Component
 {
+    #[Url]
+    public $tab = 'team';
+
     public bool $showLocation = true;
 
     public bool $showAllUsers = false;

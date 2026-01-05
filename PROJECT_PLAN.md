@@ -1504,6 +1504,12 @@ test('cannot update another users entry', function () {
 
 ---
 
+## Locations
+
+Jan 5th 2026 - Locations have been 'promoted' from an Enum to an Eloquent model.  Also a CRUD management page for them.
+
+The location model preserves most of the old enum cases/fields, but we introduced a new `is_physical` field to indicate whether the location is a 'real' location or more 'conceptual' (eg, 'Other', 'Remote').
+
 ## Future Enhancements (Parked Ideas)
 - MS Teams bot (parked - "dumpster fire" API 😄)
 - iCal feed for calendar subscriptions
