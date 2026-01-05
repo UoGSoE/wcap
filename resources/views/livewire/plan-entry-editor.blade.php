@@ -27,7 +27,7 @@
                     <flux:spacer class="mt-2"/>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <flux:input placeholder="What..." wire:model.live="entries.{{ $index }}.note" />
-                        <flux:select variant="combobox" placeholder="Where?" wire:model.live="entries.{{ $index }}.location_id">
+                        <flux:select variant="listbox" placeholder="Where?" wire:model.live="entries.{{ $index }}.location_id">
                             @foreach ($locations as $location)
                                 <flux:select.option value="{{ $location->id }}">{{ $location->label() }}</flux:select.option>
                             @endforeach

@@ -11,7 +11,7 @@
             <flux:select
                 wire:model.live="selectedTeamId"
                 placeholder="Select a team..."
-                variant="combobox"
+                variant="listbox"
             >
                 @foreach ($managedTeams as $team)
                     <flux:select.option value="{{ $team->id }}">{{ $team->name }}</flux:select.option>

@@ -1504,11 +1504,183 @@ test('cannot update another users entry', function () {
 
 ---
 
-## Locations
+## Phase 5: Locations Promotion (Enum → Eloquent Model) ✅
 
-Jan 5th 2026 - Locations have been 'promoted' from an Enum to an Eloquent model.  Also a CRUD management page for them.
+**Priority**: HIGH (completed 2026-01-05)
+**Rationale**: Locations needed to be user-manageable without code deployments, and we needed to distinguish between physical locations (offices/buildings) and conceptual locations (Remote, Other).
 
-The location model preserves most of the old enum cases/fields, but we introduced a new `is_physical` field to indicate whether the location is a 'real' location or more 'conceptual' (eg, 'Other', 'Remote').
+### What Changed
+
+**Before**: Locations were a PHP Enum (`App\Enums\Location`) with hardcoded values.
+**After**: Locations are a full Eloquent model (`App\Models\Location`) with database storage and CRUD management.
+
+### New Model Structure
+
+**Location Model** (`app/Models/Location.php`):
+```php
+// Fields
+- id (primary key)
+- name (string) - Full display name, e.g., "James Watt South"
+- short_label (string) - Abbreviated label for badges, e.g., "JWS"
+- slug (string) - URL-safe identifier, e.g., "jws"
+- is_physical (boolean) - Whether this is a real office/building location
+
+// Relationships
+- planEntries() - HasMany PlanEntry
+- usersWithDefault() - HasMany User (via default_location_id)
+
+// Scopes
+- scopePhysical() - Only physical locations (is_physical = true)
+
+// Helper Methods
+- label() - Returns the name
+- shortLabel() - Returns the short_label
+- isPhysical() - Returns is_physical boolean
+```
+
+**Factory** (`database/factories/LocationFactory.php`):
+- Default: `is_physical => true`
+- State: `->nonPhysical()` for creating non-physical locations in tests
+
+### The `is_physical` Field
+
+**Purpose**: Distinguishes between real office locations and conceptual/catch-all locations.
+
+**Physical Locations** (`is_physical = true`):
+- JWS, JWN, Rankine, Boyd-Orr, Joseph Black, etc.
+- Coverage matters - managers need to know if these are unstaffed
+- Shown in coverage reports
+- "No staff" warning displayed when empty
+
+**Non-Physical Locations** (`is_physical = false`):
+- "Other", "Remote"
+- Coverage doesn't matter - it's fine if no one is "at" Other
+- Hidden from coverage reports
+- No "No staff" warning when empty
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `app/Models/Location.php` | Eloquent model with relationships, scopes, helpers |
+| `database/factories/LocationFactory.php` | Factory with `nonPhysical()` state |
+| `database/migrations/xxxx_create_locations_table.php` | Schema with is_physical column |
+| `app/Livewire/AdminLocations.php` | CRUD management component |
+| `resources/views/livewire/admin-locations.blade.php` | Admin UI for location management |
+| `tests/Feature/AdminLocationsTest.php` | Full test coverage |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `app/Models/PlanEntry.php` | Changed `location` enum cast to `location_id` foreign key |
+| `app/Models/User.php` | Changed `default_location` to `default_location_id` relationship |
+| `database/seeders/TestDataSeeder.php` | Seeds locations from array instead of enum |
+| `resources/views/components/layouts/app.blade.php` | Added "Manage Locations" admin sidebar link |
+| `routes/web.php` | Added `/admin/locations` route |
+
+### Manager Report Updates (2026-01-05)
+
+#### 1. Coverage Report - Physical Locations Only
+
+**Change**: The Coverage tab now only shows physical locations using the `physical()` scope.
+
+**Why**: It doesn't make sense to track "coverage" for locations like "Other" or "Remote" - managers don't care if no one is working "at Other" on a given day.
+
+**Implementation** (`app/Services/ManagerReportService.php`):
+```php
+$locations = Location::orderBy('name')->get();
+$physicalLocations = Location::physical()->orderBy('name')->get();
+
+// locationDays uses all locations (for "By Location" tab)
+$locationDays = $this->buildLocationDays($days, $teamMembers, $entriesByUser, $locations);
+
+// coverageMatrix uses only physical locations
+$coverageMatrix = $this->buildCoverageMatrix($days, $locationDays, $physicalLocations);
+```
+
+#### 2. "By Location" View - Smart Empty States
+
+**Change**: Non-physical locations with no staff now show an empty card instead of "No staff" text.
+
+**Why**: "No staff" at "Other" isn't meaningful information - it's expected and not concerning.
+
+**Implementation** (`resources/views/livewire/manager-report.blade.php`):
+```blade
+@if (empty($location['members']) && $location['is_physical'])
+    <flux:text variant="strong">No staff</flux:text>
+@elseif (!empty($location['members']))
+    {{-- Show staff list --}}
+@endif
+{{-- Non-physical with no staff: empty card (no message) --}}
+```
+
+#### 3. Tab URL Persistence
+
+**Change**: Added `#[Url]` attribute to persist the selected tab in the URL.
+
+**Why**: Refreshing the page no longer loses your place - `/manager/report?tab=coverage` stays on Coverage.
+
+**Implementation** (`app/Livewire/ManagerReport.php`):
+```php
+use Livewire\Attributes\Url;
+
+#[Url]
+public $tab = 'team';
+```
+
+```blade
+<flux:tabs wire:model.live="tab">
+```
+
+### Critical Bug Fix: Plan Entry Editor
+
+**The Problem**: After promoting Location to a model, the plan entry editor blade template wasn't updated. It still used enum-style syntax:
+
+```blade
+{{-- ❌ OLD (broken) --}}
+wire:model.live="entries.{{ $index }}.location"
+value="{{ $location->value }}"
+```
+
+**The Fix** (`resources/views/livewire/plan-entry-editor.blade.php`):
+```blade
+{{-- ✅ NEW (working) --}}
+wire:model.live="entries.{{ $index }}.location_id"
+value="{{ $location->id }}"
+```
+
+**Symptoms**: Location dropdown appeared to only have one option, couldn't select locations properly.
+
+### Lesson Learned: Flux Combobox vs Listbox
+
+**The Problem**: Flux `combobox` variant had initialization issues with Livewire - options wouldn't show on first click, only on second click.
+
+**The Cause**: Alpine.js initialization timing with Livewire hydration - the combobox filter wasn't ready when options first rendered.
+
+**The Fix**: Use `listbox` variant instead of `combobox` for selects that don't need search/autocomplete:
+
+```blade
+{{-- ❌ Had initialization issues --}}
+<flux:select variant="combobox" ...>
+
+{{-- ✅ Works reliably --}}
+<flux:select variant="listbox" ...>
+```
+
+**Files Changed**:
+- `resources/views/livewire/manage-team-entries.blade.php` - Team selector
+- `resources/views/livewire/plan-entry-editor.blade.php` - Location selector
+
+**When to Use Each**:
+- `listbox` - Standard dropdowns, reliable with Livewire
+- `combobox` - When you need search/autocomplete and can accept potential hydration quirks
+
+### Test Coverage
+
+- All existing tests updated for `location_id` instead of `location`
+- New test: `coverage matrix only shows physical locations`
+- **Total**: 207 tests, 780 assertions ✓
 
 ## Future Enhancements (Parked Ideas)
 - MS Teams bot (parked - "dumpster fire" API 😄)
