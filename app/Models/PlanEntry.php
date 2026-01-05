@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\Category;
-use App\Enums\Location;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +17,7 @@ class PlanEntry extends Model
         'entry_date',
         'note',
         'category',
-        'location',
+        'location_id',
         'is_available',
         'is_holiday',
         'created_by_manager',
@@ -28,7 +27,6 @@ class PlanEntry extends Model
     {
         return [
             'entry_date' => 'date',
-            'location' => Location::class,
             'category' => Category::class,
             'is_available' => 'boolean',
             'is_holiday' => 'boolean',
@@ -39,5 +37,10 @@ class PlanEntry extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
     }
 }

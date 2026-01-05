@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Location;
 use App\Models\User;
 use App\Services\ManagerReportService;
 use Illuminate\Http\JsonResponse;
@@ -78,8 +79,9 @@ class ReportController
             ->get()
             ->all();
 
+        $locations = Location::orderBy('name')->get();
         $entriesByUser = $service->buildEntriesByUser($teamMembers, $days);
-        $locationDays = $service->buildLocationDays($days, $teamMembers, $entriesByUser);
+        $locationDays = $service->buildLocationDays($days, $teamMembers, $entriesByUser, $locations);
 
         return response()->json([
             'scope' => $ability,
@@ -111,9 +113,10 @@ class ReportController
             ->get()
             ->all();
 
+        $locations = Location::orderBy('name')->get();
         $entriesByUser = $service->buildEntriesByUser($teamMembers, $days);
-        $locationDays = $service->buildLocationDays($days, $teamMembers, $entriesByUser);
-        $coverageMatrix = $service->buildCoverageMatrix($days, $locationDays);
+        $locationDays = $service->buildLocationDays($days, $teamMembers, $entriesByUser, $locations);
+        $coverageMatrix = $service->buildCoverageMatrix($days, $locationDays, $locations);
 
         return response()->json([
             'scope' => $ability,

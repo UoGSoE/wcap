@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Service;
 use App\Models\Team;
@@ -17,6 +17,9 @@ class TestDataSeeder extends Seeder
      */
     public function run(): void
     {
+        // Seed locations first (migrating from enum values)
+        $this->seedLocations();
+
         $admin = User::factory()->admin()->create([
             'username' => 'admin2x',
             'email' => 'admin2x@example.com',
@@ -140,12 +143,15 @@ class TestDataSeeder extends Seeder
 
         // Ensure at least 2 days have zero coverage at Boyd-Orr for demo purposes
         $this->ensureLocationCoverageGaps();
+
+        // Ensure at least one day has zero coverage at "Other" to demo non-physical location handling
+        $this->ensureOtherLocationGap();
     }
 
     private function generatePlanEntries(array $teamMembers): void
     {
         $startDate = now()->startOfWeek();
-        $locations = Location::cases();
+        $locations = Location::all();
         $notes = [
             'Support tickets',
             'Server maintenance',
@@ -184,7 +190,7 @@ class TestDataSeeder extends Seeder
                 PlanEntry::create([
                     'user_id' => $member->id,
                     'entry_date' => $date,
-                    'location' => $location,
+                    'location_id' => $location->id,
                     'note' => $note,
                     'category' => null,
                     'is_available' => true,
@@ -219,7 +225,7 @@ class TestDataSeeder extends Seeder
             foreach ($userEntries as $entry) {
                 $entry->update([
                     'is_available' => false,
-                    'location' => null,
+                    'location_id' => null,
                     'note' => $unavailableReasons[array_rand($unavailableReasons)],
                 ]);
             }
@@ -254,6 +260,10 @@ class TestDataSeeder extends Seeder
         $startDate = now()->startOfWeek();
         $weekdayIndex = 0;
 
+        $jwsLocation = Location::where('slug', 'jws')->first();
+        $jwnLocation = Location::where('slug', 'jwn')->first();
+        $otherLocation = Location::where('slug', 'other')->first();
+
         for ($offset = 0; $offset < 14 && $weekdayIndex < 10; $offset++) {
             $day = $startDate->copy()->addDays($offset);
 
@@ -265,7 +275,7 @@ class TestDataSeeder extends Seeder
                 PlanEntry::create([
                     'user_id' => $serviceMember->id,
                     'entry_date' => $day,
-                    'location' => Location::JWS,
+                    'location_id' => $jwsLocation->id,
                     'note' => 'Normal coverage - member available',
                     'category' => null,
                     'is_available' => true,
@@ -276,7 +286,7 @@ class TestDataSeeder extends Seeder
                 PlanEntry::create([
                     'user_id' => $serviceManager->id,
                     'entry_date' => $day,
-                    'location' => Location::OTHER,
+                    'location_id' => $otherLocation->id,
                     'note' => 'Also available (not needed)',
                     'category' => null,
                     'is_available' => true,
@@ -287,7 +297,7 @@ class TestDataSeeder extends Seeder
                 PlanEntry::create([
                     'user_id' => $serviceMember->id,
                     'entry_date' => $day,
-                    'location' => null,
+                    'location_id' => null,
                     'note' => 'On leave',
                     'category' => null,
                     'is_available' => false,
@@ -298,7 +308,7 @@ class TestDataSeeder extends Seeder
                 PlanEntry::create([
                     'user_id' => $serviceManager->id,
                     'entry_date' => $day,
-                    'location' => Location::JWN,
+                    'location_id' => $jwnLocation->id,
                     'note' => 'Manager-only coverage',
                     'category' => null,
                     'is_available' => true,
@@ -309,7 +319,7 @@ class TestDataSeeder extends Seeder
                 PlanEntry::create([
                     'user_id' => $serviceMember->id,
                     'entry_date' => $day,
-                    'location' => null,
+                    'location_id' => null,
                     'note' => 'Unavailable',
                     'category' => null,
                     'is_available' => false,
@@ -320,7 +330,7 @@ class TestDataSeeder extends Seeder
                 PlanEntry::create([
                     'user_id' => $serviceManager->id,
                     'entry_date' => $day,
-                    'location' => null,
+                    'location_id' => null,
                     'note' => 'Also unavailable',
                     'category' => null,
                     'is_available' => false,
@@ -336,15 +346,10 @@ class TestDataSeeder extends Seeder
     private function ensureLocationCoverageGaps(): void
     {
         $startDate = now()->startOfWeek();
-        $targetLocation = Location::BO;
+        $targetLocation = Location::where('slug', 'boyd-orr')->first();
         $gapDayIndices = [2, 7]; // Wednesday of week 1, Wednesday of week 2
 
-        $alternativeLocations = [
-            Location::OTHER,
-            Location::JWS,
-            Location::JWN,
-            Location::RANKINE,
-        ];
+        $alternativeLocations = Location::whereIn('slug', ['other', 'jws', 'jwn', 'rankine'])->get();
 
         foreach ($gapDayIndices as $weekdayIndex) {
             $offset = 0;
@@ -364,15 +369,73 @@ class TestDataSeeder extends Seeder
             $targetDay = $startDate->copy()->addDays($offset);
 
             $entries = PlanEntry::where('entry_date', $targetDay)
-                ->where('location', $targetLocation)
+                ->where('location_id', $targetLocation->id)
                 ->where('is_available', true)
                 ->get();
 
             foreach ($entries as $entry) {
                 $entry->update([
-                    'location' => $alternativeLocations[array_rand($alternativeLocations)],
+                    'location_id' => $alternativeLocations->random()->id,
                 ]);
             }
+        }
+    }
+
+    private function ensureOtherLocationGap(): void
+    {
+        $startDate = now()->startOfWeek();
+        $otherLocation = Location::where('slug', 'other')->first();
+        $physicalLocations = Location::where('is_physical', true)->get();
+
+        // Target Thursday of week 1 (weekday index 3)
+        $targetWeekdayIndex = 3;
+        $offset = 0;
+        $currentWeekdayIndex = 0;
+
+        while ($currentWeekdayIndex < $targetWeekdayIndex) {
+            $day = $startDate->copy()->addDays($offset);
+            $offset++;
+
+            if ($day->isWeekend()) {
+                continue;
+            }
+
+            $currentWeekdayIndex++;
+        }
+
+        $targetDay = $startDate->copy()->addDays($offset);
+
+        // Move anyone at "Other" on this day to a physical location
+        $entries = PlanEntry::where('entry_date', $targetDay)
+            ->where('location_id', $otherLocation->id)
+            ->where('is_available', true)
+            ->get();
+
+        foreach ($entries as $entry) {
+            $entry->update([
+                'location_id' => $physicalLocations->random()->id,
+            ]);
+        }
+    }
+
+    private function seedLocations(): void
+    {
+        $locations = [
+            ['name' => 'JWS', 'short_label' => 'JWS', 'slug' => 'jws', 'is_physical' => true],
+            ['name' => 'JWN', 'short_label' => 'JWN', 'slug' => 'jwn', 'is_physical' => true],
+            ['name' => 'Rankine', 'short_label' => 'Rank', 'slug' => 'rankine', 'is_physical' => true],
+            ['name' => 'Boyd-Orr', 'short_label' => 'BO', 'slug' => 'boyd-orr', 'is_physical' => true],
+            ['name' => 'Other', 'short_label' => 'Other', 'slug' => 'other', 'is_physical' => false],
+            ['name' => 'Remote', 'short_label' => 'Remote', 'slug' => 'remote', 'is_physical' => false],
+            ['name' => 'Joseph Black', 'short_label' => 'JB', 'slug' => 'joseph-black', 'is_physical' => true],
+            ['name' => 'Alwyn William', 'short_label' => 'AW', 'slug' => 'alwyn-william', 'is_physical' => true],
+            ['name' => 'Gilbert Scott', 'short_label' => 'GS', 'slug' => 'gilbert-scott', 'is_physical' => true],
+            ['name' => 'Kelvin', 'short_label' => 'Kelv', 'slug' => 'kelvin', 'is_physical' => true],
+            ['name' => 'Maths', 'short_label' => 'Maths', 'slug' => 'maths', 'is_physical' => true],
+        ];
+
+        foreach ($locations as $location) {
+            Location::create($location);
         }
     }
 }

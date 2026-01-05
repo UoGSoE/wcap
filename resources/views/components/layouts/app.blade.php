@@ -35,6 +35,7 @@
                         @servicesEnabled
                             <flux:sidebar.item icon="wrench-screwdriver" href="{{ route('admin.services') }}" wire:navigate>Manage Services</flux:sidebar.item>
                         @endservicesEnabled
+                        <flux:sidebar.item icon="map-pin" href="{{ route('admin.locations') }}" wire:navigate>Manage Locations</flux:sidebar.item>
                         <flux:sidebar.item icon="users" href="{{ route('admin.users') }}" wire:navigate>Manage Users</flux:sidebar.item>
                     @endadmin
                 </flux:sidebar.nav>

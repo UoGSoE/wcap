@@ -32,17 +32,13 @@ Our applications are important but do not contain a lot of data.  So we do not w
 
 We like early returns and guard clauses.  Avoid nesting if statements or using `else` whereever possible.
 
-You will be aware the you should have the laravel boost tool avaiable to you.  Please use it to look up documentation.  New
-libraries, versions, syntax etc are all documented there.
+When creating a new model - please also use the `-mf` flag to generate a migration and factory at the same time.  It just saves running multiple commands so saves some effort.
 
 ### Seeding data for local development
 
 When developing locally, we use a seeder called 'TestDataSeeder' to seed the database with data.  This avoids any potential issues with running laravel's default seeder by accident.
 
 So if you have created/modified a model or factory, please check that seeder file matches your changes.
-
-Note: you cannot run database commands in this environment.  If you need to explore the database, read the migrations or stop
-and ask the user to run the command you need.
 
 ### Eloquent model class conventions
 
@@ -57,17 +53,26 @@ We have a rough convention for the order of functionality in our Eloquent models
 
 This convention makes it much easier to navigate the code and find the methods you are looking for.
 
-Also note that we like 'fat models' - helper methods, methods that make the main logic read more naturally - are all fine to put on the model.  Do not abstract to service classes without checking with the user first.  And if there are not existing service classes in the application **NEVER** introduce them unless given explicit permission by the user.
+Also note that we like 'fat models' - helper methods, methods that make the main logic read more naturally - are all fine to put on the model.  Do not abstract to service classes without checking with the user first.  If the user agrees to a service class our convention is to use \App\Services\ .
+
+We like enums over hardcoded strings for things like statuses, roles, etc.  Use laravel's casts to convert the enum to a value.  Our convention is to use \App\Enums\ .  Where is makes sense - we add helper methods to our enums for `label()` (even if it's just doing a `ucfirst()` call - it makes presentation in templates/mailables more consistent) and also `colour()` so we again - get consistent presentation in templates (we usually follow flux-ui's colour names of 'zinc, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose'.
+
+Eloquents `findOrFail` or `firstOrFail` methods are your friend.  We have sentry.io exception reporting.  If the application user is trying to do something weird with a non-existent records - let it blow up in their face and be reported to the developers.  
 
 ### Livewire component class conventions
 
 Our conventions for livewire components are:
 
 1. Properties and attributes at the top
-1.1. Any properties which are used as filters/search parameters in the component should use the `#[Url]` livewire attribute
+1.1. Any properties which are used as filters/search or active-tab parameters in the component should use the `#[Url]` livewire attribute
+1.2. Be careful of the `#[Url]` attributes though.  You should avoid using type hints on the properties being tracked in the URL due to the way livewire works.  They will always come through as strings, so you might need to cast or handle those as appropriate. 
 2. The mount() method followed by the render() method
 3. Any lifecycle methods (such as updatedFoo()) next
 4. Any custom methods after all that.
+
+### Mail notifications
+
+We always use queued mail notifications and we always use the --markdown versions for the templates.  Our conventions is to use the 'emails' folder, eg `php artisan make:mail SomethingHappened --markdown=emails.something-happened`
 
 ### Testing style
 
@@ -85,13 +90,35 @@ We like to use helpful variable names in tests.  For example we might have '$use
 
 When writing tests and you are getting unexpected results with assertSee or assertDontSee - consider that it might be that Laravels exception page is showing the values in the stack trace or contextual debug into.  Do a quick sanity check using an assertStatus() call or assertHasNoErrors().  If that doesn't help **ask the user for help**.  They can visit the page in the browser and tell you exactly what is happening and even provide you a screenshot.
 
+If you can't figure out why a test is failing after one or two fixes, add a healthy amount of logging in the test and code using dump() or dd() so that you can see what is going on rather than guessing.
+
+We also like to keep our tests quite concise.  For example:
+
+@verbatim
+```php
+Livewire::test(CreateProject::class)
+    ->set('name', '')
+    ->set('description', '')
+    ->set('email', 'kkdkdkdkkdkd')
+    ->call('create')
+    ->assertHasErrors(['name', 'description', 'email']);
+assertCount(0, Project::all());
+```
+@endverbatim
+
+Note that we don't have individual tests for each field.  We just test that the form is invalid when the fields are empty.  We don't need to test the error messages (outside of very unique/custom validation rules).
+
+That is a common pattern in our test code.  We will quite often do something like test the happy path, then the sad path.  For most cases we are testing the functionality - not every tiny detail unless it has actual concrete business logic implications.
+
+Note: if you are running the whole test suite, you can use the `--compact` flag.  It will still show you the full output for any failures, but will save you having to fill up your context window with all the passing test names.
+
 ### UI styling
 
 We use the FluxUI component library for our UI and Livewire/AlpineJS for interactivity.
 
 Always check with the laravel boost MCP tool for flux documentation.
 
-Do not add css classes to components for visual styleing - only for spacing/alignment/positioning.  Flux has it's own styling so anything that is added will make the component look out of place.  Follow the flux conventions.  Again - the laravel boost tool is your helper here.
+Do not add css classes to components for visual styling - only for spacing/alignment/positioning.  Flux has it's own styling so anything that is added will make the component look out of place.  Follow the flux conventions.  Again - the laravel boost tool is your helper here.
 
 Flux uses tailwindcss for styling and also uses it's css reset.  Make sure that anything 'clickable' has a cursor-pointer class added to it.
 
@@ -105,9 +132,17 @@ Always use the appropriate flux components instead of just <p> and <a> tags. Eg:
    ```
 @endverbatim
 
+### Validation
+
+Please don't write custom validation messages.  The laravel ones are fine.
+
+Leverage any project enums using laravels Enum rules.
+
+Remember you can validate existence of records inside validation rules and save yourself further `if { ... }` checks later.
+
 ### If in doubt...
 
-The user us always happy to help you out.  Ask questions before you add new logic or change existing code.
+The user us always happy to help you out.  They know the whole context of the application, stakeholders, conventions, etc.  They would rather you asked than take a wrong path.
 
 Most of our applications have been running in production for a long time, so there are all sorts of edge cases, features that were added, then removed, the re-added with a tweak, etc.  Legacy code is a minefield - so lean on the user.
 
@@ -118,14 +153,32 @@ If you are having a problem with a test passing - don't just keep adding code or
 
 Simplicity and readability of the code.  If you read the code and you can't imagine saying it out loud - then we consider it bad code.
 
+### Use of lando
+
+We use lando for local development - but we also have functional local development environments.  You can run laravel/artisan commands directly without using lando.  
+
+Do not try and run any commands or tools that interact with the database.  Either lando or artisan or boost.  The user will run migrations for you if you ask.  
+
+Note: The local test environment uses an in-memory database via the RefreshDatabase trait.  So there is no need to run migrations or seeders in the test environment.
+
+### Personal information
+
+Quite often you will see the developers or stakeholder names in the git commits, path names, specifications, etc.  We do not want to leak PII.  So please do not use those names in your outputs.  Especially not when writing docs or example scripts.  The one exception to that is if you are directly taling to a developer and giving them an example bash/zsh/whatever script to try right then and there.  Asking the developer to run `/Users/jenny/code/test.sh` is fine.  Putting into a readme or progress document 'Then Jimmy Smith asked for yet another feature change - omg!' is not fine.
+
+
 ### Notes from your past self
 
 • Future-me, read this before you touch the keyboard
 
-  - Start with the most obvious solution that satisfies the spec; don’t add guards, validation, or abstractions unless the user
-    explicitly asks.
+  - Start with the most obvious solution that satisfies the spec; don’t add guards, double-up "just in case" validation, or abstractions unless the user explicitly asks.
   - Respect the existing guarantees in the stack (Laravel validation, Blade escaping, etc.)—don’t re-implement or double-check them “just in case.”
   - In **ALL CASES**, simplicity beats “clever” logic every time.
   - If a requirement says “simple,” take it literally. No defensive programming unless requested.
   - For ambiguous cases, ask.  THIS IS CRITICAL TO THE USER.
+  - Do not use the users name or the names of anyone in documents you read.  Your chats with the user are logged to disk so we do not want to leak PII.  Just refer to the user as 'you', or 'stakeholders', 'the person who requested the feature', etc
+  - You are in a local development environment - the test suite uses laravel's RefreshDatabase trait and uses an in-memory sqlite database, so you don't need to run migrations before creating/editing/running tests.
+
+### Final inspiring quote
+
+"Simplicity is the ultimate sophistication."
 

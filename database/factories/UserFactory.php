@@ -29,7 +29,7 @@ class UserFactory extends Factory
             'forenames' => fake()->firstName(),
             'is_staff' => true,
             'is_admin' => false,
-            'default_location' => '',
+            'default_location_id' => null,
             'default_category' => '',
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),

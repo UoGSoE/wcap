@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
@@ -76,6 +76,7 @@ test('existing plan entries display correctly in team view', function () {
 
     $teamMember = User::factory()->create(['surname' => 'Smith', 'forenames' => 'John']);
     $team->users()->attach($teamMember->id);
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
     $monday = now()->startOfWeek();
 
@@ -83,7 +84,7 @@ test('existing plan entries display correctly in team view', function () {
         'user_id' => $teamMember->id,
         'entry_date' => $monday,
         'note' => 'Working on tickets',
-        'location' => Location::OTHER,
+        'location_id' => $location->id,
     ]);
 
     actingAs($manager);
@@ -117,20 +118,23 @@ test('by location view groups team members correctly', function () {
     $member2 = User::factory()->create(['surname' => 'Doe', 'forenames' => 'Jane']);
     $team->users()->attach([$member1->id, $member2->id]);
 
+    $locationOther = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+
     $monday = now()->startOfWeek();
 
     PlanEntry::factory()->create([
         'user_id' => $member1->id,
         'entry_date' => $monday,
         'note' => 'Support tickets',
-        'location' => Location::OTHER,
+        'location_id' => $locationOther->id,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $member2->id,
         'entry_date' => $monday,
         'note' => 'Development work',
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
     ]);
 
     actingAs($manager);
@@ -220,6 +224,7 @@ test('toggle switch changes display between location and note', function () {
 
     $teamMember = User::factory()->create(['surname' => 'Smith', 'forenames' => 'John']);
     $team->users()->attach($teamMember->id);
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
     $monday = now()->startOfWeek();
 
@@ -227,7 +232,7 @@ test('toggle switch changes display between location and note', function () {
         'user_id' => $teamMember->id,
         'entry_date' => $monday,
         'note' => 'Working on tickets',
-        'location' => Location::OTHER,
+        'location_id' => $location->id,
     ]);
 
     actingAs($manager);
@@ -251,18 +256,22 @@ test('coverage tab shows location coverage grid', function () {
     $member3 = User::factory()->create();
     $team->users()->attach([$member1->id, $member2->id, $member3->id]);
 
+    $locationOther = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    $locationJwn = Location::factory()->create(['slug' => 'jwn', 'name' => 'JWN']);
+
     $monday = now()->startOfWeek();
     $tuesday = $monday->copy()->addDay();
 
     // Monday: 2 at Other, 1 at JWS
-    PlanEntry::factory()->create(['user_id' => $member1->id, 'entry_date' => $monday, 'location' => Location::OTHER]);
-    PlanEntry::factory()->create(['user_id' => $member2->id, 'entry_date' => $monday, 'location' => Location::OTHER]);
-    PlanEntry::factory()->create(['user_id' => $member3->id, 'entry_date' => $monday, 'location' => Location::JWS]);
+    PlanEntry::factory()->create(['user_id' => $member1->id, 'entry_date' => $monday, 'location_id' => $locationOther->id]);
+    PlanEntry::factory()->create(['user_id' => $member2->id, 'entry_date' => $monday, 'location_id' => $locationOther->id]);
+    PlanEntry::factory()->create(['user_id' => $member3->id, 'entry_date' => $monday, 'location_id' => $locationJws->id]);
 
     // Tuesday: 3 at JWS
-    PlanEntry::factory()->create(['user_id' => $member1->id, 'entry_date' => $tuesday, 'location' => Location::JWS]);
-    PlanEntry::factory()->create(['user_id' => $member2->id, 'entry_date' => $tuesday, 'location' => Location::JWS]);
-    PlanEntry::factory()->create(['user_id' => $member3->id, 'entry_date' => $tuesday, 'location' => Location::JWS]);
+    PlanEntry::factory()->create(['user_id' => $member1->id, 'entry_date' => $tuesday, 'location_id' => $locationJws->id]);
+    PlanEntry::factory()->create(['user_id' => $member2->id, 'entry_date' => $tuesday, 'location_id' => $locationJws->id]);
+    PlanEntry::factory()->create(['user_id' => $member3->id, 'entry_date' => $tuesday, 'location_id' => $locationJws->id]);
 
     actingAs($manager);
 
@@ -270,7 +279,7 @@ test('coverage tab shows location coverage grid', function () {
 
     $coverageMatrix = $component->viewData('coverageMatrix');
 
-    // Find the 'Other' and 'JWS' rows in the coverage matrix
+    // Find the 'Other', 'JWS', and 'JWN' rows in the coverage matrix
     $otherRow = collect($coverageMatrix)->firstWhere('label', 'Other');
     $jwsRow = collect($coverageMatrix)->firstWhere('label', 'JWS');
     $jwnRow = collect($coverageMatrix)->firstWhere('label', 'JWN');
@@ -478,7 +487,7 @@ test('unavailable users with null location show as away in my team tab', functio
         'user_id' => $teamMember->id,
         'entry_date' => $monday,
         'note' => 'On holiday',
-        'location' => null,
+        'location_id' => null,
         'is_available' => false,
     ]);
 
@@ -498,13 +507,15 @@ test('unavailable users do not appear in by location view', function () {
     $member2 = User::factory()->create(['surname' => 'Unavailable', 'forenames' => 'User']);
     $team->users()->attach([$member1->id, $member2->id]);
 
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+
     $monday = now()->startOfWeek();
 
     // Member 1 is at Other
     PlanEntry::factory()->create([
         'user_id' => $member1->id,
         'entry_date' => $monday,
-        'location' => Location::OTHER,
+        'location_id' => $location->id,
         'is_available' => true,
     ]);
 
@@ -512,7 +523,7 @@ test('unavailable users do not appear in by location view', function () {
     PlanEntry::factory()->create([
         'user_id' => $member2->id,
         'entry_date' => $monday,
-        'location' => null,
+        'location_id' => null,
         'is_available' => false,
     ]);
 
@@ -526,8 +537,8 @@ test('unavailable users do not appear in by location view', function () {
     $mondayData = $locationDays[0];
 
     // Only member1 should appear in 'Other' location
-    expect($mondayData['locations']['other']['members'])->toHaveCount(1);
-    expect($mondayData['locations']['other']['members'][0]['name'])->toBe('Available, User');
+    expect($mondayData['locations'][$location->id]['members'])->toHaveCount(1);
+    expect($mondayData['locations'][$location->id]['members'][0]['name'])->toBe('Available, User');
 
     // Unavailable member should not appear in any location
     $component->assertSee('Available, User');
@@ -541,13 +552,15 @@ test('unavailable users do not appear in coverage counts', function () {
     $member2 = User::factory()->create();
     $team->users()->attach([$member1->id, $member2->id]);
 
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+
     $monday = now()->startOfWeek();
 
     // Member1 at Other on Monday
     PlanEntry::factory()->create([
         'user_id' => $member1->id,
         'entry_date' => $monday,
-        'location' => Location::OTHER,
+        'location_id' => $location->id,
         'is_available' => true,
     ]);
 
@@ -555,7 +568,7 @@ test('unavailable users do not appear in coverage counts', function () {
     PlanEntry::factory()->create([
         'user_id' => $member2->id,
         'entry_date' => $monday,
-        'location' => null,
+        'location_id' => null,
         'is_available' => false,
     ]);
 

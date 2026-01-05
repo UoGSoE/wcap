@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
@@ -132,12 +132,14 @@ test('manager can view team member plan entries', function () {
     $teamMember = User::factory()->create();
     $team->users()->attach($teamMember);
 
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+
     // Create a plan entry for the team member - use string date for consistent comparison
     $entryDate = now()->startOfWeek()->addDay()->toDateString();
     $entry = PlanEntry::factory()->create([
         'user_id' => $teamMember->id,
         'entry_date' => $entryDate,
-        'location' => Location::JWS,
+        'location_id' => $location->id,
         'note' => 'Working on project',
     ]);
 
@@ -161,6 +163,8 @@ test('manager can create entry for team member', function () {
     $teamMember = User::factory()->create();
     $team->users()->attach($teamMember);
 
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+
     Sanctum::actingAs($manager, ['manage:team-plans']);
 
     $response = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan", [
@@ -179,7 +183,7 @@ test('manager can create entry for team member', function () {
 
     $entry = $teamMember->planEntries()->first();
     expect($entry)->not->toBeNull();
-    expect($entry->location->value)->toBe('jws');
+    expect($entry->location->slug)->toBe('jws');
     expect($entry->note)->toBe('Assigned by manager');
     expect($entry->created_by_manager)->toBeTrue();
 });
@@ -191,10 +195,13 @@ test('manager can update entry for team member by id', function () {
     $teamMember = User::factory()->create();
     $team->users()->attach($teamMember);
 
+    $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    $locationJwn = Location::factory()->create(['slug' => 'jwn', 'name' => 'JWN']);
+
     $entry = PlanEntry::factory()->create([
         'user_id' => $teamMember->id,
         'entry_date' => '2025-12-10',
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
         'note' => 'Original note',
     ]);
 
@@ -214,7 +221,7 @@ test('manager can update entry for team member by id', function () {
     $response->assertOk();
 
     $entry->refresh();
-    expect($entry->location)->toBe(Location::JWN);
+    expect($entry->location->slug)->toBe('jwn');
     expect($entry->note)->toBe('Updated by manager');
     expect($entry->created_by_manager)->toBeTrue();
 });
@@ -226,10 +233,13 @@ test('manager can update entry for team member by date', function () {
     $teamMember = User::factory()->create();
     $team->users()->attach($teamMember);
 
+    $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    $locationRankine = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
+
     PlanEntry::factory()->create([
         'user_id' => $teamMember->id,
         'entry_date' => '2025-12-10',
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
         'note' => 'Original note',
     ]);
 
@@ -248,7 +258,7 @@ test('manager can update entry for team member by date', function () {
     $response->assertOk();
 
     $entry = $teamMember->planEntries()->whereDate('entry_date', '2025-12-10')->first();
-    expect($entry->location)->toBe(Location::RANKINE);
+    expect($entry->location->slug)->toBe('rankine');
     expect($entry->note)->toBe('Updated via date match');
 
     // Should only have one entry for this date
@@ -262,10 +272,12 @@ test('manager can delete entry for team member', function () {
     $teamMember = User::factory()->create();
     $team->users()->attach($teamMember);
 
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+
     $entry = PlanEntry::factory()->create([
         'user_id' => $teamMember->id,
         'entry_date' => '2025-12-10',
-        'location' => Location::JWS,
+        'location_id' => $location->id,
     ]);
 
     Sanctum::actingAs($manager, ['manage:team-plans']);
@@ -284,6 +296,8 @@ test('created entries have created_by_manager flag set to true', function () {
 
     $teamMember = User::factory()->create();
     $team->users()->attach($teamMember);
+
+    Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     Sanctum::actingAs($manager, ['manage:team-plans']);
 
@@ -308,6 +322,8 @@ test('manager cannot create entry for non-team member', function () {
 
     $nonTeamMember = User::factory()->create();
 
+    Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+
     Sanctum::actingAs($manager, ['manage:team-plans']);
 
     $response = $this->postJson("/api/v1/manager/team-members/{$nonTeamMember->id}/plan", [
@@ -329,10 +345,12 @@ test('manager cannot delete entry for non-team member', function () {
     Team::factory()->create(['manager_id' => $manager->id]);
 
     $nonTeamMember = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+
     $entry = PlanEntry::factory()->create([
         'user_id' => $nonTeamMember->id,
         'entry_date' => '2025-12-10',
-        'location' => Location::JWS,
+        'location_id' => $location->id,
     ]);
 
     Sanctum::actingAs($manager, ['manage:team-plans']);
@@ -344,7 +362,7 @@ test('manager cannot delete entry for non-team member', function () {
     $this->assertDatabaseHas('plan_entries', ['id' => $entry->id]);
 });
 
-test('validation rejects invalid location enum', function () {
+test('validation rejects invalid location', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
@@ -374,11 +392,15 @@ test('validation rejects entry id belonging to different user', function () {
     $team->users()->attach($teamMember);
 
     $otherUser = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+
     $otherEntry = PlanEntry::factory()->create([
         'user_id' => $otherUser->id,
         'entry_date' => '2025-12-10',
-        'location' => Location::JWS,
+        'location_id' => $location->id,
     ]);
+
+    Location::factory()->create(['slug' => 'jwn', 'name' => 'JWN']);
 
     Sanctum::actingAs($manager, ['manage:team-plans']);
 
@@ -406,6 +428,9 @@ test('manager can create entries for multiple team members from different teams'
     $member2 = User::factory()->create();
     $team1->users()->attach($member1);
     $team2->users()->attach($member2);
+
+    Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    Location::factory()->create(['slug' => 'jwn', 'name' => 'JWN']);
 
     Sanctum::actingAs($manager, ['manage:team-plans']);
 

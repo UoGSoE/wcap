@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Service;
 use App\Models\Team;
@@ -21,7 +21,7 @@ test('service availability tab is visible', function () {
     Livewire::test(\App\Livewire\ManagerReport::class)
         ->assertOk()
         ->assertSee('Service Availability');
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service availability tab displays all services', function () {
     $manager = User::factory()->create();
@@ -41,7 +41,7 @@ test('service availability tab displays all services', function () {
     expect($serviceAvailabilityMatrix[0]['label'])->toBe('Active Directory');
     expect($serviceAvailabilityMatrix[1]['label'])->toBe('Backup Service');
     expect($serviceAvailabilityMatrix[2]['label'])->toBe('Email Service');
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('only counts entries where is_available is true', function () {
     $manager = User::factory()->create();
@@ -54,18 +54,19 @@ test('only counts entries where is_available is true', function () {
     $service->users()->attach([$availableMember->id, $unavailableMember->id]);
 
     $monday = now()->startOfWeek();
+    $location = Location::factory()->create(['slug' => 'other']);
 
     PlanEntry::factory()->create([
         'user_id' => $availableMember->id,
         'entry_date' => $monday,
-        'location' => Location::OTHER,
+        'location_id' => $location->id,
         'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $unavailableMember->id,
         'entry_date' => $monday,
-        'location' => null,
+        'location_id' => null,
         'is_available' => false,
     ]);
 
@@ -77,7 +78,7 @@ test('only counts entries where is_available is true', function () {
     $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
 
     expect($testServiceRow['entries'][0]['count'])->toBe(1);
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('shows zero when no one is available', function () {
     $manager = User::factory()->create();
@@ -93,7 +94,7 @@ test('shows zero when no one is available', function () {
     PlanEntry::factory()->create([
         'user_id' => $unavailableMember->id,
         'entry_date' => $monday,
-        'location' => null,
+        'location_id' => null,
         'is_available' => false,
     ]);
 
@@ -105,7 +106,7 @@ test('shows zero when no one is available', function () {
     $emptyServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Empty Service');
 
     expect($emptyServiceRow['entries'][0]['count'])->toBe(0);
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('shows correct counts with multiple available people', function () {
     $manager = User::factory()->create();
@@ -121,38 +122,42 @@ test('shows correct counts with multiple available people', function () {
     $monday = now()->startOfWeek();
     $tuesday = $monday->copy()->addDay();
 
+    $locationJws = Location::factory()->create(['slug' => 'jws']);
+    $locationOther = Location::factory()->create(['slug' => 'other']);
+    $locationJwn = Location::factory()->create(['slug' => 'jwn']);
+
     PlanEntry::factory()->create([
         'user_id' => $member1->id,
         'entry_date' => $monday,
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
         'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $member2->id,
         'entry_date' => $monday,
-        'location' => Location::OTHER,
+        'location_id' => $locationOther->id,
         'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $member3->id,
         'entry_date' => $monday,
-        'location' => Location::JWN,
+        'location_id' => $locationJwn->id,
         'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $member1->id,
         'entry_date' => $tuesday,
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
         'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $member2->id,
         'entry_date' => $tuesday,
-        'location' => null,
+        'location_id' => null,
         'is_available' => false,
     ]);
 
@@ -165,7 +170,7 @@ test('shows correct counts with multiple available people', function () {
 
     expect($popularServiceRow['entries'][0]['count'])->toBe(3);
     expect($popularServiceRow['entries'][1]['count'])->toBe(1);
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('services always show all members regardless of admin toggle', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -181,17 +186,20 @@ test('services always show all members regardless of admin toggle', function () 
 
     $monday = now()->startOfWeek();
 
+    $locationJws = Location::factory()->create(['slug' => 'jws']);
+    $locationOther = Location::factory()->create(['slug' => 'other']);
+
     PlanEntry::factory()->create([
         'user_id' => $teamMember->id,
         'entry_date' => $monday,
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
         'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $nonTeamMember->id,
         'entry_date' => $monday,
-        'location' => Location::OTHER,
+        'location_id' => $locationOther->id,
         'is_available' => true,
     ]);
 
@@ -212,7 +220,7 @@ test('services always show all members regardless of admin toggle', function () 
     $testServiceRowToggleOff = collect($serviceMatrixToggleOff)->firstWhere('label', 'Test Service');
 
     expect($testServiceRowToggleOff['entries'][0]['count'])->toBe(2);
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service with no members shows zero availability', function () {
     $manager = User::factory()->create();
@@ -230,7 +238,7 @@ test('service with no members shows zero availability', function () {
     foreach ($unmannedServiceRow['entries'] as $entry) {
         expect($entry['count'])->toBe(0);
     }
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service availability counts across all 10 weekdays', function () {
     $manager = User::factory()->create();
@@ -241,6 +249,7 @@ test('service availability counts across all 10 weekdays', function () {
     $service->users()->attach($member->id);
 
     $startOfWeek = now()->startOfWeek();
+    $location = Location::factory()->create(['slug' => 'jws']);
 
     for ($offset = 0; $offset < 20; $offset++) {
         $day = $startOfWeek->copy()->addDays($offset);
@@ -249,7 +258,7 @@ test('service availability counts across all 10 weekdays', function () {
             PlanEntry::factory()->create([
                 'user_id' => $member->id,
                 'entry_date' => $day,
-                'location' => Location::JWS,
+                'location_id' => $location->id,
                 'is_available' => true,
             ]);
         }
@@ -266,7 +275,7 @@ test('service availability counts across all 10 weekdays', function () {
 
     $availableDays = collect($testServiceRow['entries'])->filter(fn ($entry) => $entry['count'] > 0)->count();
     expect($availableDays)->toBeGreaterThanOrEqual(9);
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('manager only coverage shows manager_only flag', function () {
     $manager = User::factory()->create();
@@ -279,11 +288,12 @@ test('manager only coverage shows manager_only flag', function () {
     ]);
 
     $monday = now()->startOfWeek();
+    $location = Location::factory()->create(['slug' => 'jws']);
 
     PlanEntry::factory()->create([
         'user_id' => $serviceManager->id,
         'entry_date' => $monday,
-        'location' => Location::JWS,
+        'location_id' => $location->id,
         'is_available' => true,
     ]);
 
@@ -298,7 +308,7 @@ test('manager only coverage shows manager_only flag', function () {
     expect($testServiceRow['entries'][0]['manager_only'])->toBe(true);
 
     $component->assertSee('Manager');
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('manager available but members also available shows count not manager_only', function () {
     $manager = User::factory()->create();
@@ -316,17 +326,20 @@ test('manager available but members also available shows count not manager_only'
 
     $monday = now()->startOfWeek();
 
+    $locationJws = Location::factory()->create(['slug' => 'jws']);
+    $locationOther = Location::factory()->create(['slug' => 'other']);
+
     PlanEntry::factory()->create([
         'user_id' => $serviceManager->id,
         'entry_date' => $monday,
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
         'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $serviceMember->id,
         'entry_date' => $monday,
-        'location' => Location::OTHER,
+        'location_id' => $locationOther->id,
         'is_available' => true,
     ]);
 
@@ -339,7 +352,7 @@ test('manager available but members also available shows count not manager_only'
 
     expect($testServiceRow['entries'][0]['count'])->toBe(1);
     expect($testServiceRow['entries'][0]['manager_only'])->toBe(false);
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('manager unavailable when count is zero shows blank cell', function () {
     $manager = User::factory()->create();
@@ -356,7 +369,7 @@ test('manager unavailable when count is zero shows blank cell', function () {
     PlanEntry::factory()->create([
         'user_id' => $serviceManager->id,
         'entry_date' => $monday,
-        'location' => null,
+        'location_id' => null,
         'is_available' => false,
     ]);
 
@@ -369,7 +382,7 @@ test('manager unavailable when count is zero shows blank cell', function () {
 
     expect($testServiceRow['entries'][0]['count'])->toBe(0);
     expect($testServiceRow['entries'][0]['manager_only'])->toBe(false);
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('manager is also a service member counts in regular count', function () {
     $manager = User::factory()->create();
@@ -384,11 +397,12 @@ test('manager is also a service member counts in regular count', function () {
     $service->users()->attach($serviceManager->id);
 
     $monday = now()->startOfWeek();
+    $location = Location::factory()->create(['slug' => 'jws']);
 
     PlanEntry::factory()->create([
         'user_id' => $serviceManager->id,
         'entry_date' => $monday,
-        'location' => Location::JWS,
+        'location_id' => $location->id,
         'is_available' => true,
     ]);
 
@@ -401,4 +415,4 @@ test('manager is also a service member counts in regular count', function () {
 
     expect($testServiceRow['entries'][0]['count'])->toBe(1);
     expect($testServiceRow['entries'][0]['manager_only'])->toBe(false);
-})->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');

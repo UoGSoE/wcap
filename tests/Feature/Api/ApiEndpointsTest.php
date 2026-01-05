@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -79,6 +79,7 @@ test('admin can access all report endpoints', function () {
 
 test('user can create a new plan entry via API', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
 
     Sanctum::actingAs($user, ['view:own-plan']);
 
@@ -99,7 +100,7 @@ test('user can create a new plan entry via API', function () {
 
     $entry = $user->planEntries()->first();
     expect($entry)->not->toBeNull();
-    expect($entry->location->value)->toBe('jws');
+    expect($entry->location->slug)->toBe('jws');
     expect($entry->note)->toBe('API testing');
     expect($entry->is_available)->toBeTrue();
     expect($entry->is_holiday)->toBeFalse();
@@ -107,6 +108,8 @@ test('user can create a new plan entry via API', function () {
 
 test('user can create multiple plan entries in batch via API', function () {
     $user = User::factory()->create();
+    $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
+    $locationJwn = Location::factory()->create(['slug' => 'jwn', 'name' => 'James Watt North']);
 
     Sanctum::actingAs($user, ['view:own-plan']);
 
@@ -131,20 +134,23 @@ test('user can create multiple plan entries in batch via API', function () {
     $entries = $user->planEntries()->get();
     expect($entries)->toHaveCount(2);
 
-    $entry1 = $entries->where('location', Location::JWS)->first();
+    $entry1 = $entries->where('location_id', $locationJws->id)->first();
     expect($entry1)->not->toBeNull();
     expect($entry1->note)->toBe('Day 1');
 
-    $entry2 = $entries->where('location', Location::JWN)->first();
+    $entry2 = $entries->where('location_id', $locationJwn->id)->first();
     expect($entry2)->not->toBeNull();
     expect($entry2->note)->toBe('Day 2');
 });
 
 test('user can update plan entry by id via API', function () {
     $user = User::factory()->create();
+    $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
+    $locationJwn = Location::factory()->create(['slug' => 'jwn', 'name' => 'James Watt North']);
+
     $entry = $user->planEntries()->create([
         'entry_date' => '2025-11-10',
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
         'note' => 'Original note',
     ]);
 
@@ -165,15 +171,18 @@ test('user can update plan entry by id via API', function () {
     $response->assertJson(['message' => 'Plan entries saved successfully']);
 
     $entry->refresh();
-    expect($entry->location)->toBe(Location::JWN);
+    expect($entry->location->slug)->toBe('jwn');
     expect($entry->note)->toBe('Updated note');
 });
 
 test('user can update plan entry by entry_date via API', function () {
     $user = User::factory()->create();
+    $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
+    $locationRankine = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
+
     $user->planEntries()->create([
         'entry_date' => '2025-11-10',
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
         'note' => 'Original note',
     ]);
 
@@ -194,7 +203,7 @@ test('user can update plan entry by entry_date via API', function () {
 
     $entry = $user->planEntries()->whereDate('entry_date', '2025-11-10')->first();
     expect($entry)->not->toBeNull();
-    expect($entry->location)->toBe(Location::RANKINE);
+    expect($entry->location->slug)->toBe('rankine');
     expect($entry->note)->toBe('Updated via date');
 
     // Should only have one entry for this date
@@ -204,10 +213,11 @@ test('user can update plan entry by entry_date via API', function () {
 test('user cannot update another users plan entry', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
 
     $otherEntry = $otherUser->planEntries()->create([
         'entry_date' => '2025-11-10',
-        'location' => Location::JWS,
+        'location_id' => $location->id,
         'note' => 'Other user entry',
     ]);
 
@@ -218,7 +228,7 @@ test('user cannot update another users plan entry', function () {
             [
                 'id' => $otherEntry->id,
                 'entry_date' => '2025-11-10',
-                'location' => 'jwn',
+                'location' => 'jws',
                 'note' => 'Trying to hack',
             ],
         ],
@@ -230,16 +240,18 @@ test('user cannot update another users plan entry', function () {
     // Original entry should be unchanged
     $this->assertDatabaseHas('plan_entries', [
         'id' => $otherEntry->id,
-        'location' => 'jws',
+        'location_id' => $location->id,
         'note' => 'Other user entry',
     ]);
 });
 
 test('user can delete their own plan entry via API', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
+
     $entry = $user->planEntries()->create([
         'entry_date' => '2025-11-10',
-        'location' => Location::JWS,
+        'location_id' => $location->id,
         'note' => 'To be deleted',
     ]);
 
@@ -258,10 +270,11 @@ test('user can delete their own plan entry via API', function () {
 test('user cannot delete another users plan entry', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
 
     $otherEntry = $otherUser->planEntries()->create([
         'entry_date' => '2025-11-10',
-        'location' => Location::JWS,
+        'location_id' => $location->id,
         'note' => 'Other user entry',
     ]);
 
@@ -277,7 +290,7 @@ test('user cannot delete another users plan entry', function () {
     ]);
 });
 
-test('API validates location enum values', function () {
+test('API validates location exists in database', function () {
     $user = User::factory()->create();
 
     Sanctum::actingAs($user, ['view:own-plan']);
@@ -316,6 +329,7 @@ test('API requires location field', function () {
 
 test('API allows optional note field', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
 
     Sanctum::actingAs($user, ['view:own-plan']);
 
@@ -332,7 +346,7 @@ test('API allows optional note field', function () {
 
     $this->assertDatabaseHas('plan_entries', [
         'user_id' => $user->id,
-        'location' => 'jws',
+        'location_id' => $location->id,
         'note' => null,
     ]);
 });
@@ -341,6 +355,7 @@ test('API allows optional note field', function () {
 
 test('authenticated user can retrieve locations list', function () {
     $user = User::factory()->create();
+    Location::factory()->create(['slug' => 'jws', 'name' => 'JWS', 'short_label' => 'JWS']);
 
     Sanctum::actingAs($user, ['view:own-plan']);
 

@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -282,10 +282,11 @@ test('deleting user removes team associations', function () {
 test('deleting user removes their plan entries', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'other']);
 
     $user->planEntries()->create([
         'entry_date' => '2025-11-04',
-        'location' => Location::OTHER->value,
+        'location_id' => $location->id,
         'note' => 'Test entry',
     ]);
 

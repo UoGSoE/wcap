@@ -3,10 +3,9 @@
 namespace App\Services;
 
 use DateTimeImmutable;
-use App\Enums\Location;
 use Illuminate\Support\Carbon;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class PlanEntryRowValidator
 {
@@ -28,7 +27,7 @@ class PlanEntryRowValidator
         return Validator::make($rowData, [
             'email' => 'required|email|exists:users,email',
             'date' => 'required|date_format:d/m/Y',
-            'location' => ['required', Rule::enum(Location::class)],
+            'location' => ['required', Rule::exists('locations', 'slug')],
             'note' => 'nullable',
             'is_available' => 'required|in:Y,N',
         ]);

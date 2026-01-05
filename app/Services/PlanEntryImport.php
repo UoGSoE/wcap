@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -30,12 +31,13 @@ class PlanEntryImport
             $validated = $result->safe();
             $user = User::where('email', $validated['email'])->first();
             $entryDate = Carbon::createFromFormat('d/m/Y', $validated['date']);
+            $location = Location::where('slug', $validated['location'])->first();
 
             PlanEntry::updateOrCreate(
                 ['user_id' => $user->id, 'entry_date' => $entryDate],
                 [
                     'note' => $validated['note'],
-                    'location' => $validated['location'],
+                    'location_id' => $location?->id,
                     'is_available' => $validated['is_available'] === 'Y',
                     'created_by_manager' => true,
                 ]

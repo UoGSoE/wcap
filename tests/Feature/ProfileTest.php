@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -22,55 +22,58 @@ test('profile page renders', function () {
 });
 
 test('profile loads existing defaults', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
     $user = User::factory()->create([
-        'default_location' => Location::OTHER->value,
+        'default_location_id' => $location->id,
         'default_category' => 'Active Directory',
     ]);
 
     actingAs($user);
 
     Livewire::test(\App\Livewire\Profile::class)
-        ->assertSet('default_location', Location::OTHER->value)
+        ->assertSet('default_location_id', $location->id)
         ->assertSet('default_category', 'Active Directory');
 });
 
 test('saving profile updates user defaults', function () {
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
     $user = User::factory()->create([
-        'default_location' => '',
+        'default_location_id' => null,
         'default_category' => '',
     ]);
 
     actingAs($user);
 
     Livewire::test(\App\Livewire\Profile::class)
-        ->set('default_location', Location::JWS->value)
+        ->set('default_location_id', $location->id)
         ->set('default_category', 'Support Tickets')
         ->call('save')
         ->assertOk();
 
     $user->refresh();
 
-    expect($user->default_location)->toBe(Location::JWS->value);
+    expect($user->default_location_id)->toBe($location->id);
     expect($user->default_category)->toBe('Support Tickets');
 });
 
 test('profile allows empty defaults', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
     $user = User::factory()->create([
-        'default_location' => Location::OTHER->value,
+        'default_location_id' => $location->id,
         'default_category' => 'Something',
     ]);
 
     actingAs($user);
 
     Livewire::test(\App\Livewire\Profile::class)
-        ->set('default_location', '')
+        ->set('default_location_id', null)
         ->set('default_category', '')
         ->call('save')
         ->assertHasNoErrors();
 
     $user->refresh();
 
-    expect($user->default_location)->toBe('');
+    expect($user->default_location_id)->toBeNull();
     expect($user->default_category)->toBe('');
 });
 

@@ -29,10 +29,18 @@ class PlanEntryFactory extends Factory
                 'Feature development',
             ]),
             'category' => null,
-            'location' => fake()->randomElement(\App\Enums\Location::cases()),
+            'location_id' => \App\Models\Location::factory(),
             'is_available' => true,
             'is_holiday' => false,
             'created_by_manager' => false,
         ];
+    }
+
+    public function unavailable(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_available' => false,
+            'location_id' => null,
+        ]);
     }
 }

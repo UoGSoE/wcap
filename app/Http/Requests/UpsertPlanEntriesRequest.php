@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Enums\Category;
-use App\Enums\Location;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -34,7 +33,7 @@ class UpsertPlanEntriesRequest extends FormRequest
                 Rule::exists('plan_entries', 'id')->where('user_id', $user->id),
             ],
             'entries.*.entry_date' => ['required', 'date'],
-            'entries.*.location' => ['required', 'string', Rule::enum(Location::class)],
+            'entries.*.location' => ['required', 'string', Rule::exists('locations', 'slug')],
             'entries.*.note' => ['nullable', 'string'],
             'entries.*.is_available' => ['nullable', 'boolean'],
             'entries.*.is_holiday' => ['nullable', 'boolean'],

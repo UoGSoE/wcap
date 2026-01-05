@@ -2,7 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\PlanEntryImport;
@@ -41,7 +41,7 @@ class ImportPlanEntries extends Component
 
     public string $newUserUsername = '';
 
-    public string $newUserDefaultLocation = '';
+    public $newUserDefaultLocationId = null;
 
     public string $newUserDefaultCategory = '';
 
@@ -140,7 +140,7 @@ class ImportPlanEntries extends Component
         $this->newUserForenames = '';
         $this->newUserSurname = '';
         $this->newUserUsername = '';
-        $this->newUserDefaultLocation = '';
+        $this->newUserDefaultLocationId = null;
         $this->newUserDefaultCategory = '';
         $this->newUserTeamId = auth()->user()->managedTeams()->orderBy('name')->first()?->id;
         $this->showCreateUserModal = true;
@@ -153,7 +153,7 @@ class ImportPlanEntries extends Component
             'newUserSurname' => 'required|string|max:255',
             'newUserEmail' => 'required|email|unique:users,email',
             'newUserUsername' => 'required|string|max:255|unique:users,username',
-            'newUserDefaultLocation' => 'nullable|string',
+            'newUserDefaultLocationId' => 'nullable|integer|exists:locations,id',
             'newUserDefaultCategory' => 'nullable|string|max:255',
             'newUserTeamId' => 'required|exists:teams,id',
         ], [
@@ -171,7 +171,7 @@ class ImportPlanEntries extends Component
             'surname' => $validated['newUserSurname'],
             'email' => strtolower($validated['newUserEmail']),
             'username' => $validated['newUserUsername'],
-            'default_location' => $validated['newUserDefaultLocation'] ?? '',
+            'default_location_id' => $validated['newUserDefaultLocationId'],
             'default_category' => $validated['newUserDefaultCategory'] ?? '',
             'password' => Hash::make(Str::random(64)),
             'is_staff' => true,
@@ -200,7 +200,7 @@ class ImportPlanEntries extends Component
     {
         return view('livewire.import-plan-entries', [
             'managerTeams' => auth()->user()->managedTeams()->orderBy('name')->get(),
-            'locations' => Location::cases(),
+            'locations' => Location::orderBy('name')->get(),
         ]);
     }
 }

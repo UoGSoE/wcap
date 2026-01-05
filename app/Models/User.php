@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -26,7 +27,7 @@ class User extends Authenticatable
         'forenames',
         'email',
         'password',
-        'default_location',
+        'default_location_id',
         'default_category',
         'is_admin',
         'is_staff',
@@ -80,6 +81,11 @@ class User extends Authenticatable
     public function managedServices(): HasMany
     {
         return $this->hasMany(Service::class, 'manager_id');
+    }
+
+    public function defaultLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'default_location_id');
     }
 
     public function isManager(): bool

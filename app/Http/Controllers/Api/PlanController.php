@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\Location;
 use App\Http\Requests\UpsertPlanEntriesRequest;
+use App\Models\Location;
 use App\Models\PlanEntry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +33,7 @@ class PlanController
 
         // Load user's plan entries
         $entries = $user->planEntries()
+            ->with('location')
             ->whereIn('entry_date', $weekdayDates)
             ->orderBy('entry_date')
             ->get()
@@ -40,7 +41,7 @@ class PlanController
                 return [
                     'id' => $entry->id,
                     'entry_date' => $entry->entry_date->toDateString(),
-                    'location' => $entry->location?->value,
+                    'location' => $entry->location?->slug,
                     'location_label' => $entry->location?->label(),
                     'note' => $entry->note,
                     'is_available' => $entry->is_available,
@@ -73,10 +74,17 @@ class PlanController
         $validated = $request->validated();
 
         foreach ($validated['entries'] as $entry) {
+            // Look up location by slug if provided
+            $locationId = null;
+            if (! empty($entry['location'])) {
+                $location = Location::where('slug', $entry['location'])->first();
+                $locationId = $location?->id;
+            }
+
             $attributes = [
                 'user_id' => $user->id,
                 'entry_date' => $entry['entry_date'],
-                'location' => $entry['location'],
+                'location_id' => $locationId,
                 'note' => $entry['note'] ?? null,
                 'is_available' => $entry['is_available'] ?? true,
                 'is_holiday' => $entry['is_holiday'] ?? false,
@@ -128,7 +136,11 @@ class PlanController
      */
     public function locations(Request $request): JsonResponse
     {
-        $locations = collect(Location::cases())->map(fn ($location) => $location->toArray());
+        $locations = Location::orderBy('name')->get()->map(fn ($location) => [
+            'value' => $location->slug,
+            'label' => $location->label(),
+            'short_label' => $location->shortLabel(),
+        ]);
 
         return response()->json([
             'locations' => $locations,

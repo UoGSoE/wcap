@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\ManagerUpsertPlanEntriesRequest;
+use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\User;
 use App\Services\ManagerReportService;
@@ -80,10 +81,15 @@ class ManagerPlanController
         $validated = $request->validated();
 
         foreach ($validated['entries'] as $entry) {
+            $locationId = null;
+            if (! empty($entry['location'])) {
+                $locationId = Location::where('slug', $entry['location'])->first()?->id;
+            }
+
             $attributes = [
                 'user_id' => $targetUser->id,
                 'entry_date' => $entry['entry_date'],
-                'location' => $entry['location'],
+                'location_id' => $locationId,
                 'note' => $entry['note'] ?? null,
                 'is_available' => $entry['is_available'] ?? true,
                 'is_holiday' => $entry['is_holiday'] ?? false,
@@ -162,7 +168,7 @@ class ManagerPlanController
         return [
             'id' => $entry->id,
             'entry_date' => $entry->entry_date->toDateString(),
-            'location' => $entry->location?->value,
+            'location' => $entry->location?->slug,
             'location_label' => $entry->location?->label(),
             'note' => $entry->note,
             'is_available' => $entry->is_available,

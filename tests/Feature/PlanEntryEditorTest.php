@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
@@ -32,17 +32,18 @@ test('home page renders with 14 days starting from monday', function () {
 
 test('saving new entries creates database records', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
     actingAs($user);
 
-    $entries = collect(range(0, 13))->map(function ($offset) {
+    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
         $date = now()->startOfWeek()->addDays($offset);
 
         return [
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note '.$offset,
-            'location' => Location::OTHER->value,
+            'location_id' => $location->id,
             'is_available' => true,
         ];
     })->toArray();
@@ -56,28 +57,30 @@ test('saving new entries creates database records', function () {
 
     $firstEntry = PlanEntry::where('user_id', $user->id)->first();
     expect($firstEntry->note)->toBe('Test note 0');
-    expect($firstEntry->location)->toBe(Location::OTHER);
+    expect($firstEntry->location_id)->toBe($location->id);
 });
 
 test('saving updates existing entries', function () {
     $user = User::factory()->create();
+    $locationOther = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
     $date = now()->startOfWeek();
 
     $created = PlanEntry::factory()->create([
         'user_id' => $user->id,
         'entry_date' => $date,
         'note' => 'Original note',
-        'location' => Location::OTHER,
+        'location_id' => $locationOther->id,
     ]);
 
     actingAs($user);
 
-    $entries = collect(range(0, 13))->map(function ($offset) use ($date) {
+    $entries = collect(range(0, 13))->map(function ($offset) use ($date, $locationJws) {
         return [
             'id' => null,
             'entry_date' => $date->copy()->addDays($offset)->format('Y-m-d'),
             'note' => 'Updated note '.$offset,
-            'location' => Location::JWS->value,
+            'location_id' => $locationJws->id,
             'is_available' => true,
         ];
     })->toArray();
@@ -98,11 +101,12 @@ test('saving updates existing entries', function () {
         ->first();
 
     expect($updatedEntry->note)->toBe('Updated note 0');
-    expect($updatedEntry->location)->toBe(Location::JWS);
+    expect($updatedEntry->location_id)->toBe($locationJws->id);
 });
 
 test('copy next copies entry to next day only', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
     actingAs($user);
 
@@ -113,24 +117,25 @@ test('copy next copies entry to next day only', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
-            'location' => '',
+            'location_id' => null,
             'is_available' => true,
         ];
     })->toArray();
 
     $entries[0]['note'] = 'First day task';
-    $entries[0]['location'] = Location::OTHER->value;
+    $entries[0]['location_id'] = $location->id;
 
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('copyNext', 0)
         ->assertSet('entries.1.note', 'First day task')
-        ->assertSet('entries.1.location', Location::OTHER->value)
+        ->assertSet('entries.1.location_id', $location->id)
         ->assertSet('entries.2.note', '');
 });
 
 test('copy rest copies entry to all remaining days', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
 
     actingAs($user);
 
@@ -141,13 +146,13 @@ test('copy rest copies entry to all remaining days', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
-            'location' => '',
+            'location_id' => null,
             'is_available' => true,
         ];
     })->toArray();
 
     $entries[0]['note'] = 'Same task all week';
-    $entries[0]['location'] = Location::RANKINE->value;
+    $entries[0]['location_id'] = $location->id;
 
     $component = Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
@@ -156,7 +161,7 @@ test('copy rest copies entry to all remaining days', function () {
     // Check all remaining days were copied
     for ($i = 1; $i < 14; $i++) {
         $component->assertSet("entries.{$i}.note", 'Same task all week')
-            ->assertSet("entries.{$i}.location", Location::RANKINE->value);
+            ->assertSet("entries.{$i}.location_id", $location->id);
     }
 });
 
@@ -172,7 +177,7 @@ test('validation requires location field when available', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note',
-            'location' => '', // Empty location should fail when available
+            'location_id' => null, // Empty location should fail when available
             'is_available' => true,
         ];
     })->toArray();
@@ -180,7 +185,7 @@ test('validation requires location field when available', function () {
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('save')
-        ->assertHasErrors(['entries.0.location']);
+        ->assertHasErrors(['entries.0.location_id']);
 });
 
 test('validation skips location when unavailable', function () {
@@ -195,7 +200,7 @@ test('validation skips location when unavailable', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note',
-            'location' => '', // Empty location is OK when unavailable
+            'location_id' => null, // Empty location is OK when unavailable
             'is_available' => false,
         ];
     })->toArray();
@@ -209,22 +214,23 @@ test('validation skips location when unavailable', function () {
 
     $firstEntry = PlanEntry::where('user_id', $user->id)->first();
     expect($firstEntry->is_available)->toBeFalse();
-    expect($firstEntry->location)->toBeNull();
+    expect($firstEntry->location_id)->toBeNull();
 });
 
 test('validation allows empty note field', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
     actingAs($user);
 
-    $entries = collect(range(0, 13))->map(function ($offset) {
+    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
         $date = now()->startOfWeek()->addDays($offset);
 
         return [
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => '', // Empty note should be allowed
-            'location' => Location::OTHER->value,
+            'location_id' => $location->id,
             'is_available' => true,
         ];
     })->toArray();
@@ -239,25 +245,27 @@ test('validation allows empty note field', function () {
 
 test('existing entries are loaded on mount', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'bo', 'name' => 'Boyd Orr']);
     $date = now()->startOfWeek();
 
     PlanEntry::factory()->create([
         'user_id' => $user->id,
         'entry_date' => $date,
         'note' => 'Existing task',
-        'location' => Location::BO,
+        'location_id' => $location->id,
     ]);
 
     actingAs($user);
 
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->assertSet('entries.0.note', 'Existing task')
-        ->assertSet('entries.0.location', Location::BO->value);
+        ->assertSet('entries.0.location_id', $location->id);
 });
 
 test('new entries use user defaults', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
     $user = User::factory()->create([
-        'default_location' => Location::OTHER->value,
+        'default_location_id' => $location->id,
         'default_category' => 'Support Tickets',
     ]);
 
@@ -265,14 +273,16 @@ test('new entries use user defaults', function () {
 
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->assertSet('entries.0.note', 'Support Tickets')
-        ->assertSet('entries.0.location', Location::OTHER->value)
+        ->assertSet('entries.0.location_id', $location->id)
         ->assertSet('entries.13.note', 'Support Tickets')
-        ->assertSet('entries.13.location', Location::OTHER->value);
+        ->assertSet('entries.13.location_id', $location->id);
 });
 
 test('existing entries override user defaults', function () {
+    $locationOther = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
     $user = User::factory()->create([
-        'default_location' => Location::OTHER->value,
+        'default_location_id' => $locationOther->id,
         'default_category' => 'Support Tickets',
     ]);
 
@@ -282,31 +292,32 @@ test('existing entries override user defaults', function () {
         'user_id' => $user->id,
         'entry_date' => $date,
         'note' => 'Specific task',
-        'location' => Location::JWS,
+        'location_id' => $locationJws->id,
     ]);
 
     actingAs($user);
 
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->assertSet('entries.0.note', 'Specific task')
-        ->assertSet('entries.0.location', Location::JWS->value)
+        ->assertSet('entries.0.location_id', $locationJws->id)
         ->assertSet('entries.1.note', 'Support Tickets')
-        ->assertSet('entries.1.location', Location::OTHER->value);
+        ->assertSet('entries.1.location_id', $locationOther->id);
 });
 
 test('is_available checkbox saves correctly', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
     actingAs($user);
 
-    $entries = collect(range(0, 13))->map(function ($offset) {
+    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
         $date = now()->startOfWeek()->addDays($offset);
 
         return [
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note',
-            'location' => Location::OTHER->value,
+            'location_id' => $location->id,
             'is_available' => $offset % 2 === 0, // Alternate true/false
         ];
     })->toArray();
@@ -327,6 +338,7 @@ test('is_available checkbox saves correctly', function () {
 
 test('copy next includes is_available', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
     actingAs($user);
 
@@ -337,26 +349,27 @@ test('copy next includes is_available', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
-            'location' => '',
+            'location_id' => null,
             'is_available' => true,
         ];
     })->toArray();
 
     $entries[0]['note'] = 'First day task';
-    $entries[0]['location'] = Location::OTHER->value;
+    $entries[0]['location_id'] = $location->id;
     $entries[0]['is_available'] = false;
 
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('copyNext', 0)
         ->assertSet('entries.1.note', 'First day task')
-        ->assertSet('entries.1.location', Location::OTHER->value)
+        ->assertSet('entries.1.location_id', $location->id)
         ->assertSet('entries.1.is_available', false)
         ->assertSet('entries.2.is_available', true);
 });
 
 test('copy rest includes is_available', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
 
     actingAs($user);
 
@@ -367,13 +380,13 @@ test('copy rest includes is_available', function () {
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
-            'location' => '',
+            'location_id' => null,
             'is_available' => true,
         ];
     })->toArray();
 
     $entries[0]['note'] = 'Same task all week';
-    $entries[0]['location'] = Location::RANKINE->value;
+    $entries[0]['location_id'] = $location->id;
     $entries[0]['is_available'] = false;
 
     $component = Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
@@ -382,20 +395,21 @@ test('copy rest includes is_available', function () {
 
     for ($i = 1; $i < 14; $i++) {
         $component->assertSet("entries.{$i}.note", 'Same task all week')
-            ->assertSet("entries.{$i}.location", Location::RANKINE->value)
+            ->assertSet("entries.{$i}.location_id", $location->id)
             ->assertSet("entries.{$i}.is_available", false);
     }
 });
 
 test('existing entries load is_available value', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
     $date = now()->startOfWeek();
 
     PlanEntry::factory()->create([
         'user_id' => $user->id,
         'entry_date' => $date,
         'note' => 'Unavailable task',
-        'location' => Location::OTHER,
+        'location_id' => $location->id,
         'is_available' => false,
     ]);
 
@@ -408,17 +422,18 @@ test('existing entries load is_available value', function () {
 
 test('read-only mode prevents saving', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
     actingAs($user);
 
-    $entries = collect(range(0, 13))->map(function ($offset) {
+    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
         $date = now()->startOfWeek()->addDays($offset);
 
         return [
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Should not save',
-            'location' => Location::OTHER->value,
+            'location_id' => $location->id,
             'is_available' => true,
         ];
     })->toArray();
@@ -433,12 +448,13 @@ test('read-only mode prevents saving', function () {
 
 test('read-only mode prevents copy next', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     actingAs($user);
 
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user, 'readOnly' => true])
         ->set('entries.0.note', 'First day')
-        ->set('entries.0.location', Location::JWS->value)
+        ->set('entries.0.location_id', $location->id)
         ->set('entries.1.note', 'Original')
         ->call('copyNext', 0)
         ->assertSet('entries.1.note', 'Original');
@@ -446,12 +462,13 @@ test('read-only mode prevents copy next', function () {
 
 test('read-only mode prevents copy rest', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     actingAs($user);
 
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user, 'readOnly' => true])
         ->set('entries.0.note', 'First day')
-        ->set('entries.0.location', Location::JWS->value)
+        ->set('entries.0.location_id', $location->id)
         ->set('entries.5.note', 'Original')
         ->call('copyRest', 0)
         ->assertSet('entries.5.note', 'Original');
@@ -460,23 +477,25 @@ test('read-only mode prevents copy rest', function () {
 test('cannot update another users entry', function () {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    $locationOther = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
     $date = now()->startOfWeek();
 
     $userAEntry = PlanEntry::factory()->create([
         'user_id' => $userA->id,
         'entry_date' => $date,
         'note' => 'User A task',
-        'location' => Location::JWS,
+        'location_id' => $location->id,
     ]);
 
     actingAs($userB);
 
-    $entries = collect(range(0, 13))->map(function ($offset) use ($date) {
+    $entries = collect(range(0, 13))->map(function ($offset) use ($date, $locationOther) {
         return [
             'id' => null,
             'entry_date' => $date->copy()->addDays($offset)->format('Y-m-d'),
             'note' => 'User B task',
-            'location' => Location::OTHER->value,
+            'location_id' => $locationOther->id,
             'is_available' => true,
         ];
     })->toArray();

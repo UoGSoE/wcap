@@ -12,5 +12,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/manager/import', \App\Livewire\ImportPlanEntries::class)->name('manager.import');
     Route::get('/admin/teams', \App\Livewire\AdminTeams::class)->name('admin.teams');
     Route::get('/admin/services', \App\Livewire\AdminServices::class)->name('admin.services');
+    Route::get('/admin/locations', \App\Livewire\AdminLocations::class)->name('admin.locations');
     Route::get('/admin/users', \App\Livewire\AdminUsers::class)->name('admin.users');
 });

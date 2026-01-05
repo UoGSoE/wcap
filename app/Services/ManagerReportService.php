@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Service;
 use App\Models\Team;
@@ -41,23 +41,45 @@ class ManagerReportService
         $days = $this->buildDays();
         $teamMembers = $this->getTeamMembersArray();
         $availableTeams = $this->getAvailableTeams();
+        $locations = Location::orderBy('name')->get();
 
-        $entriesByUser = $this->buildEntriesByUser($teamMembers, $days);
+        // Collect all user IDs we'll need entries for (team members + service members/managers)
+        $teamMemberIds = array_map(fn ($m) => $m->id, $teamMembers);
+        $allUserIds = collect($teamMemberIds);
+
+        $services = null;
+        if (config('wcap.services_enabled')) {
+            $services = Service::with(['users', 'manager'])->orderBy('name')->get();
+            $serviceUserIds = $services->flatMap(fn ($s) => $s->users->pluck('id'))
+                ->merge($services->map(fn ($s) => $s->manager?->id)->filter());
+            $allUserIds = $allUserIds->merge($serviceUserIds);
+        }
+
+        // Load all entries once
+        $start = $days[0]['key'];
+        $end = end($days)['key'];
+        $allEntries = PlanEntry::query()
+            ->with('location')
+            ->whereIn('user_id', $allUserIds->unique()->values()->toArray())
+            ->whereBetween('entry_date', [$start, $end])
+            ->get();
+
+        $entriesByUser = $this->indexEntriesByUser($allEntries, $teamMemberIds);
         $teamRows = $this->buildTeamRows($teamMembers, $days, $entriesByUser);
-        $locationDays = $this->buildLocationDays($days, $teamMembers, $entriesByUser);
-        $coverageMatrix = $this->buildCoverageMatrix($days, $locationDays);
+        $locationDays = $this->buildLocationDays($days, $teamMembers, $entriesByUser, $locations);
+        $coverageMatrix = $this->buildCoverageMatrix($days, $locationDays, $locations);
 
         $payload = [
             'days' => $days,
             'teamRows' => $teamRows,
             'locationDays' => $locationDays,
             'coverageMatrix' => $coverageMatrix,
-            'locations' => Location::cases(),
+            'locations' => $locations,
             'availableTeams' => $availableTeams,
         ];
 
         if (config('wcap.services_enabled')) {
-            $payload['serviceAvailabilityMatrix'] = $this->buildServiceAvailabilityMatrix($days);
+            $payload['serviceAvailabilityMatrix'] = $this->buildServiceAvailabilityMatrixFromEntries($days, $services, $allEntries);
         }
 
         return $payload;
@@ -89,13 +111,26 @@ class ManagerReportService
         $userIds = array_map(fn ($member) => $member->id, $teamMembers);
 
         $entries = PlanEntry::query()
+            ->with('location')
             ->whereIn('user_id', $userIds)
             ->whereBetween('entry_date', [$start, $end])
             ->get();
 
+        return $this->indexEntriesByUser($entries, $userIds);
+    }
+
+    /**
+     * Index a collection of entries by user ID and date.
+     */
+    private function indexEntriesByUser($entries, array $userIds): array
+    {
         $indexed = [];
 
         foreach ($entries as $entry) {
+            if (! in_array($entry->user_id, $userIds)) {
+                continue;
+            }
+
             $userId = $entry->user_id;
             $dateKey = $entry->entry_date->toDateString();
 
@@ -126,7 +161,7 @@ class ManagerReportService
 
                 $state = 'missing';
                 if ($entry !== null) {
-                    $state = $entry->location === null ? 'away' : 'planned';
+                    $state = $entry->location_id === null ? 'away' : 'planned';
                 }
 
                 $row['days'][] = [
@@ -144,18 +179,18 @@ class ManagerReportService
         return $rows;
     }
 
-    public function buildLocationDays(array $days, array $teamMembers, array $entriesByUser): array
+    public function buildLocationDays(array $days, array $teamMembers, array $entriesByUser, $locations): array
     {
         $result = [];
-        $locations = Location::cases();
 
         foreach ($days as $day) {
             $dateKey = $day['key'];
             $locationData = [];
 
             foreach ($locations as $location) {
-                $locationData[$location->value] = [
+                $locationData[$location->id] = [
                     'label' => $location->label(),
+                    'is_physical' => $location->is_physical,
                     'members' => [],
                 ];
             }
@@ -163,8 +198,8 @@ class ManagerReportService
             foreach ($teamMembers as $member) {
                 $entry = $entriesByUser[$member->id][$dateKey] ?? null;
 
-                if ($entry && $entry->location !== null) {
-                    $locationData[$entry->location->value]['members'][] = [
+                if ($entry && $entry->location_id !== null) {
+                    $locationData[$entry->location_id]['members'][] = [
                         'name' => "{$member->surname}, {$member->forenames}",
                         'note' => $entry->note,
                     ];
@@ -180,18 +215,19 @@ class ManagerReportService
         return $result;
     }
 
-    public function buildCoverageMatrix(array $days, array $locationDays): array
+    public function buildCoverageMatrix(array $days, array $locationDays, $locations): array
     {
         $matrix = [];
 
-        foreach (Location::cases() as $location) {
+        foreach ($locations as $location) {
             $row = [
                 'label' => $location->label(),
+                'is_physical' => $location->is_physical,
                 'entries' => [],
             ];
 
             foreach ($locationDays as $index => $dayData) {
-                $members = $dayData['locations'][$location->value]['members'];
+                $members = $dayData['locations'][$location->id]['members'] ?? [];
 
                 $row['entries'][] = [
                     'date' => $days[$index]['date'],
@@ -213,6 +249,19 @@ class ManagerReportService
         $start = $days[0]['key'];
         $end = end($days)['key'];
 
+        // Collect all user IDs (service members + managers) to load entries in one query
+        $allUserIds = $services->flatMap(fn ($s) => $s->users->pluck('id'))
+            ->merge($services->map(fn ($s) => $s->manager?->id)->filter())
+            ->unique()
+            ->values()
+            ->toArray();
+
+        $allEntries = PlanEntry::query()
+            ->whereIn('user_id', $allUserIds)
+            ->whereBetween('entry_date', [$start, $end])
+            ->get()
+            ->groupBy('user_id');
+
         foreach ($services as $service) {
             $row = [
                 'label' => $service->name,
@@ -221,18 +270,67 @@ class ManagerReportService
 
             $serviceMemberIds = $service->users->pluck('id')->toArray();
 
-            $serviceEntries = \App\Models\PlanEntry::query()
-                ->whereIn('user_id', $serviceMemberIds)
-                ->whereBetween('entry_date', [$start, $end])
-                ->get()
+            // Filter entries for this service's members from pre-loaded data
+            $serviceEntries = collect($serviceMemberIds)
+                ->flatMap(fn ($id) => $allEntries->get($id, collect()))
                 ->groupBy(fn ($e) => $e->entry_date->toDateString());
 
             $managerEntries = collect();
             if ($service->manager) {
-                $managerEntries = \App\Models\PlanEntry::query()
-                    ->where('user_id', $service->manager->id)
-                    ->whereBetween('entry_date', [$start, $end])
-                    ->get()
+                $managerEntries = $allEntries->get($service->manager->id, collect())
+                    ->groupBy(fn ($e) => $e->entry_date->toDateString());
+            }
+
+            foreach ($days as $day) {
+                $dateKey = $day['key'];
+                $dayEntries = $serviceEntries->get($dateKey, collect());
+
+                $availableCount = $dayEntries->filter(fn ($e) => $e->is_available === true)->count();
+
+                $managerOnly = false;
+                if ($availableCount === 0 && $service->manager) {
+                    $managerDayEntries = $managerEntries->get($dateKey, collect());
+                    $managerAvailable = $managerDayEntries->first(fn ($e) => $e->is_available === true);
+                    $managerOnly = $managerAvailable !== null;
+                }
+
+                $row['entries'][] = [
+                    'date' => $day['date'],
+                    'count' => $availableCount,
+                    'manager_only' => $managerOnly,
+                ];
+            }
+
+            $matrix[] = $row;
+        }
+
+        return $matrix;
+    }
+
+    /**
+     * Build service availability matrix using pre-loaded entries.
+     */
+    public function buildServiceAvailabilityMatrixFromEntries(array $days, $services, $allEntries): array
+    {
+        $matrix = [];
+        $entriesByUser = $allEntries->groupBy('user_id');
+
+        foreach ($services as $service) {
+            $row = [
+                'label' => $service->name,
+                'entries' => [],
+            ];
+
+            $serviceMemberIds = $service->users->pluck('id')->toArray();
+
+            // Filter entries for this service's members from pre-loaded data
+            $serviceEntries = collect($serviceMemberIds)
+                ->flatMap(fn ($id) => $entriesByUser->get($id, collect()))
+                ->groupBy(fn ($e) => $e->entry_date->toDateString());
+
+            $managerEntries = collect();
+            if ($service->manager) {
+                $managerEntries = $entriesByUser->get($service->manager->id, collect())
                     ->groupBy(fn ($e) => $e->entry_date->toDateString());
             }
 

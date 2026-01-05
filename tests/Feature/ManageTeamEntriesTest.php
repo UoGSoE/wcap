@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Location;
+use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
@@ -183,17 +183,18 @@ test('saving via editor sets created_by_manager flag', function () {
     $team = Team::factory()->create(['manager_id' => $manager->id]);
     $member = User::factory()->create();
     $team->users()->attach($member->id);
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     actingAs($manager);
 
-    $entries = collect(range(0, 13))->map(function ($offset) {
+    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
         $date = now()->startOfWeek()->addDays($offset);
 
         return [
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Manager entered',
-            'location' => Location::JWS->value,
+            'location_id' => $location->id,
             'is_available' => true,
         ];
     })->toArray();
@@ -244,17 +245,18 @@ test('manager can save their own entries via My Plan', function () {
     $team = Team::factory()->create(['manager_id' => $manager->id]);
     $member = User::factory()->create();
     $team->users()->attach($member->id);
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     actingAs($manager);
 
-    $entries = collect(range(0, 13))->map(function ($offset) {
+    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
         $date = now()->startOfWeek()->addDays($offset);
 
         return [
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'My own task',
-            'location' => Location::JWS->value,
+            'location_id' => $location->id,
             'is_available' => true,
         ];
     })->toArray();
@@ -276,17 +278,18 @@ test('own entries have created_by_manager false', function () {
     $team = Team::factory()->create(['manager_id' => $manager->id]);
     $member = User::factory()->create();
     $team->users()->attach($member->id);
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     actingAs($manager);
 
-    $entries = collect(range(0, 13))->map(function ($offset) {
+    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
         $date = now()->startOfWeek()->addDays($offset);
 
         return [
             'id' => null,
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'My own task',
-            'location' => Location::JWS->value,
+            'location_id' => $location->id,
             'is_available' => true,
         ];
     })->toArray();

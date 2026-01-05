@@ -2,14 +2,14 @@
 
 namespace App\Livewire;
 
-use App\Enums\Location;
+use App\Models\Location;
 use Flux\Flux;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class Profile extends Component
 {
-    public string $default_location = '';
+    public $default_location_id = null;
 
     public string $default_category = '';
 
@@ -26,14 +26,14 @@ class Profile extends Component
 
     public function mount(): void
     {
-        $this->default_location = auth()->user()->default_location;
+        $this->default_location_id = auth()->user()->default_location_id;
         $this->default_category = auth()->user()->default_category;
     }
 
     public function save(): void
     {
         $validated = $this->validate([
-            'default_location' => 'nullable|string',
+            'default_location_id' => 'nullable|integer|exists:locations,id',
             'default_category' => 'nullable|string',
         ]);
 
@@ -282,7 +282,7 @@ class Profile extends Component
     public function render()
     {
         return view('livewire.profile', [
-            'locations' => Location::cases(),
+            'locations' => Location::orderBy('name')->get(),
         ]);
     }
 }
