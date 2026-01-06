@@ -2,10 +2,10 @@
 
 namespace App\Livewire;
 
-use Flux\Flux;
-use Livewire\Component;
 use App\Models\Location;
+use Flux\Flux;
 use Illuminate\Support\Str;
+use Livewire\Component;
 
 class AdminLocations extends Component
 {
@@ -16,10 +16,6 @@ class AdminLocations extends Component
     public string $shortLabel = '';
 
     public bool $isPhysical = true;
-
-    public bool $showEditModal = false;
-
-    public bool $showDeleteModal = false;
 
     public ?int $deletingLocationId = null;
 
@@ -85,7 +81,7 @@ class AdminLocations extends Component
         }
 
         if ($this->editingLocationId === -1) {
-            $location = new Location();
+            $location = new Location;
         } else {
             $location = Location::findOrFail($this->editingLocationId);
         }

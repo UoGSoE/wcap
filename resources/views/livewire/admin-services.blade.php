@@ -53,11 +53,11 @@
     </flux:card>
 
     {{-- Edit/Create Modal --}}
-    <flux:modal wire:model="showEditModal" variant="flyout" class="md:w-96">
+    <flux:modal name="service-editor" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">
-                    {{ $editingServiceId === -1 ? 'Create New Service' : 'Edit Service' }}
+                    {{ $editingServiceId === null ? 'Create New Service' : 'Edit Service' }}
                 </flux:heading>
             </div>
 
@@ -90,9 +90,9 @@
 
                 <div class="flex gap-2">
                     <flux:button variant="primary" type="submit">
-                        <span wire:loading.remove>{{ $editingServiceId === -1 ? 'Create Service' : 'Save Changes' }}</span>
+                        {{ $editingServiceId === null ? 'Create Service' : 'Save Changes' }}
                     </flux:button>
-                    <flux:button variant="ghost" wire:click="cancelEdit">
+                    <flux:button variant="ghost" x-on:click="$flux.modal('service-editor').close()">
                         Cancel
                     </flux:button>
                 </div>
@@ -101,13 +101,13 @@
     </flux:modal>
 
     {{-- Delete Confirmation Modal --}}
-    <flux:modal wire:model="showDeleteModal" variant="flyout" class="md:w-96">
+    <flux:modal name="service-delete" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">Delete Service</flux:heading>
-                <flux:text class="mt-2">
+                <flux:subheading class="mt-2">
                     Are you sure you want to delete this service? You can transfer all members to another service, or delete the service without transferring.
-                </flux:text>
+                </flux:subheading>
             </div>
 
             <flux:field>
@@ -121,11 +121,10 @@
             </flux:field>
 
             <div class="flex gap-2">
-                <flux:button variant="danger" wire:click="deleteService" wire:loading.attr="disabled">
-                    <span wire:loading.remove>Delete Service</span>
-                    <span wire:loading>Deleting...</span>
+                <flux:button variant="danger" wire:click="deleteService">
+                    Delete Service
                 </flux:button>
-                <flux:button variant="ghost" wire:click="closeDeleteModal">
+                <flux:button variant="ghost" x-on:click="$flux.modal('service-delete').close()">
                     Cancel
                 </flux:button>
             </div>

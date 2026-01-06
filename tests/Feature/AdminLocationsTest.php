@@ -25,7 +25,6 @@ test('admin can view location management page', function () {
     $response->assertSee('Create New Location');
 });
 
-
 test('admin can see all locations in the list', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
@@ -194,7 +193,6 @@ test('admin can delete a location', function () {
 
     Livewire::test(\App\Livewire\AdminLocations::class)
         ->call('confirmDelete', $location->id)
-        ->assertSet('showDeleteModal', true)
         ->assertSet('deletingLocationId', $location->id)
         ->call('deleteLocation');
 

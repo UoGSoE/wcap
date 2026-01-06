@@ -17,10 +17,6 @@ class AdminServices extends Component
 
     public array $selectedUserIds = [];
 
-    public bool $showEditModal = false;
-
-    public bool $showDeleteModal = false;
-
     public ?int $deletingServiceId = null;
 
     public ?int $transferServiceId = null;
@@ -29,12 +25,6 @@ class AdminServices extends Component
     {
         if (! config('wcap.services_enabled')) {
             abort(404);
-        }
-
-        $user = auth()->user();
-
-        if (! $user->isAdmin()) {
-            abort(403, 'You must be an admin to access this page.');
         }
     }
 
@@ -51,11 +41,11 @@ class AdminServices extends Component
 
     public function createService(): void
     {
-        $this->editingServiceId = -1;
+        $this->editingServiceId = null;
         $this->serviceName = '';
         $this->managerId = null;
         $this->selectedUserIds = [];
-        $this->showEditModal = true;
+        Flux::modal('service-editor')->show();
     }
 
     public function editService(int $serviceId): void
@@ -66,12 +56,12 @@ class AdminServices extends Component
         $this->serviceName = $service->name;
         $this->managerId = $service->manager_id;
         $this->selectedUserIds = $service->users->pluck('id')->toArray();
-        $this->showEditModal = true;
+        Flux::modal('service-editor')->show();
     }
 
     public function save(): void
     {
-        $uniqueRule = $this->editingServiceId === -1
+        $uniqueRule = $this->editingServiceId === null
             ? 'unique:services,name'
             : 'unique:services,name,'.$this->editingServiceId;
 
@@ -80,45 +70,27 @@ class AdminServices extends Component
             'managerId' => 'required|integer|exists:users,id',
             'selectedUserIds' => 'array',
             'selectedUserIds.*' => 'integer|exists:users,id',
-        ], [
-            'serviceName.required' => 'Service name is required.',
-            'serviceName.unique' => 'A service with this name already exists.',
-            'managerId.required' => 'Manager is required.',
         ]);
 
-        if ($this->editingServiceId === -1) {
-            $service = Service::create([
-                'name' => $validated['serviceName'],
-                'manager_id' => $validated['managerId'],
-            ]);
+        $service = $this->editingServiceId
+            ? Service::findOrFail($this->editingServiceId)
+            : new Service;
 
-            Flux::toast(
-                heading: 'Service created!',
-                text: 'The service has been created successfully.',
-                variant: 'success'
-            );
-        } else {
-            $service = Service::findOrFail($this->editingServiceId);
-            $service->update([
-                'name' => $validated['serviceName'],
-                'manager_id' => $validated['managerId'],
-            ]);
-
-            Flux::toast(
-                heading: 'Service updated!',
-                text: 'The service has been updated successfully.',
-                variant: 'success'
-            );
-        }
+        $service->fill([
+            'name' => $validated['serviceName'],
+            'manager_id' => $validated['managerId'],
+        ])->save();
 
         $service->users()->sync($validated['selectedUserIds']);
 
-        $this->cancelEdit();
-    }
+        $action = $service->wasRecentlyCreated ? 'created' : 'updated';
+        Flux::toast(
+            heading: "Service {$action}!",
+            text: "The service has been {$action} successfully.",
+            variant: 'success'
+        );
 
-    public function cancelEdit(): void
-    {
-        $this->showEditModal = false;
+        Flux::modal('service-editor')->close();
         $this->editingServiceId = null;
         $this->serviceName = '';
         $this->managerId = null;
@@ -129,7 +101,7 @@ class AdminServices extends Component
     {
         $this->deletingServiceId = $serviceId;
         $this->transferServiceId = null;
-        $this->showDeleteModal = true;
+        Flux::modal('service-delete')->show();
     }
 
     public function deleteService(): void
@@ -155,14 +127,7 @@ class AdminServices extends Component
             variant: 'success'
         );
 
-        $this->showDeleteModal = false;
-        $this->deletingServiceId = null;
-        $this->transferServiceId = null;
-    }
-
-    public function closeDeleteModal(): void
-    {
-        $this->showDeleteModal = false;
+        Flux::modal('service-delete')->close();
         $this->deletingServiceId = null;
         $this->transferServiceId = null;
     }
