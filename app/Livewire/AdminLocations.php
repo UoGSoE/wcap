@@ -2,9 +2,10 @@
 
 namespace App\Livewire;
 
-use App\Models\Location;
 use Flux\Flux;
 use Livewire\Component;
+use App\Models\Location;
+use Illuminate\Support\Str;
 
 class AdminLocations extends Component
 {
@@ -22,21 +23,23 @@ class AdminLocations extends Component
 
     public ?int $deletingLocationId = null;
 
-    public function mount(): void
-    {
-        $user = auth()->user();
+    public ?int $replacementLocationId = null;
 
-        if (! $user->isAdmin()) {
-            abort(403, 'You must be an admin to access this page.');
-        }
-    }
+    public int $planEntryCount = 0;
+
+    public int $userDefaultCount = 0;
 
     public function render()
     {
         $locations = Location::orderBy('name')->get();
 
+        $replacementLocations = $this->deletingLocationId
+            ? $locations->where('id', '!=', $this->deletingLocationId)
+            : collect();
+
         return view('livewire.admin-locations', [
             'locations' => $locations,
+            'replacementLocations' => $replacementLocations,
         ]);
     }
 
@@ -46,7 +49,7 @@ class AdminLocations extends Component
         $this->locationName = '';
         $this->shortLabel = '';
         $this->isPhysical = true;
-        $this->showEditModal = true;
+        Flux::modal('location-editor')->show();
     }
 
     public function editLocation(int $locationId): void
@@ -57,7 +60,7 @@ class AdminLocations extends Component
         $this->locationName = $location->name;
         $this->shortLabel = $location->short_label;
         $this->isPhysical = $location->is_physical;
-        $this->showEditModal = true;
+        Flux::modal('location-editor')->show();
     }
 
     public function save(): void
@@ -72,52 +75,34 @@ class AdminLocations extends Component
             'isPhysical' => 'boolean',
         ]);
 
-        if ($this->editingLocationId === -1) {
-            // Generate slug from name
-            $slug = \Illuminate\Support\Str::slug($validated['locationName']);
+        $slug = Str::slug($validated['locationName']);
+        $originalSlug = $slug;
 
-            // Ensure slug is unique
-            $originalSlug = $slug;
-            $counter = 1;
-            while (Location::where('slug', $slug)->exists()) {
-                $slug = $originalSlug.'-'.$counter;
-                $counter++;
-            }
-
-            Location::create([
-                'name' => $validated['locationName'],
-                'short_label' => $validated['shortLabel'],
-                'slug' => $slug,
-                'is_physical' => $validated['isPhysical'],
-            ]);
-
-            Flux::toast(
-                heading: 'Location created!',
-                text: 'The location has been created successfully.',
-                variant: 'success'
-            );
-        } else {
-            $location = Location::findOrFail($this->editingLocationId);
-            $location->update([
-                'name' => $validated['locationName'],
-                'short_label' => $validated['shortLabel'],
-                'is_physical' => $validated['isPhysical'],
-            ]);
-
-            Flux::toast(
-                heading: 'Location updated!',
-                text: 'The location has been updated successfully.',
-                variant: 'success'
-            );
+        $counter = 1;
+        while (Location::where('slug', $slug)->exists()) {
+            $slug = $originalSlug.'-'.$counter;
+            $counter++;
         }
 
-        $this->cancelEdit();
-    }
+        if ($this->editingLocationId === -1) {
+            $location = new Location();
+        } else {
+            $location = Location::findOrFail($this->editingLocationId);
+        }
+        $location->name = $validated['locationName'];
+        $location->short_label = $validated['shortLabel'];
+        $location->slug = $slug;
+        $location->is_physical = $validated['isPhysical'];
+        $location->save();
 
-    public function cancelEdit(): void
-    {
-        $this->showEditModal = false;
-        $this->editingLocationId = null;
+        Flux::toast(
+            heading: 'Location saved!',
+            text: 'The location has been saved successfully.',
+            variant: 'success'
+        );
+
+        Flux::modal('location-editor')->close();
+        $this->editingLocationId = -1;
         $this->locationName = '';
         $this->shortLabel = '';
         $this->isPhysical = true;
@@ -125,42 +110,42 @@ class AdminLocations extends Component
 
     public function confirmDelete(int $locationId): void
     {
+        $location = Location::findOrFail($locationId);
+
         $this->deletingLocationId = $locationId;
-        $this->showDeleteModal = true;
+        $this->planEntryCount = $location->planEntries()->count();
+        $this->userDefaultCount = $location->usersWithDefault()->count();
+
+        // Pre-select first available replacement location
+        $firstReplacement = Location::where('id', '!=', $locationId)->orderBy('name')->first();
+        $this->replacementLocationId = $firstReplacement?->id;
+
+        Flux::modal('location-delete')->show();
     }
 
     public function deleteLocation(): void
     {
         $location = Location::findOrFail($this->deletingLocationId);
 
-        // Check if location is in use
         $usageCount = $location->planEntries()->count() + $location->usersWithDefault()->count();
 
+        // If location is in use, we need a replacement location selected
         if ($usageCount > 0) {
-            Flux::toast(
-                heading: 'Cannot delete location',
-                text: 'This location is in use by plan entries or as a user default.',
-                variant: 'danger'
-            );
-            $this->closeDeleteModal();
+            $this->validate([
+                'replacementLocationId' => 'required|exists:locations,id',
+            ]);
 
-            return;
+            $location->planEntries()->update(['location_id' => $this->replacementLocationId]);
+            $location->usersWithDefault()->update(['default_location_id' => $this->replacementLocationId]);
         }
 
         $location->delete();
 
         Flux::toast(
-            heading: 'Location deleted!',
-            text: 'The location has been deleted successfully.',
+            text: 'Location deleted!',
             variant: 'success'
         );
 
-        $this->closeDeleteModal();
-    }
-
-    public function closeDeleteModal(): void
-    {
-        $this->showDeleteModal = false;
-        $this->deletingLocationId = null;
+        Flux::modal('location-delete')->close();
     }
 }

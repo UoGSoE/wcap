@@ -59,7 +59,7 @@
     </flux:card>
 
     {{-- Edit/Create Modal --}}
-    <flux:modal wire:model="showEditModal" variant="flyout" class="md:w-96">
+    <flux:modal name="location-editor" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">
@@ -80,7 +80,7 @@
                     <flux:button variant="primary" type="submit">
                         Save
                     </flux:button>
-                    <flux:button variant="ghost" wire:click="cancelEdit">
+                    <flux:button variant="ghost" x-on:click="$flux.modal('location-editor').close()">
                         Cancel
                     </flux:button>
                 </div>
@@ -89,20 +89,55 @@
     </flux:modal>
 
     {{-- Delete Confirmation Modal --}}
-    <flux:modal wire:model="showDeleteModal" variant="flyout" class="md:w-96">
+    <flux:modal name="location-delete" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">Delete Location</flux:heading>
-                <flux:subheading class="mt-2">
-                    Are you sure you want to delete this location? This action cannot be undone. Locations that are in use by plan entries or as user defaults cannot be deleted.
-                </flux:subheading>
+
+                @if ($planEntryCount > 0 || $userDefaultCount > 0)
+                    <flux:subheading class="mt-2">
+                        This location is currently in use:
+                    </flux:subheading>
+
+                    <ul class="mt-2 list-disc list-inside text-sm text-zinc-600 dark:text-zinc-400">
+                        @if ($planEntryCount > 0)
+                            <li>{{ $planEntryCount }} {{ Str::plural('plan entry', $planEntryCount) }}</li>
+                        @endif
+                        @if ($userDefaultCount > 0)
+                            <li>{{ $userDefaultCount }} {{ Str::plural('user default', $userDefaultCount) }}</li>
+                        @endif
+                    </ul>
+
+                    <flux:subheading class="mt-4">
+                        Select a replacement location to migrate these records to before deleting:
+                    </flux:subheading>
+
+                    <div class="mt-4">
+                        <flux:select wire:model="replacementLocationId" placeholder="Select replacement location...">
+                            @foreach ($replacementLocations as $location)
+                                <flux:select.option value="{{ $location->id }}">{{ $location->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        @error('replacementLocationId')
+                            <flux:text class="text-red-500 text-sm mt-1">{{ $message }}</flux:text>
+                        @enderror
+                    </div>
+                @else
+                    <flux:subheading class="mt-2">
+                        Are you sure you want to delete this location? This action cannot be undone.
+                    </flux:subheading>
+                @endif
             </div>
 
             <div class="flex gap-2">
                 <flux:button variant="danger" wire:click="deleteLocation">
-                    Delete Location
+                    @if ($planEntryCount > 0 || $userDefaultCount > 0)
+                        Migrate &amp; Delete
+                    @else
+                        Delete Location
+                    @endif
                 </flux:button>
-                <flux:button variant="ghost" wire:click="closeDeleteModal">
+                <flux:button variant="ghost" x-on:click="$flux.modal('location-delete').close()">
                     Cancel
                 </flux:button>
             </div>

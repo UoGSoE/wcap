@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'ability' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
             'abilities' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
+            'manager' => \App\Http\Middleware\ManagerMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

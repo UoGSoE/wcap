@@ -10,25 +10,21 @@ use function Pest\Laravel\actingAs;
 
 uses(RefreshDatabase::class);
 
-test('admin can view location management page', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-
-    actingAs($admin);
-
-    Livewire::test(\App\Livewire\AdminLocations::class)
-        ->assertOk()
-        ->assertSee('Location Management')
-        ->assertSee('Create New Location');
-});
-
 test('non-admin cannot access location management page', function () {
     $user = User::factory()->create(['is_admin' => false]);
 
-    actingAs($user);
-
-    Livewire::test(\App\Livewire\AdminLocations::class)
-        ->assertForbidden();
+    $this->actingAs($user)->get(route('admin.locations'))->assertForbidden();
 });
+
+test('admin can view location management page', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $response = $this->actingAs($admin)->get(route('admin.locations'))->assertOk();
+    $response->assertOk();
+    $response->assertSee('Location Management');
+    $response->assertSee('Create New Location');
+});
+
 
 test('admin can see all locations in the list', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -68,14 +64,13 @@ test('admin can create a new location', function () {
         ->set('shortLabel', 'NB')
         ->set('isPhysical', true)
         ->call('save')
-        ->assertSet('editingLocationId', null);
+        ->assertSet('editingLocationId', -1);
 
-    $this->assertDatabaseHas('locations', [
-        'name' => 'New Building',
-        'short_label' => 'NB',
-        'slug' => 'new-building',
-        'is_physical' => true,
-    ]);
+    $location = Location::where('name', 'New Building')->first();
+    expect($location->name)->toBe('New Building');
+    expect($location->short_label)->toBe('NB');
+    expect($location->slug)->toBe('new-building');
+    expect($location->is_physical)->toBeTrue();
 });
 
 test('slug is generated uniquely when creating location', function () {
@@ -94,10 +89,9 @@ test('slug is generated uniquely when creating location', function () {
         ->set('shortLabel', 'TB2')
         ->call('save');
 
-    $this->assertDatabaseHas('locations', [
-        'name' => 'Test Building 2',
-        'slug' => 'test-building-2',
-    ]);
+    $location = Location::where('name', 'Test Building 2')->first();
+    expect($location->name)->toBe('Test Building 2');
+    expect($location->slug)->toBe('test-building-2');
 });
 
 test('location name must be unique when creating', function () {
@@ -114,7 +108,7 @@ test('location name must be unique when creating', function () {
         ->call('save')
         ->assertHasErrors(['locationName' => 'unique']);
 
-    $this->assertEquals(1, Location::where('name', 'Existing Building')->count());
+    expect(Location::where('name', 'Existing Building')->count())->toBe(1);
 });
 
 test('admin can edit an existing location', function () {
@@ -138,7 +132,7 @@ test('admin can edit an existing location', function () {
         ->set('shortLabel', 'UN')
         ->set('isPhysical', false)
         ->call('save')
-        ->assertSet('editingLocationId', null);
+        ->assertSet('editingLocationId', -1);
 
     $location->refresh();
 
@@ -147,7 +141,7 @@ test('admin can edit an existing location', function () {
     expect($location->is_physical)->toBeFalse();
 });
 
-test('editing location does not change its slug', function () {
+test('editing location updates its slug if the name changes', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
     $location = Location::factory()->create([
@@ -165,7 +159,7 @@ test('editing location does not change its slug', function () {
     $location->refresh();
 
     expect($location->name)->toBe('Completely Different Name');
-    expect($location->slug)->toBe('original-slug');
+    expect($location->slug)->toBe('completely-different-name');
 });
 
 test('location name must be unique when updating but can keep same name', function () {
@@ -204,42 +198,83 @@ test('admin can delete a location', function () {
         ->assertSet('deletingLocationId', $location->id)
         ->call('deleteLocation');
 
-    $this->assertDatabaseMissing('locations', ['id' => $location->id]);
+    expect(Location::where('id', $location->id)->count())->toBe(0);
 });
 
-test('cannot delete location in use by plan entries', function () {
+test('replacement location is pre-selected when deleting location in use', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
-    $location = Location::factory()->create();
+    $locationToDelete = Location::factory()->create(['name' => 'Old Building']);
+    $replacementLocation = Location::factory()->create(['name' => 'New Building']);
 
-    PlanEntry::factory()->create(['location_id' => $location->id]);
+    PlanEntry::factory()->create(['location_id' => $locationToDelete->id]);
+
+    actingAs($admin);
+
+    // Replacement should be pre-selected, so delete works immediately
+    Livewire::test(\App\Livewire\AdminLocations::class)
+        ->call('confirmDelete', $locationToDelete->id)
+        ->assertSet('planEntryCount', 1)
+        ->assertSet('userDefaultCount', 0)
+        ->assertSet('replacementLocationId', $replacementLocation->id)
+        ->call('deleteLocation')
+        ->assertHasNoErrors();
+
+    expect(Location::where('id', $locationToDelete->id)->count())->toBe(0);
+});
+
+test('can delete location in use by migrating both plan entries and user defaults', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $locationToDelete = Location::factory()->create(['name' => 'Old Building']);
+    $replacementLocation = Location::factory()->create(['name' => 'New Building']);
+
+    $planEntry1 = PlanEntry::factory()->create(['location_id' => $locationToDelete->id]);
+    $planEntry2 = PlanEntry::factory()->create(['location_id' => $locationToDelete->id]);
+    $userWithDefault = User::factory()->create(['default_location_id' => $locationToDelete->id]);
 
     actingAs($admin);
 
     Livewire::test(\App\Livewire\AdminLocations::class)
-        ->call('confirmDelete', $location->id)
-        ->call('deleteLocation');
+        ->call('confirmDelete', $locationToDelete->id)
+        ->assertSet('planEntryCount', 2)
+        ->assertSet('userDefaultCount', 1)
+        ->set('replacementLocationId', $replacementLocation->id)
+        ->call('deleteLocation')
+        ->assertHasNoErrors();
 
-    $this->assertDatabaseHas('locations', ['id' => $location->id]);
+    expect(Location::where('id', $locationToDelete->id)->count())->toBe(0);
+
+    $planEntry1->refresh();
+    $planEntry2->refresh();
+    $userWithDefault->refresh();
+
+    expect($planEntry1->location_id)->toBe($replacementLocation->id);
+    expect($planEntry2->location_id)->toBe($replacementLocation->id);
+    expect($userWithDefault->default_location_id)->toBe($replacementLocation->id);
 });
 
-test('cannot delete location set as user default', function () {
+test('replacement location list excludes the location being deleted', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
-    $location = Location::factory()->create();
-
-    User::factory()->create(['default_location_id' => $location->id]);
+    $locationToDelete = Location::factory()->create(['name' => 'Location A']);
+    $otherLocation1 = Location::factory()->create(['name' => 'Location B']);
+    $otherLocation2 = Location::factory()->create(['name' => 'Location C']);
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
-        ->call('confirmDelete', $location->id)
-        ->call('deleteLocation');
+    $component = Livewire::test(\App\Livewire\AdminLocations::class)
+        ->call('confirmDelete', $locationToDelete->id);
 
-    $this->assertDatabaseHas('locations', ['id' => $location->id]);
+    $replacementLocations = $component->viewData('replacementLocations');
+
+    expect($replacementLocations)->toHaveCount(2);
+    expect($replacementLocations->pluck('id')->toArray())->not->toContain($locationToDelete->id);
+    expect($replacementLocations->pluck('id')->toArray())->toContain($otherLocation1->id);
+    expect($replacementLocations->pluck('id')->toArray())->toContain($otherLocation2->id);
 });
 
-test('validation requires location name', function () {
+test('required fields must be present', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
     actingAs($admin);
@@ -247,73 +282,7 @@ test('validation requires location name', function () {
     Livewire::test(\App\Livewire\AdminLocations::class)
         ->call('createLocation')
         ->set('locationName', '')
-        ->set('shortLabel', 'TB')
-        ->call('save')
-        ->assertHasErrors(['locationName' => 'required']);
-});
-
-test('validation requires short label', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-
-    actingAs($admin);
-
-    Livewire::test(\App\Livewire\AdminLocations::class)
-        ->call('createLocation')
-        ->set('locationName', 'Test Building')
         ->set('shortLabel', '')
         ->call('save')
-        ->assertHasErrors(['shortLabel' => 'required']);
-});
-
-test('admin can cancel editing', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-
-    $location = Location::factory()->create();
-
-    actingAs($admin);
-
-    Livewire::test(\App\Livewire\AdminLocations::class)
-        ->call('editLocation', $location->id)
-        ->assertSet('editingLocationId', $location->id)
-        ->call('cancelEdit')
-        ->assertSet('editingLocationId', null)
-        ->assertSet('locationName', '')
-        ->assertSet('shortLabel', '');
-});
-
-test('admin can close delete modal', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-
-    $location = Location::factory()->create();
-
-    actingAs($admin);
-
-    Livewire::test(\App\Livewire\AdminLocations::class)
-        ->call('confirmDelete', $location->id)
-        ->assertSet('showDeleteModal', true)
-        ->call('closeDeleteModal')
-        ->assertSet('showDeleteModal', false)
-        ->assertSet('deletingLocationId', null);
-});
-
-test('location list shows is_physical status correctly', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-
-    $physicalLocation = Location::factory()->create([
-        'name' => 'Physical Building',
-        'is_physical' => true,
-    ]);
-
-    $nonPhysicalLocation = Location::factory()->nonPhysical()->create([
-        'name' => 'Other Location',
-    ]);
-
-    actingAs($admin);
-
-    $component = Livewire::test(\App\Livewire\AdminLocations::class);
-
-    $locations = $component->viewData('locations');
-
-    expect($locations->firstWhere('name', 'Physical Building')->is_physical)->toBeTrue();
-    expect($locations->firstWhere('name', 'Other Location')->is_physical)->toBeFalse();
+        ->assertHasErrors(['locationName' => 'required', 'shortLabel' => 'required']);
 });

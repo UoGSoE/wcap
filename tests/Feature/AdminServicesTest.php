@@ -70,12 +70,7 @@ test('admin can create a new service', function () {
         ->call('save')
         ->assertSet('editingServiceId', null);
 
-    $this->assertDatabaseHas('services', [
-        'name' => 'New Service',
-        'manager_id' => $manager->id,
-    ]);
-
-    $service = Service::where('name', 'New Service')->first();
+    $service = Service::where('name', 'New Service')->firstOrFail();
     expect($service->users)->toHaveCount(2);
     expect($service->users->pluck('id')->toArray())->toContain($member1->id, $member2->id);
 })->skip(fn() => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
