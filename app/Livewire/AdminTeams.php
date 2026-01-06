@@ -17,22 +17,9 @@ class AdminTeams extends Component
 
     public array $selectedUserIds = [];
 
-    public bool $showEditModal = false;
-
-    public bool $showDeleteModal = false;
-
     public ?int $deletingTeamId = null;
 
     public ?int $transferTeamId = null;
-
-    public function mount(): void
-    {
-        $user = auth()->user();
-
-        if (! $user->isAdmin()) {
-            abort(403, 'You must be an admin to access this page.');
-        }
-    }
 
     public function render()
     {
@@ -51,7 +38,7 @@ class AdminTeams extends Component
         $this->teamName = '';
         $this->managerId = null;
         $this->selectedUserIds = [];
-        $this->showEditModal = true;
+        Flux::modal('team-editor')->show();
     }
 
     public function editTeam(int $teamId): void
@@ -62,7 +49,7 @@ class AdminTeams extends Component
         $this->teamName = $team->name;
         $this->managerId = $team->manager_id;
         $this->selectedUserIds = $team->users->pluck('id')->toArray();
-        $this->showEditModal = true;
+        Flux::modal('team-editor')->show();
     }
 
     public function save(): void
@@ -82,40 +69,26 @@ class AdminTeams extends Component
             'managerId.required' => 'Manager is required.',
         ]);
 
-        if ($this->editingTeamId === -1) {
-            $team = Team::create([
-                'name' => $validated['teamName'],
-                'manager_id' => $validated['managerId'],
-            ]);
+        $team = $this->editingTeamId === -1
+            ? new Team
+            : Team::findOrFail($this->editingTeamId);
 
-            Flux::toast(
-                heading: 'Team created!',
-                text: 'The team has been created successfully.',
-                variant: 'success'
-            );
-        } else {
-            $team = Team::findOrFail($this->editingTeamId);
-            $team->update([
-                'name' => $validated['teamName'],
-                'manager_id' => $validated['managerId'],
-            ]);
+        $team->fill([
+            'name' => $validated['teamName'],
+            'manager_id' => $validated['managerId'],
+        ])->save();
 
-            Flux::toast(
-                heading: 'Team updated!',
-                text: 'The team has been updated successfully.',
-                variant: 'success'
-            );
-        }
+        $action = $team->wasRecentlyCreated ? 'created' : 'updated';
+        Flux::toast(
+            heading: "Team {$action}!",
+            text: "The team has been {$action} successfully.",
+            variant: 'success'
+        );
 
         $team->users()->sync($validated['selectedUserIds']);
 
-        $this->cancelEdit();
-    }
-
-    public function cancelEdit(): void
-    {
-        $this->showEditModal = false;
-        $this->editingTeamId = null;
+        Flux::modal('team-editor')->close();
+        $this->editingTeamId = -1;
         $this->teamName = '';
         $this->managerId = null;
         $this->selectedUserIds = [];
@@ -125,7 +98,7 @@ class AdminTeams extends Component
     {
         $this->deletingTeamId = $teamId;
         $this->transferTeamId = null;
-        $this->showDeleteModal = true;
+        Flux::modal('team-delete')->show();
     }
 
     public function deleteTeam(): void
@@ -151,14 +124,7 @@ class AdminTeams extends Component
             variant: 'success'
         );
 
-        $this->showDeleteModal = false;
-        $this->deletingTeamId = null;
-        $this->transferTeamId = null;
-    }
-
-    public function closeDeleteModal(): void
-    {
-        $this->showDeleteModal = false;
+        Flux::modal('team-delete')->close();
         $this->deletingTeamId = null;
         $this->transferTeamId = null;
     }

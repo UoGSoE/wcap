@@ -53,7 +53,7 @@
     </flux:card>
 
     {{-- Edit/Create Modal --}}
-    <flux:modal wire:model="showEditModal" variant="flyout" class="md:w-96">
+    <flux:modal name="team-editor" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">
@@ -90,9 +90,9 @@
 
                 <div class="flex gap-2">
                     <flux:button variant="primary" type="submit">
-                        <span wire:loading.remove>{{ $editingTeamId === -1 ? 'Create Team' : 'Save Changes' }}</span>
+                        {{ $editingTeamId === -1 ? 'Create Team' : 'Save Changes' }}
                     </flux:button>
-                    <flux:button variant="ghost" wire:click="cancelEdit">
+                    <flux:button variant="ghost" x-on:click="$flux.modal('team-editor').close()">
                         Cancel
                     </flux:button>
                 </div>
@@ -101,7 +101,7 @@
     </flux:modal>
 
     {{-- Delete Confirmation Modal --}}
-    <flux:modal wire:model="showDeleteModal" variant="flyout" class="md:w-96">
+    <flux:modal name="team-delete" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">Delete Team</flux:heading>
@@ -121,11 +121,10 @@
             </flux:field>
 
             <div class="flex gap-2">
-                <flux:button variant="danger" wire:click="deleteTeam" wire:loading.attr="disabled">
-                    <span wire:loading.remove>Delete Team</span>
-                    <span wire:loading>Deleting...</span>
+                <flux:button variant="danger" wire:click="deleteTeam">
+                    Delete Team
                 </flux:button>
-                <flux:button variant="ghost" wire:click="closeDeleteModal">
+                <flux:button variant="ghost" x-on:click="$flux.modal('team-delete').close()">
                     Cancel
                 </flux:button>
             </div>

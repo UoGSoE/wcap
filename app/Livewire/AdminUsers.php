@@ -24,20 +24,7 @@ class AdminUsers extends Component
 
     public bool $isStaff = true;
 
-    public bool $showEditModal = false;
-
-    public bool $showDeleteModal = false;
-
     public ?int $deletingUserId = null;
-
-    public function mount(): void
-    {
-        $user = auth()->user();
-
-        if (! $user->isAdmin()) {
-            abort(403, 'You must be an admin to access this page.');
-        }
-    }
 
     public function render()
     {
@@ -57,7 +44,7 @@ class AdminUsers extends Component
         $this->forenames = '';
         $this->isAdmin = false;
         $this->isStaff = true;
-        $this->showEditModal = true;
+        Flux::modal('user-editor')->show();
     }
 
     public function editUser(int $userId): void
@@ -71,7 +58,7 @@ class AdminUsers extends Component
         $this->forenames = $user->forenames;
         $this->isAdmin = $user->is_admin;
         $this->isStaff = $user->is_staff;
-        $this->showEditModal = true;
+        Flux::modal('user-editor')->show();
     }
 
     public function save(): void
@@ -101,50 +88,34 @@ class AdminUsers extends Component
             'forenames.required' => 'Forenames is required.',
         ]);
 
-        if ($this->editingUserId === -1) {
-            User::create([
-                'username' => $validated['username'],
-                'email' => $validated['email'],
-                'surname' => $validated['surname'],
-                'forenames' => $validated['forenames'],
-                'is_admin' => $validated['isAdmin'],
-                'is_staff' => $validated['isStaff'],
-                'password' => Hash::make(Str::random(32)),
-            ]);
+        $user = $this->editingUserId === -1
+            ? new User
+            : User::findOrFail($this->editingUserId);
 
-            Flux::toast(
-                heading: 'User created!',
-                text: 'The user has been created successfully.',
-                variant: 'success'
-            );
-        } else {
-            $user = User::findOrFail($this->editingUserId);
+        $user->fill([
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'surname' => $validated['surname'],
+            'forenames' => $validated['forenames'],
+            'is_admin' => $validated['isAdmin'],
+            'is_staff' => $validated['isStaff'],
+        ]);
 
-            $updateData = [
-                'username' => $validated['username'],
-                'email' => $validated['email'],
-                'surname' => $validated['surname'],
-                'forenames' => $validated['forenames'],
-                'is_admin' => $validated['isAdmin'],
-                'is_staff' => $validated['isStaff'],
-            ];
-
-            $user->update($updateData);
-
-            Flux::toast(
-                heading: 'User updated!',
-                text: 'The user has been updated successfully.',
-                variant: 'success'
-            );
+        if (! $user->exists) {
+            $user->password = Hash::make(Str::random(32));
         }
 
-        $this->cancelEdit();
-    }
+        $user->save();
 
-    public function cancelEdit(): void
-    {
-        $this->showEditModal = false;
-        $this->editingUserId = null;
+        $action = $user->wasRecentlyCreated ? 'created' : 'updated';
+        Flux::toast(
+            heading: "User {$action}!",
+            text: "The user has been {$action} successfully.",
+            variant: 'success'
+        );
+
+        Flux::modal('user-editor')->close();
+        $this->editingUserId = -1;
         $this->username = '';
         $this->email = '';
         $this->surname = '';
@@ -156,7 +127,7 @@ class AdminUsers extends Component
     public function confirmDelete(int $userId): void
     {
         $this->deletingUserId = $userId;
-        $this->showDeleteModal = true;
+        Flux::modal('user-delete')->show();
     }
 
     public function deleteUser(): void
@@ -174,13 +145,7 @@ class AdminUsers extends Component
             variant: 'success'
         );
 
-        $this->showDeleteModal = false;
-        $this->deletingUserId = null;
-    }
-
-    public function closeDeleteModal(): void
-    {
-        $this->showDeleteModal = false;
+        Flux::modal('user-delete')->close();
         $this->deletingUserId = null;
     }
 }

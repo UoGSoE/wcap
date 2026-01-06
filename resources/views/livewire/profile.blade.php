@@ -364,7 +364,7 @@
     @endif
 
     {{-- Token Creation Modal --}}
-    <flux:modal name="create-token" variant="flyout" wire:model="showTokenModal">
+    <flux:modal name="create-token" variant="flyout">
         @if($generatedToken)
             {{-- Token Display Section --}}
             <div class="space-y-6">

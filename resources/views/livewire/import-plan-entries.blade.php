@@ -83,7 +83,7 @@
     @endif
 
     {{-- Create User Modal --}}
-    <flux:modal wire:model="showCreateUserModal" variant="flyout" class="md:w-96">
+    <flux:modal name="create-user" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <flux:heading size="lg">Create New User</flux:heading>
 
@@ -110,7 +110,7 @@
 
                 <div class="flex gap-2">
                     <flux:button type="submit" variant="primary">Create User</flux:button>
-                    <flux:button type="button" variant="ghost" wire:click="cancelCreateUser">Cancel</flux:button>
+                    <flux:button type="button" variant="ghost" x-on:click="$flux.modal('create-user').close()">Cancel</flux:button>
                 </div>
             </form>
         </div>

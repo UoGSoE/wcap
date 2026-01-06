@@ -27,9 +27,6 @@ class ImportPlanEntries extends Component
 
     public bool $showPreview = false;
 
-    // Modal state
-    public bool $showCreateUserModal = false;
-
     public int $creatingForRowIndex = -1;
 
     // Form fields
@@ -46,13 +43,6 @@ class ImportPlanEntries extends Component
     public string $newUserDefaultCategory = '';
 
     public $newUserTeamId = null;
-
-    public function mount(): void
-    {
-        if (! auth()->user()->isManager()) {
-            abort(403, 'You do not manage any teams.');
-        }
-    }
 
     public function updatedFile(): void
     {
@@ -143,7 +133,7 @@ class ImportPlanEntries extends Component
         $this->newUserDefaultLocationId = null;
         $this->newUserDefaultCategory = '';
         $this->newUserTeamId = auth()->user()->managedTeams()->orderBy('name')->first()?->id;
-        $this->showCreateUserModal = true;
+        Flux::modal('create-user')->show();
     }
 
     public function saveNewUser(): void
@@ -180,7 +170,7 @@ class ImportPlanEntries extends Component
 
         Team::find($validated['newUserTeamId'])->users()->attach($user);
 
-        $this->showCreateUserModal = false;
+        Flux::modal('create-user')->close();
 
         Flux::toast(
             heading: 'User Created',
@@ -189,11 +179,6 @@ class ImportPlanEntries extends Component
         );
 
         $this->parseFile();
-    }
-
-    public function cancelCreateUser(): void
-    {
-        $this->showCreateUserModal = false;
     }
 
     public function render()

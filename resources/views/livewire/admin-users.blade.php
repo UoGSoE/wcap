@@ -63,7 +63,7 @@
     </flux:card>
 
     {{-- Edit/Create Modal --}}
-    <flux:modal wire:model="showEditModal" variant="flyout" class="md:w-96">
+    <flux:modal name="user-editor" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">
@@ -105,11 +105,10 @@
             </flux:field>
 
             <div class="flex gap-2">
-                <flux:button variant="primary" wire:click="save" wire:loading.attr="disabled">
-                    <span wire:loading.remove>{{ $editingUserId === -1 ? 'Create User' : 'Save Changes' }}</span>
-                    <span wire:loading>Saving...</span>
+                <flux:button variant="primary" wire:click="save">
+                    {{ $editingUserId === -1 ? 'Create User' : 'Save Changes' }}
                 </flux:button>
-                <flux:button variant="ghost" wire:click="cancelEdit">
+                <flux:button variant="ghost" x-on:click="$flux.modal('user-editor').close()">
                     Cancel
                 </flux:button>
             </div>
@@ -117,7 +116,7 @@
     </flux:modal>
 
     {{-- Delete Confirmation Modal --}}
-    <flux:modal wire:model="showDeleteModal" variant="flyout" class="md:w-96">
+    <flux:modal name="user-delete" variant="flyout" class="md:w-96">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">Delete User</flux:heading>
@@ -130,11 +129,10 @@
             </div>
 
             <div class="flex gap-2">
-                <flux:button variant="danger" wire:click="deleteUser" wire:loading.attr="disabled">
-                    <span wire:loading.remove>Delete User</span>
-                    <span wire:loading>Deleting...</span>
+                <flux:button variant="danger" wire:click="deleteUser">
+                    Delete User
                 </flux:button>
-                <flux:button variant="ghost" wire:click="closeDeleteModal">
+                <flux:button variant="ghost" x-on:click="$flux.modal('user-delete').close()">
                     Cancel
                 </flux:button>
             </div>

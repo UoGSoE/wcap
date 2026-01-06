@@ -13,9 +13,6 @@ class Profile extends Component
 
     public string $default_category = '';
 
-    // Token management
-    public bool $showTokenModal = false;
-
     public string $newTokenName = '';
 
     public ?string $generatedToken = null;
@@ -131,7 +128,7 @@ class Profile extends Component
 
     public function closeTokenModal(): void
     {
-        $this->showTokenModal = false;
+        Flux::modal('create-token')->close();
         $this->generatedToken = null;
         $this->newTokenName = '';
     }

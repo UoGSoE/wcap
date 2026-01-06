@@ -223,7 +223,6 @@ test('isEmailNotFoundError returns true for email not found error', function () 
     actingAs($manager);
 
     Livewire::test(\App\Livewire\ImportPlanEntries::class)
-        ->assertSet('showCreateUserModal', false)
         ->call('isEmailNotFoundError', 'The selected email is invalid.')
         ->assertReturned(true);
 });
@@ -239,7 +238,7 @@ test('isEmailNotFoundError returns false for other email errors', function () {
         ->assertReturned(false);
 });
 
-test('openCreateUserModal sets email and shows modal with team pre-selected', function () {
+test('openCreateUserModal sets email and pre-selects team', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
@@ -247,7 +246,6 @@ test('openCreateUserModal sets email and shows modal with team pre-selected', fu
 
     Livewire::test(\App\Livewire\ImportPlanEntries::class)
         ->call('openCreateUserModal', 0, 'NewUser@Example.com')
-        ->assertSet('showCreateUserModal', true)
         ->assertSet('newUserEmail', 'newuser@example.com')
         ->assertSet('creatingForRowIndex', 0)
         ->assertSet('newUserTeamId', $team->id);
@@ -274,7 +272,7 @@ test('saveNewUser creates user and attaches to team', function () {
         ->set('newUserUsername', 'jsmith')
         ->set('newUserTeamId', $team->id)
         ->call('saveNewUser')
-        ->assertSet('showCreateUserModal', false);
+        ->assertHasNoErrors();
 
     $newUser = User::where('email', 'john.smith@example.com')->first();
 
@@ -319,7 +317,6 @@ test('saveNewUser validates required fields', function () {
     actingAs($manager);
 
     Livewire::test(\App\Livewire\ImportPlanEntries::class)
-        ->set('showCreateUserModal', true)
         ->set('newUserForenames', '')
         ->set('newUserSurname', '')
         ->set('newUserEmail', '')
@@ -332,7 +329,7 @@ test('saveNewUser validates required fields', function () {
 test('saveNewUser validates unique email and username', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
-    $existingUser = User::factory()->create([
+    User::factory()->create([
         'email' => 'existing@example.com',
         'username' => 'existinguser',
     ]);
@@ -340,7 +337,6 @@ test('saveNewUser validates unique email and username', function () {
     actingAs($manager);
 
     Livewire::test(\App\Livewire\ImportPlanEntries::class)
-        ->set('showCreateUserModal', true)
         ->set('newUserForenames', 'Test')
         ->set('newUserSurname', 'User')
         ->set('newUserEmail', 'existing@example.com')

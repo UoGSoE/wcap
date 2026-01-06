@@ -10,24 +10,18 @@ use function Pest\Laravel\actingAs;
 
 uses(RefreshDatabase::class);
 
-test('admin can view user management page', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-
-    actingAs($admin);
-
-    Livewire::test(\App\Livewire\AdminUsers::class)
-        ->assertOk()
-        ->assertSee('User Management')
-        ->assertSee('Create New User');
-});
-
 test('non-admin cannot access user management page', function () {
     $user = User::factory()->create(['is_admin' => false]);
 
-    actingAs($user);
+    $this->actingAs($user)->get(route('admin.users'))->assertForbidden();
+});
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
-        ->assertForbidden();
+test('admin can view user management page', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $response = $this->actingAs($admin)->get(route('admin.users'))->assertOk();
+    $response->assertSee('User Management');
+    $response->assertSee('Create New User');
 });
 
 test('admin can see all users in the list', function () {
@@ -71,16 +65,15 @@ test('admin can create a new user', function () {
         ->set('isAdmin', false)
         ->set('isStaff', true)
         ->call('save')
-        ->assertSet('editingUserId', null);
+        ->assertSet('editingUserId', -1);
 
-    $this->assertDatabaseHas('users', [
-        'username' => 'newuser',
-        'email' => 'newuser@example.com',
-        'surname' => 'New',
-        'forenames' => 'User',
-        'is_admin' => false,
-        'is_staff' => true,
-    ]);
+    $user = User::where('username', 'newuser')->first();
+    expect($user)->not->toBeNull();
+    expect($user->email)->toBe('newuser@example.com');
+    expect($user->surname)->toBe('New');
+    expect($user->forenames)->toBe('User');
+    expect($user->is_admin)->toBeFalse();
+    expect($user->is_staff)->toBeTrue();
 });
 
 test('username must be unique when creating', function () {
@@ -143,7 +136,7 @@ test('admin can edit an existing user', function () {
         ->set('forenames', 'User')
         ->call('save')
         ->assertHasNoErrors()
-        ->assertSet('editingUserId', null);
+        ->assertSet('editingUserId', -1);
 
     $user->refresh();
 
@@ -255,11 +248,10 @@ test('admin can delete a user', function () {
 
     Livewire::test(\App\Livewire\AdminUsers::class)
         ->call('confirmDelete', $user->id)
-        ->assertSet('showDeleteModal', true)
         ->assertSet('deletingUserId', $user->id)
         ->call('deleteUser');
 
-    $this->assertDatabaseMissing('users', ['id' => $user->id]);
+    expect(User::find($user->id))->toBeNull();
 });
 
 test('deleting user removes team associations', function () {
@@ -276,7 +268,7 @@ test('deleting user removes team associations', function () {
         ->call('confirmDelete', $user->id)
         ->call('deleteUser');
 
-    $this->assertDatabaseMissing('team_user', ['user_id' => $user->id]);
+    expect($team->users()->where('user_id', $user->id)->count())->toBe(0);
 });
 
 test('deleting user removes their plan entries', function () {
@@ -284,7 +276,7 @@ test('deleting user removes their plan entries', function () {
     $user = User::factory()->create();
     $location = Location::factory()->create(['slug' => 'other']);
 
-    $user->planEntries()->create([
+    $planEntry = $user->planEntries()->create([
         'entry_date' => '2025-11-04',
         'location_id' => $location->id,
         'note' => 'Test entry',
@@ -296,7 +288,7 @@ test('deleting user removes their plan entries', function () {
         ->call('confirmDelete', $user->id)
         ->call('deleteUser');
 
-    $this->assertDatabaseMissing('plan_entries', ['user_id' => $user->id]);
+    expect(\App\Models\PlanEntry::find($planEntry->id))->toBeNull();
 });
 
 test('deleting user unassigns them as manager from teams', function () {
@@ -388,35 +380,6 @@ test('validation requires forenames', function () {
         ->set('forenames', '')
         ->call('save')
         ->assertHasErrors(['forenames' => 'required']);
-});
-
-test('admin can cancel editing', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-    $user = User::factory()->create();
-
-    actingAs($admin);
-
-    Livewire::test(\App\Livewire\AdminUsers::class)
-        ->call('editUser', $user->id)
-        ->assertSet('editingUserId', $user->id)
-        ->call('cancelEdit')
-        ->assertSet('editingUserId', null)
-        ->assertSet('username', '')
-        ->assertSet('email', '');
-});
-
-test('admin can close delete modal', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-    $user = User::factory()->create();
-
-    actingAs($admin);
-
-    Livewire::test(\App\Livewire\AdminUsers::class)
-        ->call('confirmDelete', $user->id)
-        ->assertSet('showDeleteModal', true)
-        ->call('closeDeleteModal')
-        ->assertSet('showDeleteModal', false)
-        ->assertSet('deletingUserId', null);
 });
 
 test('user list shows admin and staff badges', function () {
