@@ -26,6 +26,7 @@
                     <flux:sidebar.item icon="home" href="/" wire:navigate>Home</flux:sidebar.item>
                     <flux:separator class="my-2" />
                     <flux:sidebar.item icon="user-group" href="{{ route('manager.report') }}" wire:navigate>Team Report</flux:sidebar.item>
+                    <flux:sidebar.item icon="building-office-2" href="{{ route('manager.occupancy') }}" wire:navigate>Office Occupancy</flux:sidebar.item>
                     @if (auth()->user()->isManager())
                         <flux:sidebar.item icon="pencil-square" href="{{ route('manager.entries') }}" wire:navigate>Edit Team Plans</flux:sidebar.item>
                     @endif

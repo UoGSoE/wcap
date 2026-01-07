@@ -51,9 +51,17 @@ class TestDataSeeder extends Seeder
             'Principle Engineer Linux',
         ];
 
+        // Get physical locations for assigning default locations to users
+        $physicalLocations = Location::where('is_physical', true)->get();
+
         $managers = [];
         $allUsers = [];
+        $userIndex = 0;
+
+        // Assign admin a default location
+        $admin->update(['default_location_id' => $physicalLocations[$userIndex % count($physicalLocations)]->id]);
         $allUsers[] = $admin;
+        $userIndex++;
 
         foreach ($teamNames as $teamName) {
             $minTeamMembers = str_starts_with($teamName, 'Principle Engineer') ? 1 : 2;
@@ -66,8 +74,10 @@ class TestDataSeeder extends Seeder
                     'username' => strtolower($teamName).'2x',
                     'email' => 'manager.'.strtolower($teamName).'2x@example.com',
                     'password' => Hash::make('secret'),
+                    'default_location_id' => $physicalLocations[$userIndex % count($physicalLocations)]->id,
                 ]);
                 $allUsers[] = $manager;
+                $userIndex++;
             }
 
             $team = Team::factory()->create([
@@ -80,11 +90,13 @@ class TestDataSeeder extends Seeder
                 $user = User::factory()->create([
                     'username' => 'user'.strtolower($teamName).'1x'.$i,
                     'password' => Hash::make('secret'),
+                    'default_location_id' => $physicalLocations[$userIndex % count($physicalLocations)]->id,
                 ]);
                 $user->teams()->attach($team);
 
                 // Track all users for plan entry generation
                 $allUsers[] = $user;
+                $userIndex++;
             }
         }
 
@@ -152,7 +164,7 @@ class TestDataSeeder extends Seeder
     private function generatePlanEntries(array $teamMembers): void
     {
         $startDate = now()->startOfWeek();
-        $locations = Location::all();
+        $physicalLocations = Location::where('is_physical', true)->get();
         $notes = [
             'Support tickets',
             'Server maintenance',
@@ -169,10 +181,13 @@ class TestDataSeeder extends Seeder
         ];
 
         // Create entries for 10 weekdays (2 weeks)
-        foreach ($teamMembers as $index => $member) {
-            // Give each member a preferred location pattern
-            $primaryLocation = $locations[$index % count($locations)];
-            $secondaryLocation = $locations[($index + 1) % count($locations)];
+        foreach ($teamMembers as $member) {
+            // Use the member's default location as their primary (home) location
+            $primaryLocation = $member->defaultLocation;
+
+            // Pick a random other physical location as secondary (for visiting other offices)
+            $otherLocations = $physicalLocations->where('id', '!=', $primaryLocation?->id);
+            $secondaryLocation = $otherLocations->isNotEmpty() ? $otherLocations->random() : $primaryLocation;
 
             for ($dayOffset = 0; $dayOffset < 14; $dayOffset++) {
                 $date = $startDate->copy()->addDays($dayOffset);
@@ -182,7 +197,7 @@ class TestDataSeeder extends Seeder
                     continue;
                 }
 
-                // Vary the location (80% primary, 20% secondary)
+                // 80% at home location, 20% visiting another office
                 $location = (rand(1, 10) <= 8) ? $primaryLocation : $secondaryLocation;
 
                 // Pick a random note
@@ -235,12 +250,16 @@ class TestDataSeeder extends Seeder
 
     private function createDemoServiceWithVariedCoverage(): void
     {
+        $jwsLocation = Location::where('slug', 'jws')->first();
+        $jwnLocation = Location::where('slug', 'jwn')->first();
+
         $serviceManager = User::factory()->create([
             'username' => 'demo.service.manager',
             'email' => 'demo.service.manager@example.com',
             'password' => Hash::make('secret'),
             'surname' => 'Manager',
             'forenames' => 'Demo Service',
+            'default_location_id' => $jwnLocation->id,
         ]);
 
         $serviceMember = User::factory()->create([
@@ -249,6 +268,7 @@ class TestDataSeeder extends Seeder
             'password' => Hash::make('secret'),
             'surname' => 'Member',
             'forenames' => 'Demo Service',
+            'default_location_id' => $jwsLocation->id,
         ]);
 
         $demoService = Service::factory()->create([
@@ -261,8 +281,6 @@ class TestDataSeeder extends Seeder
         $startDate = now()->startOfWeek();
         $weekdayIndex = 0;
 
-        $jwsLocation = Location::where('slug', 'jws')->first();
-        $jwnLocation = Location::where('slug', 'jwn')->first();
         $otherLocation = Location::where('slug', 'other')->first();
 
         for ($offset = 0; $offset < 14 && $weekdayIndex < 10; $offset++) {
