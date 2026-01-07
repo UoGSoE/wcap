@@ -1,7 +1,20 @@
 <div>
-    <div class="mb-6">
-        <flux:heading size="xl">Office Occupancy Report</flux:heading>
-        <flux:subheading>Track physical office usage across locations</flux:subheading>
+    <div class="mb-6 flex justify-between items-start">
+        <div>
+            <flux:heading size="xl">Office Occupancy Report</flux:heading>
+            <flux:subheading>Track physical office usage across locations</flux:subheading>
+        </div>
+        <flux:dropdown>
+            <flux:button variant="primary" icon="arrow-down-tray" icon:trailing="chevron-down">Export</flux:button>
+            <flux:menu>
+                <flux:menu.item wire:click="exportCurrent" icon="document-arrow-down">
+                    Export current view
+                </flux:menu.item>
+                <flux:menu.item wire:click="exportDetailed" icon="table-cells">
+                    Export detailed (daily)
+                </flux:menu.item>
+            </flux:menu>
+        </flux:dropdown>
     </div>
 
     <flux:tab.group>

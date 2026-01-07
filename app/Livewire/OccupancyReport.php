@@ -2,10 +2,12 @@
 
 namespace App\Livewire;
 
+use App\Exports\OccupancyReportExport;
 use App\Services\OccupancyReportService;
 use Carbon\Carbon;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OccupancyReport extends Component
 {
@@ -46,5 +48,44 @@ class OccupancyReport extends Component
         $payload = app(OccupancyReportService::class)->buildReportPayload($snapshotDate, $rangeStart, $rangeEnd);
 
         return view('livewire.occupancy-report', $payload);
+    }
+
+    public function exportCurrent()
+    {
+        $payload = $this->buildExportPayload(skipAggregation: false);
+
+        return $this->downloadExport($payload);
+    }
+
+    public function exportDetailed()
+    {
+        $payload = $this->buildExportPayload(skipAggregation: true);
+
+        return $this->downloadExport($payload);
+    }
+
+    private function buildExportPayload(bool $skipAggregation): array
+    {
+        $rangeStart = Carbon::parse($this->range['start']);
+        $rangeEnd = Carbon::parse($this->range['end']);
+
+        return app(OccupancyReportService::class)->buildReportPayload(
+            snapshotDate: null,
+            rangeStart: $rangeStart,
+            rangeEnd: $rangeEnd,
+            skipAggregation: $skipAggregation,
+        );
+    }
+
+    private function downloadExport(array $payload)
+    {
+        $start = $payload['days'][0]['date']->format('Ymd');
+        $end = end($payload['days'])['date']->format('Ymd');
+        $suffix = $payload['aggregation'] === 'weekly' ? '-weekly' : '';
+
+        return Excel::download(
+            new OccupancyReportExport($payload),
+            "occupancy-report-{$start}-{$end}{$suffix}.xlsx",
+        );
     }
 }

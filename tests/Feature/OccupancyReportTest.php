@@ -616,3 +616,95 @@ test('weekly aggregation calculates averages correctly', function () {
     // First week: 3 entries over 5 weekdays = 0.6 average, ceil to 1
     expect($jwsRow['days'][0]['total_present'])->toBe(1);
 });
+
+test('export current view downloads excel file', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->call('exportCurrent')
+        ->assertFileDownloaded();
+});
+
+test('export detailed downloads excel file', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->call('exportDetailed')
+        ->assertFileDownloaded();
+});
+
+test('export detailed skips weekly aggregation for large ranges', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    $user = User::factory()->create(['default_location_id' => $location->id]);
+
+    $monday = now()->startOfWeek();
+
+    // Create entries for each weekday in 6 weeks (30 weekdays)
+    for ($week = 0; $week < 6; $week++) {
+        for ($day = 0; $day < 5; $day++) {
+            PlanEntry::factory()->onsite()->create([
+                'user_id' => $user->id,
+                'entry_date' => $monday->copy()->addWeeks($week)->addDays($day),
+                'location_id' => $location->id,
+            ]);
+        }
+    }
+
+    actingAs($manager);
+
+    // Set a 6-week range that would normally trigger weekly aggregation
+    $start = $monday;
+    $end = $monday->copy()->addWeeks(6)->subDay();
+
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->set('range', [
+            'start' => $start->toDateString(),
+            'end' => $end->toDateString(),
+        ]);
+
+    // Current view should be weekly aggregated
+    expect($component->viewData('aggregation'))->toBe('weekly');
+
+    // But detailed export should skip aggregation - filename should NOT contain '-weekly'
+    $result = $component->call('exportDetailed');
+    $downloadedFilename = data_get($result->effects, 'download.name');
+
+    expect($downloadedFilename)->not->toContain('-weekly');
+});
+
+test('export current view respects aggregation for large ranges', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+
+    actingAs($manager);
+
+    // Set a 6-week range to trigger weekly aggregation
+    $start = now()->startOfWeek();
+    $end = $start->copy()->addWeeks(6)->subDay();
+
+    $result = Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->set('range', [
+            'start' => $start->toDateString(),
+            'end' => $end->toDateString(),
+        ])
+        ->call('exportCurrent');
+
+    $downloadedFilename = data_get($result->effects, 'download.name');
+
+    expect($downloadedFilename)->toContain('-weekly');
+});

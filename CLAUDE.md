@@ -1,4 +1,9 @@
 <laravel-boost-guidelines>
+=== .ai/beads rules ===
+
+Use 'bd' for task tracking
+
+
 === .ai/team-conventions rules ===
 
 ## Developer Team Guidelines

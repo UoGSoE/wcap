@@ -21,7 +21,7 @@ class OccupancyReportService
 
     private const WEEKLY_THRESHOLD = 25;
 
-    public function buildReportPayload(?Carbon $snapshotDate = null, ?Carbon $rangeStart = null, ?Carbon $rangeEnd = null): array
+    public function buildReportPayload(?Carbon $snapshotDate = null, ?Carbon $rangeStart = null, ?Carbon $rangeEnd = null, bool $skipAggregation = false): array
     {
         $days = $this->buildDays($rangeStart, $rangeEnd);
         $physicalLocations = Location::physical()->orderBy('name')->get();
@@ -31,9 +31,9 @@ class OccupancyReportService
         $snapshotDate = $snapshotDate ?? $this->getSnapshotDate();
         $periodMatrix = $this->buildPeriodMatrix($days, $physicalLocations);
 
-        // Auto-aggregate to weekly view if range is large
+        // Auto-aggregate to weekly view if range is large (unless skipped for detailed export)
         $aggregation = 'daily';
-        if (count($days) >= self::WEEKLY_THRESHOLD) {
+        if (! $skipAggregation && count($days) >= self::WEEKLY_THRESHOLD) {
             $condensed = $this->condenseToWeeks($days, $periodMatrix);
             $days = $condensed['days'];
             $periodMatrix = $condensed['periodMatrix'];
