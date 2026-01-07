@@ -14,22 +14,12 @@
         <flux:tab.panel name="today">
             <flux:subheading class="mb-2">{{ $snapshotDate->format('l, F jS Y') }}</flux:subheading>
             <flux:text class="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
-                Shows who is physically present at each location today. Numbers show home staff present, with visitors in brackets.
+                Shows who is physically present at each location today. Total present shown with visitor count in badge.
             </flux:text>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 @foreach ($daySnapshot as $location)
-                    @php
-                        $hasOccupancy = $location['total_present'] > 0;
-                        $utilizationClass = match(true) {
-                            $location['utilization_pct'] >= 80 => 'bg-emerald-100 dark:bg-emerald-900/30',
-                            $location['utilization_pct'] >= 50 => 'bg-sky-100 dark:bg-sky-900/30',
-                            $location['utilization_pct'] > 0 => 'bg-amber-100 dark:bg-amber-900/30',
-                            default => 'bg-zinc-100 dark:bg-zinc-800',
-                        };
-                    @endphp
-
-                    <div class="p-4 rounded-lg {{ $utilizationClass }}">
+                    <div class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div class="flex justify-between items-start mb-3">
                             <div>
                                 <flux:heading size="lg">{{ $location['location_name'] }}</flux:heading>
@@ -38,10 +28,13 @@
                                 </flux:text>
                             </div>
                             <div class="text-right">
-                                <flux:text variant="strong" class="text-2xl">
-                                    {{ $location['home_count'] }}@if($location['visitor_count'] > 0)<span class="text-base text-zinc-500"> (+{{ $location['visitor_count'] }})</span>@endif
-                                </flux:text>
-                                <flux:text class="text-sm text-zinc-500">
+                                <div class="flex items-center justify-end gap-2">
+                                    <flux:text variant="strong" class="text-2xl">{{ $location['total_present'] }}</flux:text>
+                                    @if($location['visitor_count'] > 0)
+                                        <flux:badge icon="user-circle" size="sm" color="sky" inset="top bottom">{{ $location['visitor_count'] }}</flux:badge>
+                                    @endif
+                                </div>
+                                <flux:text class="text-sm {{ $location['utilization_pct'] > 100 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-zinc-500' }}">
                                     {{ $location['utilization_pct'] }}% utilization
                                 </flux:text>
                             </div>

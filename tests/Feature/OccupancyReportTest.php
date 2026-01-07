@@ -438,19 +438,36 @@ test('tab switching works correctly', function () {
         ->assertSee('Occupancy statistics');
 });
 
-test('utilization percentage is calculated correctly', function () {
+test('utilization percentage is based on total present including visitors', function () {
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
     $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    $otherLocation = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
 
-    User::factory()->count(4)->create(['default_location_id' => $location->id]);
-    $presentUser = User::factory()->create(['default_location_id' => $location->id]);
+    // 4 users assigned to JWS (base capacity = 4)
+    $homeUsers = User::factory()->count(4)->create(['default_location_id' => $location->id]);
+
+    // 1 visitor from another location
+    $visitor = User::factory()->create(['default_location_id' => $otherLocation->id]);
 
     $monday = now()->startOfWeek();
 
+    // 2 home users present
     PlanEntry::factory()->onsite()->create([
-        'user_id' => $presentUser->id,
+        'user_id' => $homeUsers[0]->id,
+        'entry_date' => $monday,
+        'location_id' => $location->id,
+    ]);
+    PlanEntry::factory()->onsite()->create([
+        'user_id' => $homeUsers[1]->id,
+        'entry_date' => $monday,
+        'location_id' => $location->id,
+    ]);
+
+    // 1 visitor present
+    PlanEntry::factory()->onsite()->create([
+        'user_id' => $visitor->id,
         'entry_date' => $monday,
         'location_id' => $location->id,
     ]);
@@ -464,9 +481,62 @@ test('utilization percentage is calculated correctly', function () {
 
     $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
 
-    expect($jwsData['base_capacity'])->toBe(5);
-    expect($jwsData['home_count'])->toBe(1);
-    expect($jwsData['utilization_pct'])->toBe(20.0);
+    expect($jwsData['base_capacity'])->toBe(4);
+    expect($jwsData['home_count'])->toBe(2);
+    expect($jwsData['visitor_count'])->toBe(1);
+    expect($jwsData['total_present'])->toBe(3);
+    // Utilization = total_present / base_capacity = 3/4 = 75%
+    expect($jwsData['utilization_pct'])->toBe(75.0);
+
+    Date::setTestNow();
+});
+
+test('utilization can exceed 100 percent when visitors push occupancy above capacity', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    $otherLocation = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
+
+    // 2 users assigned to JWS (base capacity = 2)
+    $homeUsers = User::factory()->count(2)->create(['default_location_id' => $location->id]);
+
+    // 2 visitors from another location
+    $visitors = User::factory()->count(2)->create(['default_location_id' => $otherLocation->id]);
+
+    $monday = now()->startOfWeek();
+
+    // Both home users present
+    foreach ($homeUsers as $user) {
+        PlanEntry::factory()->onsite()->create([
+            'user_id' => $user->id,
+            'entry_date' => $monday,
+            'location_id' => $location->id,
+        ]);
+    }
+
+    // Both visitors present
+    foreach ($visitors as $visitor) {
+        PlanEntry::factory()->onsite()->create([
+            'user_id' => $visitor->id,
+            'entry_date' => $monday,
+            'location_id' => $location->id,
+        ]);
+    }
+
+    actingAs($manager);
+
+    Date::setTestNow($monday->copy()->setTime(10, 0));
+
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $daySnapshot = $component->viewData('daySnapshot');
+
+    $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
+
+    expect($jwsData['base_capacity'])->toBe(2);
+    expect($jwsData['total_present'])->toBe(4);
+    // Utilization = 4/2 = 200%
+    expect($jwsData['utilization_pct'])->toBe(200.0);
 
     Date::setTestNow();
 });

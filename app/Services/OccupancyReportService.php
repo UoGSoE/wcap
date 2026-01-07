@@ -83,7 +83,7 @@ class OccupancyReportService
             $homeCount = $homeUsers->count();
             $visitorCount = $visitorUsers->count();
             $totalPresent = $homeCount + $visitorCount;
-            $utilizationPct = $baseCapacity > 0 ? round(($homeCount / $baseCapacity) * 100, 1) : 0;
+            $utilizationPct = $baseCapacity > 0 ? round(($totalPresent / $baseCapacity) * 100, 1) : 0;
 
             $snapshot[] = [
                 'location_id' => $location->id,
@@ -135,7 +135,7 @@ class OccupancyReportService
                 }
 
                 $totalPresent = $homeCount + $visitorCount;
-                $utilizationPct = $baseCapacity > 0 ? round(($homeCount / $baseCapacity) * 100, 1) : 0;
+                $utilizationPct = $baseCapacity > 0 ? round(($totalPresent / $baseCapacity) * 100, 1) : 0;
 
                 $row['days'][] = [
                     'date' => $day['date'],
