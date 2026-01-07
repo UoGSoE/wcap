@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\User;
@@ -33,12 +34,19 @@ class PlanEntryImport
             $entryDate = Carbon::createFromFormat('d/m/Y', $validated['date']);
             $location = Location::where('slug', $validated['location'])->first();
 
+            $availabilityStatus = match ($validated['availability_status']) {
+                'O' => AvailabilityStatus::ONSITE,
+                'R' => AvailabilityStatus::REMOTE,
+                'N' => AvailabilityStatus::NOT_AVAILABLE,
+                default => AvailabilityStatus::ONSITE,
+            };
+
             PlanEntry::updateOrCreate(
                 ['user_id' => $user->id, 'entry_date' => $entryDate],
                 [
                     'note' => $validated['note'],
                     'location_id' => $location?->id,
-                    'is_available' => $validated['is_available'] === 'Y',
+                    'availability_status' => $availabilityStatus,
                     'created_by_manager' => true,
                 ]
             );

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AvailabilityStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -30,7 +31,7 @@ class PlanEntryFactory extends Factory
             ]),
             'category' => null,
             'location_id' => \App\Models\Location::factory(),
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE,
             'is_holiday' => false,
             'created_by_manager' => false,
         ];
@@ -39,8 +40,22 @@ class PlanEntryFactory extends Factory
     public function unavailable(): static
     {
         return $this->state(fn (array $attributes) => [
-            'is_available' => false,
+            'availability_status' => AvailabilityStatus::NOT_AVAILABLE,
             'location_id' => null,
+        ]);
+    }
+
+    public function remote(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'availability_status' => AvailabilityStatus::REMOTE,
+        ]);
+    }
+
+    public function onsite(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'availability_status' => AvailabilityStatus::ONSITE,
         ]);
     }
 }

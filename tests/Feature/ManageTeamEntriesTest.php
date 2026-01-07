@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
@@ -195,7 +196,7 @@ test('saving via editor sets created_by_manager flag', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Manager entered',
             'location_id' => $location->id,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
@@ -257,7 +258,7 @@ test('manager can save their own entries via My Plan', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'My own task',
             'location_id' => $location->id,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
@@ -290,7 +291,7 @@ test('own entries have created_by_manager false', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'My own task',
             'location_id' => $location->id,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 

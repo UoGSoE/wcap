@@ -21,7 +21,7 @@ class PlanEntryRowValidator
             'date' => $date,
             'location' => $row[2] ?? '',
             'note' => $row[3] ?? '',
-            'is_available' => $row[4] ?? '',
+            'availability_status' => strtoupper($row[4] ?? ''),
         ];
 
         return Validator::make($rowData, [
@@ -29,7 +29,7 @@ class PlanEntryRowValidator
             'date' => 'required|date_format:d/m/Y',
             'location' => ['required', Rule::exists('locations', 'slug')],
             'note' => 'nullable',
-            'is_available' => 'required|in:Y,N',
+            'availability_status' => 'required|in:O,R,N', // O=Onsite, R=Remote, N=Not available
         ]);
     }
 }

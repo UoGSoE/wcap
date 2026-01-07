@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\AvailabilityStatus;
 use App\Enums\Category;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -35,7 +36,7 @@ class UpsertPlanEntriesRequest extends FormRequest
             'entries.*.entry_date' => ['required', 'date'],
             'entries.*.location' => ['required', 'string', Rule::exists('locations', 'slug')],
             'entries.*.note' => ['nullable', 'string'],
-            'entries.*.is_available' => ['nullable', 'boolean'],
+            'entries.*.availability_status' => ['nullable', 'integer', Rule::enum(AvailabilityStatus::class)],
             'entries.*.is_holiday' => ['nullable', 'boolean'],
             'entries.*.category' => ['nullable', 'string', Rule::enum(Category::class)],
         ];

@@ -3,9 +3,9 @@
         <div class="w-full max-w-md">
             <flux:card>
                 <div class="text-center mb-6">
-                    <flux:heading size="xl">QrToTeams Login</flux:heading>
+                    <flux:heading size="xl">{{ config('app.name') }} Login</flux:heading>
                 </div>
-                
+
                 @error('authentication')
                     <div class="mb-6">
                         <flux:text variant="danger" class="text-center font-bold p-4 bg-red-100 rounded">
@@ -21,7 +21,7 @@
                 @else
                     <form method="POST" action="{{ route('login.local') }}" class="space-y-4">
                         @csrf
-                        
+
                         <flux:input
                             label="Username"
                             name="username"
@@ -32,7 +32,7 @@
                         @error('username')
                             <flux:text variant="danger" size="sm">{{ $message }}</flux:text>
                         @enderror
-                        
+
                         <flux:input
                             label="Password"
                             name="password"
@@ -42,9 +42,9 @@
                         @error('password')
                             <flux:text variant="danger" size="sm">{{ $message }}</flux:text>
                         @enderror
-                        
+
                         <flux:separator class="my-4" />
-                        
+
                         <flux:button type="submit" variant="primary" class="w-full">
                             Log In
                         </flux:button>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\Team;
 use App\Models\User;
@@ -89,7 +90,7 @@ test('user can create a new plan entry via API', function () {
                 'entry_date' => '2025-11-10',
                 'location' => 'jws',
                 'note' => 'API testing',
-                'is_available' => true,
+                'availability_status' => AvailabilityStatus::ONSITE->value,
                 'is_holiday' => false,
             ],
         ],
@@ -102,7 +103,7 @@ test('user can create a new plan entry via API', function () {
     expect($entry)->not->toBeNull();
     expect($entry->location->slug)->toBe('jws');
     expect($entry->note)->toBe('API testing');
-    expect($entry->is_available)->toBeTrue();
+    expect($entry->availability_status)->toBe(AvailabilityStatus::ONSITE);
     expect($entry->is_holiday)->toBeFalse();
 });
 

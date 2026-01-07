@@ -15,7 +15,12 @@
                 <flux:card size="sm" class="mt-2" wire:key="day-{{ $index }}">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-2">
-                            <flux:checkbox label="{{ $day->format('l') }} {{ $day->format('jS') }}" wire:model.live="entries.{{ $index }}.is_available" title="Available" />
+                            <flux:heading size="sm">{{ $day->format('l') }} {{ $day->format('jS') }}</flux:heading>
+                            <flux:select size="sm" wire:model.live="entries.{{ $index }}.availability_status">
+                                @foreach ($availabilityStatuses as $status)
+                                    <flux:select.option value="{{ $status->value }}">{{ $status->label() }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
                         </div>
                         @if (! $readOnly)
                             <div class="flex gap-2">
@@ -39,7 +44,7 @@
                 <input type="hidden" wire:model="entries.{{ $index }}.entry_date" />
                 <input type="hidden" wire:model="entries.{{ $index }}.note" />
                 <input type="hidden" wire:model="entries.{{ $index }}.location_id" />
-                <input type="hidden" wire:model="entries.{{ $index }}.is_available" />
+                <input type="hidden" wire:model="entries.{{ $index }}.availability_status" />
             @endif
         @endforeach
         </div>

@@ -43,7 +43,7 @@ test('service availability tab displays all services', function () {
     expect($serviceAvailabilityMatrix[2]['label'])->toBe('Email Service');
 })->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
-test('only counts entries where is_available is true', function () {
+test('only counts entries where availability_status is available', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
@@ -60,14 +60,12 @@ test('only counts entries where is_available is true', function () {
         'user_id' => $availableMember->id,
         'entry_date' => $monday,
         'location_id' => $location->id,
-        'is_available' => true,
     ]);
 
-    PlanEntry::factory()->create([
+    PlanEntry::factory()->unavailable()->create([
         'user_id' => $unavailableMember->id,
         'entry_date' => $monday,
         'location_id' => null,
-        'is_available' => false,
     ]);
 
     actingAs($manager);
@@ -91,11 +89,10 @@ test('shows zero when no one is available', function () {
 
     $monday = now()->startOfWeek();
 
-    PlanEntry::factory()->create([
+    PlanEntry::factory()->unavailable()->create([
         'user_id' => $unavailableMember->id,
         'entry_date' => $monday,
         'location_id' => null,
-        'is_available' => false,
     ]);
 
     actingAs($manager);
@@ -130,35 +127,30 @@ test('shows correct counts with multiple available people', function () {
         'user_id' => $member1->id,
         'entry_date' => $monday,
         'location_id' => $locationJws->id,
-        'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $member2->id,
         'entry_date' => $monday,
         'location_id' => $locationOther->id,
-        'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $member3->id,
         'entry_date' => $monday,
         'location_id' => $locationJwn->id,
-        'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $member1->id,
         'entry_date' => $tuesday,
         'location_id' => $locationJws->id,
-        'is_available' => true,
     ]);
 
-    PlanEntry::factory()->create([
+    PlanEntry::factory()->unavailable()->create([
         'user_id' => $member2->id,
         'entry_date' => $tuesday,
         'location_id' => null,
-        'is_available' => false,
     ]);
 
     actingAs($manager);
@@ -193,14 +185,12 @@ test('services always show all members regardless of admin toggle', function () 
         'user_id' => $teamMember->id,
         'entry_date' => $monday,
         'location_id' => $locationJws->id,
-        'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $nonTeamMember->id,
         'entry_date' => $monday,
         'location_id' => $locationOther->id,
-        'is_available' => true,
     ]);
 
     actingAs($admin);
@@ -259,7 +249,6 @@ test('service availability counts across all 10 weekdays', function () {
                 'user_id' => $member->id,
                 'entry_date' => $day,
                 'location_id' => $location->id,
-                'is_available' => true,
             ]);
         }
     }
@@ -294,7 +283,6 @@ test('manager only coverage shows manager_only flag', function () {
         'user_id' => $serviceManager->id,
         'entry_date' => $monday,
         'location_id' => $location->id,
-        'is_available' => true,
     ]);
 
     actingAs($manager);
@@ -333,14 +321,12 @@ test('manager available but members also available shows count not manager_only'
         'user_id' => $serviceManager->id,
         'entry_date' => $monday,
         'location_id' => $locationJws->id,
-        'is_available' => true,
     ]);
 
     PlanEntry::factory()->create([
         'user_id' => $serviceMember->id,
         'entry_date' => $monday,
         'location_id' => $locationOther->id,
-        'is_available' => true,
     ]);
 
     actingAs($manager);
@@ -366,11 +352,10 @@ test('manager unavailable when count is zero shows blank cell', function () {
 
     $monday = now()->startOfWeek();
 
-    PlanEntry::factory()->create([
+    PlanEntry::factory()->unavailable()->create([
         'user_id' => $serviceManager->id,
         'entry_date' => $monday,
         'location_id' => null,
-        'is_available' => false,
     ]);
 
     actingAs($manager);
@@ -403,7 +388,6 @@ test('manager is also a service member counts in regular count', function () {
         'user_id' => $serviceManager->id,
         'entry_date' => $monday,
         'location_id' => $location->id,
-        'is_available' => true,
     ]);
 
     actingAs($manager);

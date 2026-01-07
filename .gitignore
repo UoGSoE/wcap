@@ -43,4 +43,5 @@ Homestead.yaml
 Thumbs.db
 fluxui*
 *.xlsx
+heatmap-table.blade.php
 

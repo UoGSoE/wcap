@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
@@ -173,7 +174,7 @@ test('manager can create entry for team member', function () {
                 'entry_date' => '2025-12-10',
                 'location' => 'jws',
                 'note' => 'Assigned by manager',
-                'is_available' => true,
+                'availability_status' => AvailabilityStatus::ONSITE->value,
             ],
         ],
     ]);

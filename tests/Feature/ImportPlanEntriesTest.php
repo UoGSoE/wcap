@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
@@ -48,7 +49,7 @@ test('validator passes for valid row', function () {
     $user = User::factory()->create(['email' => 'test@example.com']);
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
-    $row = ['test@example.com', '15/12/2025', 'jws', 'Some note', 'Y'];
+    $row = ['test@example.com', '15/12/2025', 'jws', 'Some note', 'O'];
 
     $validator = new PlanEntryRowValidator;
     $result = $validator->validate($row);
@@ -59,7 +60,7 @@ test('validator passes for valid row', function () {
 test('validator fails for unknown email', function () {
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
-    $row = ['unknown@example.com', '15/12/2025', 'jws', 'Some note', 'Y'];
+    $row = ['unknown@example.com', '15/12/2025', 'jws', 'Some note', 'O'];
 
     $validator = new PlanEntryRowValidator;
     $result = $validator->validate($row);
@@ -72,7 +73,7 @@ test('validator fails for invalid date format', function () {
     User::factory()->create(['email' => 'test@example.com']);
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
-    $row = ['test@example.com', '2025-12-15', 'jws', 'Some note', 'Y'];
+    $row = ['test@example.com', '2025-12-15', 'jws', 'Some note', 'O'];
 
     $validator = new PlanEntryRowValidator;
     $result = $validator->validate($row);
@@ -84,7 +85,7 @@ test('validator fails for invalid date format', function () {
 test('validator fails for invalid location', function () {
     User::factory()->create(['email' => 'test@example.com']);
 
-    $row = ['test@example.com', '15/12/2025', 'invalid-location', 'Some note', 'Y'];
+    $row = ['test@example.com', '15/12/2025', 'invalid-location', 'Some note', 'O'];
 
     $validator = new PlanEntryRowValidator;
     $result = $validator->validate($row);
@@ -103,7 +104,7 @@ test('validator fails for invalid availability value', function () {
     $result = $validator->validate($row);
 
     expect($result->fails())->toBeTrue();
-    expect($result->errors()->has('is_available'))->toBeTrue();
+    expect($result->errors()->has('availability_status'))->toBeTrue();
 });
 
 test('validator accepts all valid locations', function () {
@@ -113,7 +114,7 @@ test('validator accepts all valid locations', function () {
     $locations = Location::factory()->count(3)->create();
 
     foreach ($locations as $location) {
-        $row = ['test@example.com', '15/12/2025', $location->slug, 'Note', 'Y'];
+        $row = ['test@example.com', '15/12/2025', $location->slug, 'Note', 'O'];
         $result = $validator->validate($row);
 
         expect($result->fails())->toBeFalse("Location {$location->slug} should be valid");
@@ -128,8 +129,8 @@ test('import creates entries for valid rows', function () {
     $locationJwn = Location::factory()->create(['slug' => 'jwn', 'name' => 'JWN']);
 
     $rows = [
-        ['email', 'date', 'location', 'note', 'is_available'], // Header
-        ['test@example.com', '15/12/2025', 'jws', 'Task one', 'Y'],
+        ['email', 'date', 'location', 'note', 'availability_status'], // Header
+        ['test@example.com', '15/12/2025', 'jws', 'Task one', 'O'],
         ['test@example.com', '16/12/2025', 'jwn', 'Task two', 'N'],
     ];
 
@@ -143,11 +144,11 @@ test('import creates entries for valid rows', function () {
 
     expect($entries[0]->location->slug)->toBe('jws');
     expect($entries[0]->note)->toBe('Task one');
-    expect($entries[0]->is_available)->toBeTrue();
+    expect($entries[0]->availability_status)->toBe(AvailabilityStatus::ONSITE);
     expect($entries[0]->created_by_manager)->toBeTrue();
 
     expect($entries[1]->location->slug)->toBe('jwn');
-    expect($entries[1]->is_available)->toBeFalse();
+    expect($entries[1]->availability_status)->toBe(AvailabilityStatus::NOT_AVAILABLE);
 });
 
 test('import skips header row', function () {
@@ -155,8 +156,8 @@ test('import skips header row', function () {
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     $rows = [
-        ['email', 'date', 'location', 'note', 'is_available'],
-        ['test@example.com', '15/12/2025', 'jws', 'Real data', 'Y'],
+        ['email', 'date', 'location', 'note', 'availability_status'],
+        ['test@example.com', '15/12/2025', 'jws', 'Real data', 'O'],
     ];
 
     $importer = new PlanEntryImport($rows);
@@ -171,10 +172,10 @@ test('import returns errors for invalid rows', function () {
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     $rows = [
-        ['email', 'date', 'location', 'note', 'is_available'],
-        ['test@example.com', '15/12/2025', 'jws', 'Valid row', 'Y'],
-        ['unknown@example.com', '16/12/2025', 'jws', 'Invalid email', 'Y'],
-        ['test@example.com', 'bad-date', 'jws', 'Invalid date', 'Y'],
+        ['email', 'date', 'location', 'note', 'availability_status'],
+        ['test@example.com', '15/12/2025', 'jws', 'Valid row', 'O'],
+        ['unknown@example.com', '16/12/2025', 'jws', 'Invalid email', 'O'],
+        ['test@example.com', 'bad-date', 'jws', 'Invalid date', 'O'],
     ];
 
     $importer = new PlanEntryImport($rows);
@@ -200,8 +201,8 @@ test('import updates existing entries with same user and date', function () {
     expect(PlanEntry::count())->toBe(1);
 
     $rows = [
-        ['email', 'date', 'location', 'note', 'is_available'],
-        ['test@example.com', '15/12/2025', 'jwn', 'Updated note', 'Y'],
+        ['email', 'date', 'location', 'note', 'availability_status'],
+        ['test@example.com', '15/12/2025', 'jwn', 'Updated note', 'O'],
     ];
 
     $importer = new PlanEntryImport($rows);
@@ -257,7 +258,7 @@ test('saveNewUser creates user and attaches to team', function () {
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     // Create a real Excel file with unknown email
-    $data = [['john.smith@example.com', '15/12/2025', 'jws', 'Note', 'Y']];
+    $data = [['john.smith@example.com', '15/12/2025', 'jws', 'Note', 'O']];
     $tempPath = (new \Ohffs\SimpleSpout\ExcelSheet)->generate($data);
     $file = (new \Illuminate\Http\Testing\FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
 
@@ -291,7 +292,7 @@ test('saveNewUser lowercases the email', function () {
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     // Create a real Excel file with unknown email (uppercase)
-    $data = [['Jane.Doe@EXAMPLE.COM', '15/12/2025', 'jws', 'Note', 'Y']];
+    $data = [['Jane.Doe@EXAMPLE.COM', '15/12/2025', 'jws', 'Note', 'O']];
     $tempPath = (new \Ohffs\SimpleSpout\ExcelSheet)->generate($data);
     $file = (new \Illuminate\Http\Testing\FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
 

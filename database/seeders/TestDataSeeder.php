@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Service;
@@ -193,7 +194,7 @@ class TestDataSeeder extends Seeder
                     'location_id' => $location->id,
                     'note' => $note,
                     'category' => null,
-                    'is_available' => true,
+                    'availability_status' => AvailabilityStatus::ONSITE,
                     'is_holiday' => false,
                     'created_by_manager' => false,
                 ]);
@@ -224,7 +225,7 @@ class TestDataSeeder extends Seeder
 
             foreach ($userEntries as $entry) {
                 $entry->update([
-                    'is_available' => false,
+                    'availability_status' => AvailabilityStatus::NOT_AVAILABLE,
                     'location_id' => null,
                     'note' => $unavailableReasons[array_rand($unavailableReasons)],
                 ]);
@@ -278,7 +279,7 @@ class TestDataSeeder extends Seeder
                     'location_id' => $jwsLocation->id,
                     'note' => 'Normal coverage - member available',
                     'category' => null,
-                    'is_available' => true,
+                    'availability_status' => AvailabilityStatus::ONSITE,
                     'is_holiday' => false,
                     'created_by_manager' => false,
                 ]);
@@ -289,7 +290,7 @@ class TestDataSeeder extends Seeder
                     'location_id' => $otherLocation->id,
                     'note' => 'Also available (not needed)',
                     'category' => null,
-                    'is_available' => true,
+                    'availability_status' => AvailabilityStatus::ONSITE,
                     'is_holiday' => false,
                     'created_by_manager' => false,
                 ]);
@@ -300,7 +301,7 @@ class TestDataSeeder extends Seeder
                     'location_id' => null,
                     'note' => 'On leave',
                     'category' => null,
-                    'is_available' => false,
+                    'availability_status' => AvailabilityStatus::NOT_AVAILABLE,
                     'is_holiday' => false,
                     'created_by_manager' => false,
                 ]);
@@ -311,7 +312,7 @@ class TestDataSeeder extends Seeder
                     'location_id' => $jwnLocation->id,
                     'note' => 'Manager-only coverage',
                     'category' => null,
-                    'is_available' => true,
+                    'availability_status' => AvailabilityStatus::ONSITE,
                     'is_holiday' => false,
                     'created_by_manager' => false,
                 ]);
@@ -322,7 +323,7 @@ class TestDataSeeder extends Seeder
                     'location_id' => null,
                     'note' => 'Unavailable',
                     'category' => null,
-                    'is_available' => false,
+                    'availability_status' => AvailabilityStatus::NOT_AVAILABLE,
                     'is_holiday' => false,
                     'created_by_manager' => false,
                 ]);
@@ -333,7 +334,7 @@ class TestDataSeeder extends Seeder
                     'location_id' => null,
                     'note' => 'Also unavailable',
                     'category' => null,
-                    'is_available' => false,
+                    'availability_status' => AvailabilityStatus::NOT_AVAILABLE,
                     'is_holiday' => false,
                     'created_by_manager' => false,
                 ]);
@@ -370,7 +371,7 @@ class TestDataSeeder extends Seeder
 
             $entries = PlanEntry::where('entry_date', $targetDay)
                 ->where('location_id', $targetLocation->id)
-                ->where('is_available', true)
+                ->whereIn('availability_status', [AvailabilityStatus::ONSITE, AvailabilityStatus::REMOTE])
                 ->get();
 
             foreach ($entries as $entry) {
@@ -408,7 +409,7 @@ class TestDataSeeder extends Seeder
         // Move anyone at "Other" on this day to a physical location
         $entries = PlanEntry::where('entry_date', $targetDay)
             ->where('location_id', $otherLocation->id)
-            ->where('is_available', true)
+            ->whereIn('availability_status', [AvailabilityStatus::ONSITE, AvailabilityStatus::REMOTE])
             ->get();
 
         foreach ($entries as $entry) {

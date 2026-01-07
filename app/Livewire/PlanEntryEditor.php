@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\User;
@@ -49,7 +50,7 @@ class PlanEntryEditor extends Component
                 'entries.*.note' => 'nullable|string',
                 'entries.*.location_id' => 'nullable|integer|exists:locations,id',
                 'entries.*.entry_date' => 'required|date',
-                'entries.*.is_available' => 'required|boolean',
+                'entries.*.availability_status' => ['required', 'integer', Rule::enum(AvailabilityStatus::class)],
             ],
             [
                 'entries.*.location_id.required' => 'Location is required when available.',
@@ -57,7 +58,7 @@ class PlanEntryEditor extends Component
         );
 
         $validator->sometimes('entries.*.location_id', 'required', function (Fluent $input, Fluent $item) {
-            return $item->is_available === true;
+            return (int) $item->availability_status > 0;
         });
 
         $validated = $validator->validate();
@@ -72,7 +73,7 @@ class PlanEntryEditor extends Component
                     'entry_date' => $entry['entry_date'],
                     'note' => $entry['note'],
                     'location_id' => $entry['location_id'] ?: null,
-                    'is_available' => $entry['is_available'],
+                    'availability_status' => $entry['availability_status'],
                     'created_by_manager' => $this->createdByManager,
                 ]
             );
@@ -97,7 +98,7 @@ class PlanEntryEditor extends Component
         if ($dayIndex < 13) {
             $this->entries[$dayIndex + 1]['note'] = $this->entries[$dayIndex]['note'];
             $this->entries[$dayIndex + 1]['location_id'] = $this->entries[$dayIndex]['location_id'];
-            $this->entries[$dayIndex + 1]['is_available'] = $this->entries[$dayIndex]['is_available'];
+            $this->entries[$dayIndex + 1]['availability_status'] = $this->entries[$dayIndex]['availability_status'];
         }
     }
 
@@ -109,12 +110,12 @@ class PlanEntryEditor extends Component
 
         $sourceNote = $this->entries[$dayIndex]['note'];
         $sourceLocationId = $this->entries[$dayIndex]['location_id'];
-        $sourceIsAvailable = $this->entries[$dayIndex]['is_available'];
+        $sourceAvailabilityStatus = $this->entries[$dayIndex]['availability_status'];
 
         for ($i = $dayIndex + 1; $i < 14; $i++) {
             $this->entries[$i]['note'] = $sourceNote;
             $this->entries[$i]['location_id'] = $sourceLocationId;
-            $this->entries[$i]['is_available'] = $sourceIsAvailable;
+            $this->entries[$i]['availability_status'] = $sourceAvailabilityStatus;
         }
     }
 
@@ -123,6 +124,7 @@ class PlanEntryEditor extends Component
         return view('livewire.plan-entry-editor', [
             'days' => $this->getDays(),
             'locations' => Location::orderBy('name')->get(),
+            'availabilityStatuses' => AvailabilityStatus::cases(),
         ]);
     }
 
@@ -132,6 +134,7 @@ class PlanEntryEditor extends Component
 
         $defaultNote = $user->default_category;
         $defaultLocationId = $user->default_location_id;
+        $defaultAvailabilityStatus = $user->default_availability_status ?? AvailabilityStatus::ONSITE;
 
         $existingEntries = $user->planEntries()
             ->whereBetween('entry_date', [
@@ -150,7 +153,7 @@ class PlanEntryEditor extends Component
                 'entry_date' => $dateKey,
                 'note' => $existing?->note ?? $defaultNote,
                 'location_id' => $existing?->location_id ?? $defaultLocationId,
-                'is_available' => $existing?->is_available ?? true,
+                'availability_status' => $existing?->availability_status->value ?? $defaultAvailabilityStatus->value,
             ];
         }
     }

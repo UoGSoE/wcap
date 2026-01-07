@@ -286,12 +286,12 @@ class ManagerReportService
                 $dateKey = $day['key'];
                 $dayEntries = $serviceEntries->get($dateKey, collect());
 
-                $availableCount = $dayEntries->filter(fn ($e) => $e->is_available === true)->count();
+                $availableCount = $dayEntries->filter(fn ($e) => $e->isAvailable())->count();
 
                 $managerOnly = false;
                 if ($availableCount === 0 && $service->manager) {
                     $managerDayEntries = $managerEntries->get($dateKey, collect());
-                    $managerAvailable = $managerDayEntries->first(fn ($e) => $e->is_available === true);
+                    $managerAvailable = $managerDayEntries->first(fn ($e) => $e->isAvailable());
                     $managerOnly = $managerAvailable !== null;
                 }
 
@@ -339,12 +339,12 @@ class ManagerReportService
                 $dateKey = $day['key'];
                 $dayEntries = $serviceEntries->get($dateKey, collect());
 
-                $availableCount = $dayEntries->filter(fn ($e) => $e->is_available === true)->count();
+                $availableCount = $dayEntries->filter(fn ($e) => $e->isAvailable())->count();
 
                 $managerOnly = false;
                 if ($availableCount === 0 && $service->manager) {
                     $managerDayEntries = $managerEntries->get($dateKey, collect());
-                    $managerAvailable = $managerDayEntries->first(fn ($e) => $e->is_available === true);
+                    $managerAvailable = $managerDayEntries->first(fn ($e) => $e->isAvailable());
                     $managerOnly = $managerAvailable !== null;
                 }
 

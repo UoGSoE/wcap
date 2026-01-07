@@ -21,6 +21,7 @@ return new class extends Migration
             $table->boolean('is_admin')->default(false);
             $table->string('default_location')->default('');
             $table->string('default_category')->default('');
+            $table->tinyInteger('default_availability_status')->default(2); // see app/Enums/AvailabilityStatus
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

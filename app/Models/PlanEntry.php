@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AvailabilityStatus;
 use App\Enums\Category;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +19,7 @@ class PlanEntry extends Model
         'note',
         'category',
         'location_id',
-        'is_available',
+        'availability_status',
         'is_holiday',
         'created_by_manager',
     ];
@@ -28,7 +29,7 @@ class PlanEntry extends Model
         return [
             'entry_date' => 'date',
             'category' => Category::class,
-            'is_available' => 'boolean',
+            'availability_status' => AvailabilityStatus::class,
             'is_holiday' => 'boolean',
             'created_by_manager' => 'boolean',
         ];
@@ -42,5 +43,10 @@ class PlanEntry extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function isAvailable(): bool
+    {
+        return $this->availability_status->isAvailable();
     }
 }

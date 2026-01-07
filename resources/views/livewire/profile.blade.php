@@ -10,9 +10,19 @@
                 <flux:field>
                     <flux:label>Default Location</flux:label>
                     <flux:description>This location will be pre-filled for new entries.</flux:description>
-                    <flux:select variant="combobox" placeholder="Select a default location..." wire:model.live="default_location">
+                    <flux:select variant="combobox" placeholder="Select a default location..." wire:model.live="default_location_id">
                         @foreach ($locations as $location)
-                            <flux:select.option value="{{ $location->value }}">{{ $location->label() }}</flux:select.option>
+                            <flux:select.option value="{{ $location->id }}">{{ $location->label() }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Default Availability Status</flux:label>
+                    <flux:description>Your typical working arrangement for new entries.</flux:description>
+                    <flux:select wire:model.live="default_availability_status">
+                        @foreach ($availabilityStatuses as $status)
+                            <flux:select.option value="{{ $status->value }}">{{ $status->label() }}</flux:select.option>
                         @endforeach
                     </flux:select>
                 </flux:field>

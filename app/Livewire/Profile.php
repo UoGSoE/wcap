@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use Flux\Flux;
 use Livewire\Attributes\Computed;
@@ -13,6 +14,8 @@ class Profile extends Component
 
     public string $default_category = '';
 
+    public $default_availability_status = null;
+
     public string $newTokenName = '';
 
     public ?string $generatedToken = null;
@@ -23,8 +26,10 @@ class Profile extends Component
 
     public function mount(): void
     {
-        $this->default_location_id = auth()->user()->default_location_id;
-        $this->default_category = auth()->user()->default_category;
+        $user = auth()->user();
+        $this->default_location_id = $user->default_location_id;
+        $this->default_category = $user->default_category;
+        $this->default_availability_status = $user->default_availability_status?->value ?? AvailabilityStatus::ONSITE->value;
     }
 
     public function save(): void
@@ -32,6 +37,7 @@ class Profile extends Component
         $validated = $this->validate([
             'default_location_id' => 'nullable|integer|exists:locations,id',
             'default_category' => 'nullable|string',
+            'default_availability_status' => 'nullable|integer',
         ]);
 
         auth()->user()->update($validated);
@@ -280,6 +286,7 @@ class Profile extends Component
     {
         return view('livewire.profile', [
             'locations' => Location::orderBy('name')->get(),
+            'availabilityStatuses' => AvailabilityStatus::cases(),
         ]);
     }
 }

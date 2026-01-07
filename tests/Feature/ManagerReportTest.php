@@ -483,12 +483,11 @@ test('unavailable users with null location show as away in my team tab', functio
 
     $monday = now()->startOfWeek();
 
-    PlanEntry::factory()->create([
+    PlanEntry::factory()->unavailable()->create([
         'user_id' => $teamMember->id,
         'entry_date' => $monday,
         'note' => 'On holiday',
         'location_id' => null,
-        'is_available' => false,
     ]);
 
     actingAs($manager);
@@ -516,15 +515,13 @@ test('unavailable users do not appear in by location view', function () {
         'user_id' => $member1->id,
         'entry_date' => $monday,
         'location_id' => $location->id,
-        'is_available' => true,
     ]);
 
     // Member 2 is unavailable
-    PlanEntry::factory()->create([
+    PlanEntry::factory()->unavailable()->create([
         'user_id' => $member2->id,
         'entry_date' => $monday,
         'location_id' => null,
-        'is_available' => false,
     ]);
 
     actingAs($manager);
@@ -561,15 +558,13 @@ test('unavailable users do not appear in coverage counts', function () {
         'user_id' => $member1->id,
         'entry_date' => $monday,
         'location_id' => $location->id,
-        'is_available' => true,
     ]);
 
     // Member2 unavailable on Monday
-    PlanEntry::factory()->create([
+    PlanEntry::factory()->unavailable()->create([
         'user_id' => $member2->id,
         'entry_date' => $monday,
         'location_id' => null,
-        'is_available' => false,
     ]);
 
     actingAs($manager);

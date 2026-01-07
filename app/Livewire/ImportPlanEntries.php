@@ -89,7 +89,7 @@ class ImportPlanEntries extends Component
                 'date' => $validated['date'],
                 'location' => $validated['location'],
                 'note' => $validated['note'],
-                'is_available' => $validated['is_available'],
+                'availability_status' => $validated['availability_status'],
                 'raw' => $row,
             ];
         }

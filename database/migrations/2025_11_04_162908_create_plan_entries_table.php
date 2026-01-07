@@ -18,7 +18,7 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->string('category', 32)->nullable(); // see app/Enums/Category
             $table->string('location', 120)->nullable(); // see app/Enums/Location
-            $table->boolean('is_available')->default(true);
+            $table->tinyInteger('availability_status')->default(2); // see app/Enums/AvailabilityStatus
             $table->boolean('is_holiday')->default(false);
             $table->boolean('created_by_manager')->default(false);
             $table->timestamps();

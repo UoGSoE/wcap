@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
@@ -44,7 +45,7 @@ test('saving new entries creates database records', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note '.$offset,
             'location_id' => $location->id,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
@@ -81,7 +82,7 @@ test('saving updates existing entries', function () {
             'entry_date' => $date->copy()->addDays($offset)->format('Y-m-d'),
             'note' => 'Updated note '.$offset,
             'location_id' => $locationJws->id,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
@@ -118,7 +119,7 @@ test('copy next copies entry to next day only', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
             'location_id' => null,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
@@ -147,7 +148,7 @@ test('copy rest copies entry to all remaining days', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
             'location_id' => null,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
@@ -178,7 +179,7 @@ test('validation requires location field when available', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note',
             'location_id' => null, // Empty location should fail when available
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
@@ -201,7 +202,7 @@ test('validation skips location when unavailable', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note',
             'location_id' => null, // Empty location is OK when unavailable
-            'is_available' => false,
+            'availability_status' => AvailabilityStatus::NOT_AVAILABLE->value,
         ];
     })->toArray();
 
@@ -213,7 +214,7 @@ test('validation skips location when unavailable', function () {
     expect(PlanEntry::where('user_id', $user->id)->count())->toBe(14);
 
     $firstEntry = PlanEntry::where('user_id', $user->id)->first();
-    expect($firstEntry->is_available)->toBeFalse();
+    expect($firstEntry->availability_status)->toBe(AvailabilityStatus::NOT_AVAILABLE);
     expect($firstEntry->location_id)->toBeNull();
 });
 
@@ -231,7 +232,7 @@ test('validation allows empty note field', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => '', // Empty note should be allowed
             'location_id' => $location->id,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
@@ -304,7 +305,7 @@ test('existing entries override user defaults', function () {
         ->assertSet('entries.1.location_id', $locationOther->id);
 });
 
-test('is_available checkbox saves correctly', function () {
+test('availability_status saves correctly', function () {
     $user = User::factory()->create();
     $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
@@ -318,7 +319,7 @@ test('is_available checkbox saves correctly', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Test note',
             'location_id' => $location->id,
-            'is_available' => $offset % 2 === 0, // Alternate true/false
+            'availability_status' => $offset % 2 === 0 ? AvailabilityStatus::ONSITE->value : AvailabilityStatus::NOT_AVAILABLE->value,
         ];
     })->toArray();
 
@@ -330,13 +331,13 @@ test('is_available checkbox saves correctly', function () {
     expect(PlanEntry::where('user_id', $user->id)->count())->toBe(14);
 
     $firstEntry = PlanEntry::where('user_id', $user->id)->where('entry_date', now()->startOfWeek())->first();
-    expect($firstEntry->is_available)->toBeTrue();
+    expect($firstEntry->availability_status)->toBe(AvailabilityStatus::ONSITE);
 
     $secondEntry = PlanEntry::where('user_id', $user->id)->where('entry_date', now()->startOfWeek()->addDay())->first();
-    expect($secondEntry->is_available)->toBeFalse();
+    expect($secondEntry->availability_status)->toBe(AvailabilityStatus::NOT_AVAILABLE);
 });
 
-test('copy next includes is_available', function () {
+test('copy next includes availability_status', function () {
     $user = User::factory()->create();
     $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
 
@@ -350,24 +351,24 @@ test('copy next includes is_available', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
             'location_id' => null,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
     $entries[0]['note'] = 'First day task';
     $entries[0]['location_id'] = $location->id;
-    $entries[0]['is_available'] = false;
+    $entries[0]['availability_status'] = AvailabilityStatus::NOT_AVAILABLE->value;
 
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
         ->call('copyNext', 0)
         ->assertSet('entries.1.note', 'First day task')
         ->assertSet('entries.1.location_id', $location->id)
-        ->assertSet('entries.1.is_available', false)
-        ->assertSet('entries.2.is_available', true);
+        ->assertSet('entries.1.availability_status', AvailabilityStatus::NOT_AVAILABLE->value)
+        ->assertSet('entries.2.availability_status', AvailabilityStatus::ONSITE->value);
 });
 
-test('copy rest includes is_available', function () {
+test('copy rest includes availability_status', function () {
     $user = User::factory()->create();
     $location = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
 
@@ -381,13 +382,13 @@ test('copy rest includes is_available', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => '',
             'location_id' => null,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
     $entries[0]['note'] = 'Same task all week';
     $entries[0]['location_id'] = $location->id;
-    $entries[0]['is_available'] = false;
+    $entries[0]['availability_status'] = AvailabilityStatus::NOT_AVAILABLE->value;
 
     $component = Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
         ->set('entries', $entries)
@@ -396,28 +397,27 @@ test('copy rest includes is_available', function () {
     for ($i = 1; $i < 14; $i++) {
         $component->assertSet("entries.{$i}.note", 'Same task all week')
             ->assertSet("entries.{$i}.location_id", $location->id)
-            ->assertSet("entries.{$i}.is_available", false);
+            ->assertSet("entries.{$i}.availability_status", AvailabilityStatus::NOT_AVAILABLE->value);
     }
 });
 
-test('existing entries load is_available value', function () {
+test('existing entries load availability_status value', function () {
     $user = User::factory()->create();
     $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
     $date = now()->startOfWeek();
 
-    PlanEntry::factory()->create([
+    PlanEntry::factory()->unavailable()->create([
         'user_id' => $user->id,
         'entry_date' => $date,
         'note' => 'Unavailable task',
         'location_id' => $location->id,
-        'is_available' => false,
     ]);
 
     actingAs($user);
 
     Livewire::test(\App\Livewire\PlanEntryEditor::class, ['user' => $user])
-        ->assertSet('entries.0.is_available', false)
-        ->assertSet('entries.1.is_available', true);
+        ->assertSet('entries.0.availability_status', AvailabilityStatus::NOT_AVAILABLE->value)
+        ->assertSet('entries.1.availability_status', AvailabilityStatus::ONSITE->value);
 });
 
 test('read-only mode prevents saving', function () {
@@ -434,7 +434,7 @@ test('read-only mode prevents saving', function () {
             'entry_date' => $date->format('Y-m-d'),
             'note' => 'Should not save',
             'location_id' => $location->id,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 
@@ -496,7 +496,7 @@ test('cannot update another users entry', function () {
             'entry_date' => $date->copy()->addDays($offset)->format('Y-m-d'),
             'note' => 'User B task',
             'location_id' => $locationOther->id,
-            'is_available' => true,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
         ];
     })->toArray();
 

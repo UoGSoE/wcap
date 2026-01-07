@@ -10,7 +10,7 @@
         <flux:card class="max-w-xl">
             <flux:heading size="lg">Upload Excel File</flux:heading>
             <flux:text class="mt-2">
-                Upload a file with columns: email, date (DD/MM/YYYY), location, note, is_available (Y/N)
+                Upload a file with columns: email, date (DD/MM/YYYY), location, note, availability (O/R/N for Onsite/Remote/Not available)
             </flux:text>
 
             <div class="mt-6">

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AvailabilityStatus;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,7 @@ class User extends Authenticatable
         'password',
         'default_location_id',
         'default_category',
+        'default_availability_status',
         'is_admin',
         'is_staff',
     ];
@@ -55,6 +57,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'is_staff' => 'boolean',
+            'default_availability_status' => AvailabilityStatus::class,
         ];
     }
 

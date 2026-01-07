@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AvailabilityStatus;
 use App\Http\Requests\UpsertPlanEntriesRequest;
 use App\Models\Location;
 use App\Models\PlanEntry;
@@ -44,7 +45,8 @@ class PlanController
                     'location' => $entry->location?->slug,
                     'location_label' => $entry->location?->label(),
                     'note' => $entry->note,
-                    'is_available' => $entry->is_available,
+                    'availability_status' => $entry->availability_status->value,
+                    'availability_status_label' => $entry->availability_status->label(),
                     'is_holiday' => $entry->is_holiday,
                     'category' => $entry->category?->value,
                     'category_label' => $entry->category?->label(),
@@ -86,7 +88,7 @@ class PlanController
                 'entry_date' => $entry['entry_date'],
                 'location_id' => $locationId,
                 'note' => $entry['note'] ?? null,
-                'is_available' => $entry['is_available'] ?? true,
+                'availability_status' => $entry['availability_status'] ?? AvailabilityStatus::ONSITE->value,
                 'is_holiday' => $entry['is_holiday'] ?? false,
                 'category' => $entry['category'] ?? null,
             ];
