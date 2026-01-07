@@ -6,72 +6,67 @@
 
     <flux:tab.group>
         <flux:tabs wire:model.live="tab">
-            <flux:tab name="today">Today</flux:tab>
-            <flux:tab name="period">This Period</flux:tab>
-            <flux:tab name="summary">Summary</flux:tab>
+            <flux:tab name="today">Date</flux:tab>
+            <flux:tab name="period">Heatmap</flux:tab>
+            <flux:tab name="summary">Stats</flux:tab>
         </flux:tabs>
 
         <flux:tab.panel name="today">
-            <flux:subheading class="mb-2">{{ $snapshotDate->format('l, F jS Y') }}</flux:subheading>
-            <flux:text class="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
-                Shows who is physically present at each location today. Total present shown with visitor count in badge.
+            <div class="flex items-center gap-4 mb-6">
+                <flux:date-picker wire:model.live="date" with-today />
+                <flux:heading size="lg">{{ $snapshotDate->format('l, F jS Y') }}</flux:heading>
+            </div>
+            <flux:text size="sm" variant="subtle" class="mb-4">
+                Shows who is physically present at each location. Total present shown with visitor count in badge.
             </flux:text>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 @foreach ($daySnapshot as $location)
-                    <div class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    <flux:card>
                         <div class="flex justify-between items-start mb-3">
                             <div>
                                 <flux:heading size="lg">{{ $location['location_name'] }}</flux:heading>
-                                <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
+                                <flux:text size="sm" variant="subtle">
                                     Base capacity: {{ $location['base_capacity'] }}
                                 </flux:text>
                             </div>
                             <div class="text-right">
                                 <div class="flex items-center justify-end gap-2">
-                                    <flux:text variant="strong" class="text-2xl">{{ $location['total_present'] }}</flux:text>
+                                    <flux:text variant="strong" size="xl">{{ $location['total_present'] }}</flux:text>
                                     @if($location['visitor_count'] > 0)
                                         <flux:badge icon="user-circle" size="sm" color="sky" inset="top bottom">{{ $location['visitor_count'] }}</flux:badge>
                                     @endif
                                 </div>
-                                <flux:text class="text-sm {{ $location['utilization_pct'] > 100 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-zinc-500' }}">
+                                <flux:text size="sm" :color="$location['utilization_pct'] > 100 ? 'red' : null" :variant="$location['utilization_pct'] > 100 ? null : 'subtle'">
                                     {{ $location['utilization_pct'] }}% utilization
                                 </flux:text>
                             </div>
                         </div>
 
                         @if ($location['home_users']->isNotEmpty() || $location['visitor_users']->isNotEmpty())
-                            <div class="border-t border-zinc-200 dark:border-zinc-700 pt-3 mt-3">
-                                @if ($location['home_users']->isNotEmpty())
-                                    <flux:text class="text-xs text-zinc-500 uppercase tracking-wide mb-1">Home Staff</flux:text>
-                                    <div class="flex flex-wrap gap-1 mb-2">
-                                        @foreach ($location['home_users'] as $user)
-                                            <flux:badge size="sm" inset="top bottom">{{ $user->surname }}</flux:badge>
-                                        @endforeach
-                                    </div>
-                                @endif
-
-                                @if ($location['visitor_users']->isNotEmpty())
-                                    <flux:text class="text-xs text-zinc-500 uppercase tracking-wide mb-1">Visitors</flux:text>
-                                    <div class="flex flex-wrap gap-1">
-                                        @foreach ($location['visitor_users'] as $user)
-                                            <flux:badge size="sm" color="sky" inset="top bottom">{{ $user->surname }}</flux:badge>
-                                        @endforeach
-                                    </div>
-                                @endif
+                            <flux:separator class="my-3" />
+                            <div class="flex flex-wrap gap-1">
+                                @foreach ($location['home_users'] as $user)
+                                    <flux:badge size="sm">{{ $user->surname }}</flux:badge>
+                                @endforeach
+                                @foreach ($location['visitor_users'] as $user)
+                                    <flux:badge icon="user-circle" size="sm" color="sky">{{ $user->surname }}</flux:badge>
+                                @endforeach
                             </div>
                         @else
-                            <flux:text class="text-sm text-zinc-500 italic">No one present</flux:text>
+                            <flux:text size="sm" variant="subtle" class="italic">No one present</flux:text>
                         @endif
-                    </div>
+                    </flux:card>
                 @endforeach
             </div>
         </flux:tab.panel>
 
         <flux:tab.panel name="period">
-            <flux:subheading class="mb-2">Two-week occupancy overview</flux:subheading>
-            <flux:text class="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
-                Shows occupancy for each location over the planning period. Format: home staff (+visitors). Colour intensity indicates utilization.
+            <div class="flex items-center gap-4 mb-6">
+                <flux:date-picker mode="range" wire:model.live="range" with-today />
+            </div>
+            <flux:text size="sm" variant="subtle" class="mb-4">
+                Shows total occupancy for each location over the selected period. Colour intensity indicates utilization.
             </flux:text>
 
             <div class="overflow-x-auto">
@@ -107,7 +102,7 @@
                             @endphp
                             <div class="p-2 text-center text-sm {{ $cellClass }} rounded">
                                 @if ($dayData['total_present'] > 0)
-                                    <span class="font-medium">{{ $dayData['home_count'] }}</span>@if($dayData['visitor_count'] > 0)<span class="text-zinc-500 text-xs"> +{{ $dayData['visitor_count'] }}</span>@endif
+                                    <span class="font-medium">{{ $dayData['total_present'] }}</span>
                                 @else
                                     <span class="text-zinc-400">-</span>
                                 @endif
@@ -138,9 +133,11 @@
         </flux:tab.panel>
 
         <flux:tab.panel name="summary">
-            <flux:subheading class="mb-2">Occupancy statistics</flux:subheading>
-            <flux:text class="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
-                Summary statistics across the two-week planning period. Use these figures to demonstrate space utilization.
+            <div class="flex items-center gap-4 mb-6">
+                <flux:date-picker mode="range" wire:model.live="range" with-today />
+            </div>
+            <flux:text size="sm" variant="subtle" class="mb-4">
+                Summary statistics across the selected period. Use these figures to demonstrate space utilization.
             </flux:text>
 
             <div class="overflow-x-auto">

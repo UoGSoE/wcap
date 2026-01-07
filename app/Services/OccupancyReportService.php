@@ -19,37 +19,41 @@ class OccupancyReportService
 
     private ?Collection $userDefaultLocations = null;
 
-    public function buildReportPayload(): array
+    public function buildReportPayload(?Carbon $snapshotDate = null, ?Carbon $rangeStart = null, ?Carbon $rangeEnd = null): array
     {
-        $days = $this->buildDays();
+        $days = $this->buildDays($rangeStart, $rangeEnd);
         $physicalLocations = Location::physical()->orderBy('name')->get();
 
         $this->loadData($days);
 
+        $snapshotDate = $snapshotDate ?? $this->getSnapshotDate();
+
         return [
             'days' => $days,
-            'snapshotDate' => $this->getSnapshotDate(),
-            'daySnapshot' => $this->buildDaySnapshot(),
+            'snapshotDate' => $snapshotDate,
+            'daySnapshot' => $this->buildDaySnapshot($snapshotDate),
             'periodMatrix' => $this->buildPeriodMatrix($days, $physicalLocations),
             'summaryStats' => $this->buildSummaryStats($days, $physicalLocations),
             'physicalLocations' => $physicalLocations,
         ];
     }
 
-    public function buildDays(): array
+    public function buildDays(?Carbon $start = null, ?Carbon $end = null): array
     {
-        $start = now()->startOfWeek();
+        $start = $start?->copy()->startOfDay() ?? now()->startOfWeek();
+        $end = $end?->copy()->startOfDay() ?? $start->copy()->addDays(13);
+
         $days = [];
+        $current = $start->copy();
 
-        for ($offset = 0; $offset < 14; $offset++) {
-            $day = $start->copy()->addDays($offset);
-
-            if ($day->isWeekday()) {
+        while ($current->lte($end)) {
+            if ($current->isWeekday()) {
                 $days[] = [
-                    'date' => $day,
-                    'key' => $day->toDateString(),
+                    'date' => $current->copy(),
+                    'key' => $current->toDateString(),
                 ];
             }
+            $current->addDay();
         }
 
         return $days;
@@ -178,8 +182,8 @@ class OccupancyReportService
                 'location_name' => $location->name,
                 'short_label' => $location->shortLabel(),
                 'base_capacity' => $baseCapacity,
-                'mean_occupancy' => round($meanOccupancy, 1),
-                'median_occupancy' => $medianOccupancy,
+                'mean_occupancy' => (int) ceil($meanOccupancy),
+                'median_occupancy' => (int) ceil($medianOccupancy),
                 'peak_occupancy' => $peakOccupancy,
                 'peak_date' => $peakDate,
             ];

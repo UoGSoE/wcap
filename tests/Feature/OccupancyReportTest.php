@@ -21,9 +21,9 @@ test('manager can view occupancy report page', function () {
     Livewire::test(\App\Livewire\OccupancyReport::class)
         ->assertOk()
         ->assertSee('Office Occupancy Report')
-        ->assertSee('Today')
-        ->assertSee('This Period')
-        ->assertSee('Summary');
+        ->assertSee('Date')
+        ->assertSee('Heatmap')
+        ->assertSee('Stats');
 });
 
 test('non-manager cannot access occupancy report page', function () {
@@ -287,7 +287,8 @@ test('summary stats calculate mean correctly', function () {
 
     $jwsStats = collect($summaryStats)->firstWhere('location_name', 'JWS');
 
-    expect($jwsStats['mean_occupancy'])->toBe(0.5);
+    // Mean is 5 entries over 10 days = 0.5, rounded up to 1 (partial people need desk space)
+    expect($jwsStats['mean_occupancy'])->toBe(1);
 });
 
 test('summary stats identify peak occupancy and date', function () {
@@ -432,10 +433,10 @@ test('tab switching works correctly', function () {
         ->assertSee('Base capacity')
         ->set('tab', 'period')
         ->assertSet('tab', 'period')
-        ->assertSee('Two-week occupancy overview')
+        ->assertSee('Shows total occupancy for each location')
         ->set('tab', 'summary')
         ->assertSet('tab', 'summary')
-        ->assertSee('Occupancy statistics');
+        ->assertSee('Summary statistics across the selected period');
 });
 
 test('utilization percentage is based on total present including visitors', function () {
