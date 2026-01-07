@@ -541,3 +541,78 @@ test('utilization can exceed 100 percent when visitors push occupancy above capa
 
     Date::setTestNow();
 });
+
+test('heatmap shows daily aggregation for ranges under 25 weekdays', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+
+    actingAs($manager);
+
+    // Default 2-week range has 10 weekdays - should be daily
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+
+    expect($component->viewData('aggregation'))->toBe('daily');
+    expect(count($component->viewData('days')))->toBe(10);
+});
+
+test('heatmap switches to weekly aggregation for ranges of 25+ weekdays', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+
+    actingAs($manager);
+
+    // Set a 6-week range (30 weekdays) - should trigger weekly aggregation
+    $start = now()->startOfWeek();
+    $end = $start->copy()->addWeeks(6)->subDay();
+
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->set('range', [
+            'start' => $start->toDateString(),
+            'end' => $end->toDateString(),
+        ]);
+
+    expect($component->viewData('aggregation'))->toBe('weekly');
+    // 6 weeks = 6 columns (one per week)
+    expect(count($component->viewData('days')))->toBeLessThanOrEqual(7);
+});
+
+test('weekly aggregation calculates averages correctly', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    $user = User::factory()->create(['default_location_id' => $location->id]);
+
+    $monday = now()->startOfWeek();
+
+    // Create entries for Mon, Tue, Wed (3 out of 5 weekdays) with 1 person each day
+    for ($i = 0; $i < 3; $i++) {
+        PlanEntry::factory()->onsite()->create([
+            'user_id' => $user->id,
+            'entry_date' => $monday->copy()->addDays($i),
+            'location_id' => $location->id,
+        ]);
+    }
+
+    actingAs($manager);
+
+    // Set a 6-week range to trigger weekly aggregation
+    $start = $monday;
+    $end = $monday->copy()->addWeeks(6)->subDay();
+
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->set('range', [
+            'start' => $start->toDateString(),
+            'end' => $end->toDateString(),
+        ]);
+
+    $periodMatrix = $component->viewData('periodMatrix');
+    $jwsRow = collect($periodMatrix)->firstWhere('location_name', 'JWS');
+
+    // First week: 3 entries over 5 weekdays = 0.6 average, ceil to 1
+    expect($jwsRow['days'][0]['total_present'])->toBe(1);
+});

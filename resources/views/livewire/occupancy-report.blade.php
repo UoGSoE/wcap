@@ -64,9 +64,16 @@
         <flux:tab.panel name="period">
             <div class="flex items-center gap-4 mb-6">
                 <flux:date-picker mode="range" wire:model.live="range" with-today />
+                @if ($aggregation === 'weekly')
+                    <flux:badge color="sky">Showing weekly averages</flux:badge>
+                @endif
             </div>
             <flux:text size="sm" variant="subtle" class="mb-4">
-                Shows total occupancy for each location over the selected period. Colour intensity indicates utilization.
+                @if ($aggregation === 'weekly')
+                    Shows average weekly occupancy for each location. Colour intensity indicates utilization.
+                @else
+                    Shows total occupancy for each location over the selected period. Colour intensity indicates utilization.
+                @endif
             </flux:text>
 
             <div class="overflow-x-auto">
@@ -77,8 +84,13 @@
                     </div>
                     @foreach ($days as $day)
                         <div class="p-2 text-center">
-                            <flux:text variant="strong" class="text-xs">{{ $day['date']->format('D') }}</flux:text>
-                            <flux:text class="text-xs block">{{ $day['date']->format('j/n') }}</flux:text>
+                            @if ($aggregation === 'weekly')
+                                <flux:text variant="strong" class="text-xs">W/C</flux:text>
+                                <flux:text class="text-xs block">{{ $day['date']->format('j M') }}</flux:text>
+                            @else
+                                <flux:text variant="strong" class="text-xs">{{ $day['date']->format('D') }}</flux:text>
+                                <flux:text class="text-xs block">{{ $day['date']->format('j/n') }}</flux:text>
+                            @endif
                         </div>
                     @endforeach
 

@@ -19,6 +19,8 @@ class OccupancyReportService
 
     private ?Collection $userDefaultLocations = null;
 
+    private const WEEKLY_THRESHOLD = 25;
+
     public function buildReportPayload(?Carbon $snapshotDate = null, ?Carbon $rangeStart = null, ?Carbon $rangeEnd = null): array
     {
         $days = $this->buildDays($rangeStart, $rangeEnd);
@@ -27,14 +29,25 @@ class OccupancyReportService
         $this->loadData($days);
 
         $snapshotDate = $snapshotDate ?? $this->getSnapshotDate();
+        $periodMatrix = $this->buildPeriodMatrix($days, $physicalLocations);
+
+        // Auto-aggregate to weekly view if range is large
+        $aggregation = 'daily';
+        if (count($days) >= self::WEEKLY_THRESHOLD) {
+            $condensed = $this->condenseToWeeks($days, $periodMatrix);
+            $days = $condensed['days'];
+            $periodMatrix = $condensed['periodMatrix'];
+            $aggregation = 'weekly';
+        }
 
         return [
             'days' => $days,
             'snapshotDate' => $snapshotDate,
             'daySnapshot' => $this->buildDaySnapshot($snapshotDate),
-            'periodMatrix' => $this->buildPeriodMatrix($days, $physicalLocations),
-            'summaryStats' => $this->buildSummaryStats($days, $physicalLocations),
+            'periodMatrix' => $periodMatrix,
+            'summaryStats' => $this->buildSummaryStats($this->buildDays($rangeStart, $rangeEnd), $physicalLocations),
             'physicalLocations' => $physicalLocations,
+            'aggregation' => $aggregation,
         ];
     }
 
@@ -253,5 +266,64 @@ class OccupancyReportService
         }
 
         return $values[$middle];
+    }
+
+    private function condenseToWeeks(array $days, array $periodMatrix): array
+    {
+        // Group days by week (using Monday's date as key)
+        $weekGroups = [];
+        foreach ($days as $index => $day) {
+            $weekKey = $day['date']->copy()->startOfWeek()->toDateString();
+            if (! isset($weekGroups[$weekKey])) {
+                $weekGroups[$weekKey] = [
+                    'date' => $day['date']->copy()->startOfWeek(),
+                    'key' => $weekKey,
+                    'dayIndices' => [],
+                ];
+            }
+            $weekGroups[$weekKey]['dayIndices'][] = $index;
+        }
+
+        // Build condensed days array (one per week)
+        $condensedDays = array_values($weekGroups);
+
+        // Condense period matrix
+        $condensedMatrix = [];
+        foreach ($periodMatrix as $locationRow) {
+            $condensedRow = [
+                'location_id' => $locationRow['location_id'],
+                'location_name' => $locationRow['location_name'],
+                'short_label' => $locationRow['short_label'],
+                'base_capacity' => $locationRow['base_capacity'],
+                'days' => [],
+            ];
+
+            foreach ($weekGroups as $weekData) {
+                $weekDays = array_map(fn ($i) => $locationRow['days'][$i], $weekData['dayIndices']);
+                $dayCount = count($weekDays);
+
+                $avgHomeCount = (int) ceil(array_sum(array_column($weekDays, 'home_count')) / $dayCount);
+                $avgVisitorCount = (int) ceil(array_sum(array_column($weekDays, 'visitor_count')) / $dayCount);
+                $avgTotalPresent = (int) ceil(array_sum(array_column($weekDays, 'total_present')) / $dayCount);
+                $avgUtilizationPct = $condensedRow['base_capacity'] > 0
+                    ? round(($avgTotalPresent / $condensedRow['base_capacity']) * 100, 1)
+                    : 0;
+
+                $condensedRow['days'][] = [
+                    'date' => $weekData['date'],
+                    'home_count' => $avgHomeCount,
+                    'visitor_count' => $avgVisitorCount,
+                    'total_present' => $avgTotalPresent,
+                    'utilization_pct' => $avgUtilizationPct,
+                ];
+            }
+
+            $condensedMatrix[] = $condensedRow;
+        }
+
+        return [
+            'days' => $condensedDays,
+            'periodMatrix' => $condensedMatrix,
+        ];
     }
 }
