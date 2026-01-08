@@ -25,25 +25,24 @@
                 <flux:sidebar.nav>
                     <flux:sidebar.item icon="home" href="/" wire:navigate>Home</flux:sidebar.item>
                     <flux:separator class="my-2" />
-                    <flux:sidebar.item icon="user-group" href="{{ route('manager.report') }}" wire:navigate>Team Report</flux:sidebar.item>
-                    <flux:sidebar.item icon="building-office-2" href="{{ route('manager.occupancy') }}" wire:navigate>Office Occupancy</flux:sidebar.item>
                     @if (auth()->user()->isManager())
-                        <flux:sidebar.item icon="pencil-square" href="{{ route('manager.entries') }}" wire:navigate>Edit Team Plans</flux:sidebar.item>
+                        <flux:sidebar.item icon="pencil-square" href="{{ route('manager.entries') }}" :current="request()->is('manager/entries')" wire:navigate>Team Planning</flux:sidebar.item>
+                        <flux:sidebar.item icon="user-group" href="{{ route('manager.report') }}" :current="request()->is('manager/report')" wire:navigate>Team Report</flux:sidebar.item>
+                        <flux:sidebar.item icon="building-office-2" href="{{ route('manager.occupancy') }}" :current="request()->is('manager/occupancy')" wire:navigate>Office Occupancy</flux:sidebar.item>
                     @endif
                     @admin
                         <flux:separator class="my-2" />
-                        <flux:sidebar.item icon="cog-6-tooth" href="{{ route('admin.teams') }}" wire:navigate>Manage Teams</flux:sidebar.item>
+                        <flux:sidebar.item icon="cog-6-tooth" href="{{ route('admin.teams') }}" :current="request()->is('admin/teams')" wire:navigate>Manage Teams</flux:sidebar.item>
                         @servicesEnabled
-                            <flux:sidebar.item icon="wrench-screwdriver" href="{{ route('admin.services') }}" wire:navigate>Manage Services</flux:sidebar.item>
+                            <flux:sidebar.item icon="wrench-screwdriver" href="{{ route('admin.services') }}" :current="request()->is('admin/services')" wire:navigate>Manage Services</flux:sidebar.item>
                         @endservicesEnabled
-                        <flux:sidebar.item icon="map-pin" href="{{ route('admin.locations') }}" wire:navigate>Manage Locations</flux:sidebar.item>
-                        <flux:sidebar.item icon="users" href="{{ route('admin.users') }}" wire:navigate>Manage Users</flux:sidebar.item>
+                        <flux:sidebar.item icon="map-pin" href="{{ route('admin.locations') }}" :current="request()->is('admin/locations')" wire:navigate>Manage Locations</flux:sidebar.item>
+                        <flux:sidebar.item icon="users" href="{{ route('admin.users') }}" :current="request()->is('admin/users')" wire:navigate>Manage Users</flux:sidebar.item>
                     @endadmin
                 </flux:sidebar.nav>
                 <flux:sidebar.spacer />
                 <flux:sidebar.nav>
-                    <flux:sidebar.item icon="user-circle" href="{{ route('profile') }}" wire:navigate>Profile</flux:sidebar.item>
-                    <flux:sidebar.item icon="information-circle" href="#">Help</flux:sidebar.item>
+                    <flux:sidebar.item icon="user-circle" href="{{ route('profile') }}" :current="request()->is('profile')" wire:navigate>Profile</flux:sidebar.item>
                 </flux:sidebar.nav>
                 <flux:sidebar.nav>
                     <flux:sidebar.item tooltip="Logout" icon="arrow-right-start-on-rectangle">

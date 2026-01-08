@@ -61,7 +61,7 @@
                 </flux:heading>
             </div>
 
-            <form wire:submit="save">
+            <form wire:submit="save" class="space-y-6">
                 <flux:field>
                     <flux:label>Service Name</flux:label>
                     <flux:description>A unique name for this service.</flux:description>

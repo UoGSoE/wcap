@@ -11,19 +11,17 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('home page loads the plan editor component for non-managers', function () {
+test('home page loads the profile page for regular users', function () {
     $user = User::factory()->create();
 
-    actingAs($user);
-
-    $this->get(route('home'))->assertOk()->assertSeeLivewire('plan-entry-editor');
+    $this->actingAs($user)->get(route('home'))->assertRedirect(route('profile'));
 });
 
-test('home page redirects to manager report page for managers', function () {
+test('home page redirects to manager edit entries page for managers and admins', function () {
     $manager = User::factory()->create();
+    $admin = User::factory()->admin()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
-    actingAs($manager);
-
-    $this->get(route('home'))->assertRedirect(route('manager.report'));
+    $this->actingAs($manager)->get(route('home'))->assertRedirect(route('manager.entries'));
+    $this->actingAs($admin)->get(route('home'))->assertRedirect(route('manager.entries'));
 });

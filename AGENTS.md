@@ -77,8 +77,10 @@ bd dep tree <id>                            # Show dependency tree
 1. **Starting a session**: Run `bd ready` to see what's unblocked
 2. **Pick work**: `bd update <id> --claim` to claim an issue
 3. **Check details**: `bd show <id>` for full context
-4. **Complete work**: `bd close <id> --suggest-next` to close and see what's newly unblocked
-5. **End of session**: `bd status` to see overall state
+4. **Work**: Try to complete the task
+5. **User QA Test**: Stop and ask the user for to test/check the work
+6. **Complete work**: `bd close <id> --suggest-next` to close and see what's newly unblocked
+7. **End of session**: `bd status` to see overall state
 
 ## Hierarchical IDs
 
