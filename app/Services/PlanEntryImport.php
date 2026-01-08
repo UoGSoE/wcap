@@ -32,20 +32,45 @@ class PlanEntryImport
             $validated = $result->safe();
             $user = User::where('email', $validated['email'])->first();
             $entryDate = Carbon::createFromFormat('d/m/Y', $validated['date']);
-            $location = Location::where('slug', $validated['location'])->first();
 
-            $availabilityStatus = match ($validated['availability_status']) {
-                'O' => AvailabilityStatus::ONSITE,
-                'R' => AvailabilityStatus::REMOTE,
-                'N' => AvailabilityStatus::NOT_AVAILABLE,
-                default => AvailabilityStatus::ONSITE,
-            };
+            // Use provided availability, or fall back to user's default
+            $availabilityStatus = null;
+            if (! empty($validated['availability_status'])) {
+                $availabilityStatus = match ($validated['availability_status']) {
+                    'O' => AvailabilityStatus::ONSITE,
+                    'R' => AvailabilityStatus::REMOTE,
+                    'N' => AvailabilityStatus::NOT_AVAILABLE,
+                };
+            } else {
+                $availabilityStatus = $user->default_availability_status;
+                if (! $availabilityStatus) {
+                    $errors[] = "Row {$index}: No availability provided and user has no default availability set.";
+
+                    continue;
+                }
+            }
+
+            // Use provided location, or fall back to user's default
+            $location = null;
+            if (! empty($validated['location'])) {
+                $location = Location::where('slug', $validated['location'])->first();
+            } else {
+                $location = $user->defaultLocation;
+                if (! $location) {
+                    $errors[] = "Row {$index}: No location provided and user has no default location set.";
+
+                    continue;
+                }
+            }
+
+            // Use provided note, or fall back to user's default category
+            $note = ! empty($validated['note']) ? $validated['note'] : ($user->default_category ?? '');
 
             PlanEntry::updateOrCreate(
                 ['user_id' => $user->id, 'entry_date' => $entryDate],
                 [
-                    'note' => $validated['note'],
-                    'location_id' => $location?->id,
+                    'note' => $note,
+                    'location_id' => $location->id,
                     'availability_status' => $availabilityStatus,
                     'created_by_manager' => true,
                 ]

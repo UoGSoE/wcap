@@ -346,3 +346,139 @@ test('saveNewUser validates unique email and username', function () {
         ->call('saveNewUser')
         ->assertHasErrors(['newUserEmail', 'newUserUsername']);
 });
+
+// Empty row handling tests - fallback to user defaults
+
+test('import uses user default availability when availability is empty', function () {
+    $defaultLocation = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    User::factory()->create([
+        'email' => 'test@example.com',
+        'default_location_id' => $defaultLocation->id,
+        'default_availability_status' => AvailabilityStatus::REMOTE,
+    ]);
+
+    $rows = [
+        ['email', 'date', 'location', 'note', 'availability_status'],
+        ['test@example.com', '15/12/2025', 'jws', 'Has availability', 'O'],
+        ['test@example.com', '16/12/2025', 'jws', 'No availability', ''],
+    ];
+
+    $importer = new PlanEntryImport($rows);
+    $errors = $importer->import();
+
+    expect($errors)->toBeEmpty();
+    expect(PlanEntry::count())->toBe(2);
+
+    $entries = PlanEntry::orderBy('entry_date')->get();
+    expect($entries[0]->availability_status)->toBe(AvailabilityStatus::ONSITE);
+    expect($entries[1]->availability_status)->toBe(AvailabilityStatus::REMOTE);
+});
+
+// Note: default_availability_status always has a DB default (2=ONSITE), so the "no default" error case cannot occur
+
+test('import uses user default location when location is empty', function () {
+    $defaultLocation = Location::factory()->create(['slug' => 'default', 'name' => 'Default']);
+    User::factory()->create([
+        'email' => 'test@example.com',
+        'default_location_id' => $defaultLocation->id,
+        'default_availability_status' => AvailabilityStatus::ONSITE,
+    ]);
+
+    $rows = [
+        ['email', 'date', 'location', 'note', 'availability_status'],
+        ['test@example.com', '15/12/2025', '', 'No location specified', 'O'],
+    ];
+
+    $importer = new PlanEntryImport($rows);
+    $errors = $importer->import();
+
+    expect($errors)->toBeEmpty();
+    expect(PlanEntry::count())->toBe(1);
+    expect(PlanEntry::first()->location_id)->toBe($defaultLocation->id);
+});
+
+test('import errors when location empty and user has no default', function () {
+    User::factory()->create([
+        'email' => 'test@example.com',
+        'default_location_id' => null,
+        'default_availability_status' => AvailabilityStatus::ONSITE,
+    ]);
+
+    $rows = [
+        ['email', 'date', 'location', 'note', 'availability_status'],
+        ['test@example.com', '15/12/2025', '', 'No location', 'O'],
+    ];
+
+    $importer = new PlanEntryImport($rows);
+    $errors = $importer->import();
+
+    expect($errors)->toHaveCount(1);
+    expect($errors[0])->toContain('No location provided and user has no default location');
+    expect(PlanEntry::count())->toBe(0);
+});
+
+test('import uses user default_category for note when note is empty', function () {
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    User::factory()->create([
+        'email' => 'test@example.com',
+        'default_location_id' => $location->id,
+        'default_availability_status' => AvailabilityStatus::ONSITE,
+        'default_category' => 'Patching servers',
+    ]);
+
+    $rows = [
+        ['email', 'date', 'location', 'note', 'availability_status'],
+        ['test@example.com', '15/12/2025', 'jws', '', 'O'],
+    ];
+
+    $importer = new PlanEntryImport($rows);
+    $errors = $importer->import();
+
+    expect($errors)->toBeEmpty();
+    expect(PlanEntry::count())->toBe(1);
+    expect(PlanEntry::first()->note)->toBe('Patching servers');
+});
+
+test('import allows empty note when user has empty default_category', function () {
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    // default_category defaults to '' in the database schema
+    User::factory()->create([
+        'email' => 'test@example.com',
+        'default_location_id' => $location->id,
+        'default_category' => '',
+    ]);
+
+    $rows = [
+        ['email', 'date', 'location', 'note', 'availability_status'],
+        ['test@example.com', '15/12/2025', 'jws', '', 'O'],
+    ];
+
+    $importer = new PlanEntryImport($rows);
+    $errors = $importer->import();
+
+    expect($errors)->toBeEmpty();
+    expect(PlanEntry::count())->toBe(1);
+    expect(PlanEntry::first()->note)->toBe('');
+});
+
+test('validator passes for empty location', function () {
+    User::factory()->create(['email' => 'test@example.com']);
+
+    $row = ['test@example.com', '15/12/2025', '', 'Note', 'O'];
+
+    $validator = new PlanEntryRowValidator;
+    $result = $validator->validate($row);
+
+    expect($result->fails())->toBeFalse();
+});
+
+test('validator passes for empty availability', function () {
+    User::factory()->create(['email' => 'test@example.com']);
+
+    $row = ['test@example.com', '15/12/2025', '', 'Note', ''];
+
+    $validator = new PlanEntryRowValidator;
+    $result = $validator->validate($row);
+
+    expect($result->fails())->toBeFalse();
+});

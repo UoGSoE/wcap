@@ -24,12 +24,19 @@ class PlanEntryRowValidator
             'availability_status' => strtoupper($row[4] ?? ''),
         ];
 
-        return Validator::make($rowData, [
+        $rules = [
             'email' => 'required|email|exists:users,email',
             'date' => 'required|date_format:d/m/Y',
-            'location' => ['required', Rule::exists('locations', 'slug')],
+            'location' => 'nullable',
             'note' => 'nullable',
-            'availability_status' => 'required|in:O,R,N', // O=Onsite, R=Remote, N=Not available
-        ]);
+            'availability_status' => 'nullable|in:O,R,N,', // O=Onsite, R=Remote, N=Not available, empty=skip row
+        ];
+
+        // Only validate location exists if one is provided
+        if ($rowData['location'] !== '') {
+            $rules['location'] = ['nullable', Rule::exists('locations', 'slug')];
+        }
+
+        return Validator::make($rowData, $rules);
     }
 }

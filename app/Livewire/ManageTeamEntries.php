@@ -2,10 +2,13 @@
 
 namespace App\Livewire;
 
+use App\Exports\TeamPlanEntriesExport;
 use App\Models\Team;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ManageTeamEntries extends Component
 {
@@ -40,7 +43,7 @@ class ManageTeamEntries extends Component
     public function render()
     {
         $user = auth()->user();
-        $selfTeam = new Team();
+        $selfTeam = new Team;
         $selfTeam->id = 0;
         $selfTeam->name = 'My Plan';
         $managedTeams = $user->managedTeams()->orderBy('name')->get()->prepend($selfTeam);
@@ -109,5 +112,63 @@ class ManageTeamEntries extends Component
     private function editingMyOwnPlan(): bool
     {
         return (int) $this->selectedTeamId === 0;
+    }
+
+    public function export()
+    {
+        if ($this->editingMyOwnPlan()) {
+            return;
+        }
+
+        $team = Team::findOrFail($this->selectedTeamId);
+
+        if (! $this->canManageTeam($team)) {
+            abort(403);
+        }
+
+        $days = $this->getDays();
+        $members = $team->users()->orderBy('surname')->get();
+
+        $rows = [];
+
+        foreach ($members as $member) {
+            $entries = $member->planEntries()
+                ->whereBetween('entry_date', [
+                    $days[0]->format('Y-m-d'),
+                    $days[13]->format('Y-m-d'),
+                ])
+                ->with('location')
+                ->get()
+                ->keyBy(fn ($entry) => $entry->entry_date->format('Y-m-d'));
+
+            foreach ($days as $day) {
+                $dateKey = $day->format('Y-m-d');
+                $entry = $entries->get($dateKey);
+
+                $rows[] = [
+                    $member->email,
+                    $day->format('d/m/Y'),
+                    $entry?->location?->slug ?? '',
+                    $entry?->note ?? '',
+                    $entry?->availability_status?->code() ?? '',
+                ];
+            }
+        }
+
+        $start = $days[0]->format('Ymd');
+        $end = $days[13]->format('Ymd');
+        $teamSlug = Str::slug($team->name);
+
+        return Excel::download(
+            new TeamPlanEntriesExport($rows),
+            "team-plan-{$teamSlug}-{$start}-{$end}.xlsx",
+        );
+    }
+
+    private function getDays(): array
+    {
+        $start = now()->startOfWeek();
+
+        return collect(range(0, 13))->map(fn ($offset) => $start->copy()->addDays($offset))->toArray();
     }
 }

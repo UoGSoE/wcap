@@ -5,6 +5,11 @@
             <flux:button href="{{ route('manager.import') }}" variant="ghost" size="sm" icon="arrow-up-tray">
                 Import
             </flux:button>
+            @if ($selectedTeamId > 0)
+                <flux:button wire:click="export" variant="ghost" size="sm" icon="arrow-down-tray" class="cursor-pointer">
+                    Export
+                </flux:button>
+            @endif
         </div>
         @if ($managedTeams->count() > 1)
         <div class="w-full md:w-1/4">

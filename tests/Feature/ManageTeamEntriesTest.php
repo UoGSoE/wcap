@@ -337,3 +337,85 @@ test('switching back to My Plan selects manager', function () {
         ->set('selectedTeamId', 0)
         ->assertSet('selectedUserId', $manager->id);
 });
+
+// Export tests
+
+test('manager can export team plan entries', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id, 'name' => 'Test Team']);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+    $location = Location::factory()->create(['slug' => 'jws']);
+
+    PlanEntry::factory()->create([
+        'user_id' => $member->id,
+        'entry_date' => now()->startOfWeek(),
+        'location_id' => $location->id,
+        'availability_status' => AvailabilityStatus::ONSITE,
+    ]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
+        ->call('export')
+        ->assertFileDownloaded();
+});
+
+test('export button is hidden when viewing My Plan', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', 0)
+        ->assertDontSee('Export');
+});
+
+test('export button is visible when viewing a real team', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
+        ->assertSee('Export');
+});
+
+test('export does nothing when My Plan is selected', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', 0)
+        ->call('export')
+        ->assertOk();
+});
+
+test('cannot export team they do not manage', function () {
+    $manager = User::factory()->create();
+    $otherManager = User::factory()->create();
+
+    $ownTeam = Team::factory()->create(['manager_id' => $manager->id]);
+    $otherTeam = Team::factory()->create(['manager_id' => $otherManager->id]);
+
+    $member = User::factory()->create();
+    $ownTeam->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $otherTeam->id)
+        ->call('export')
+        ->assertForbidden();
+});

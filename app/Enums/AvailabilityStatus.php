@@ -30,4 +30,13 @@ enum AvailabilityStatus: int
     {
         return $this->value > 0;
     }
+
+    public function code(): string
+    {
+        return match ($this) {
+            self::NOT_AVAILABLE => 'N',
+            self::REMOTE => 'R',
+            self::ONSITE => 'O',
+        };
+    }
 }
