@@ -23,7 +23,8 @@ test('manager can view occupancy report page', function () {
         ->assertSee('Office Occupancy Report')
         ->assertSee('Date')
         ->assertSee('Heatmap')
-        ->assertSee('Stats');
+        ->assertSee('Stats')
+        ->assertSee('Trends');
 });
 
 test('non-manager cannot access occupancy report page', function () {
@@ -707,4 +708,109 @@ test('export current view respects aggregation for large ranges', function () {
     $downloadedFilename = data_get($result->effects, 'download.name');
 
     expect($downloadedFilename)->toContain('-weekly');
+});
+
+test('trends tab shows chart with utilization percentages', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    $user = User::factory()->create(['default_location_id' => $location->id]);
+
+    $monday = now()->startOfWeek();
+
+    PlanEntry::factory()->onsite()->create([
+        'user_id' => $user->id,
+        'entry_date' => $monday,
+        'location_id' => $location->id,
+    ]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->set('tab', 'trends');
+
+    $component->assertSee('Shows utilization trends over the selected period')
+        ->assertSee('Locations');
+
+    $chartData = $component->viewData('chartData');
+
+    expect($chartData)->toBeArray();
+    expect($chartData[0])->toHaveKey('date');
+    expect($chartData[0])->toHaveKey('JWS');
+    // Value should be a decimal (1.0 = 100%) since 1 user at location with capacity 1
+    expect($chartData[0]['JWS'])->toBe(1.0);
+});
+
+test('trends tab defaults to all locations selected', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+
+    $selectedLocations = $component->viewData('selectedLocations');
+
+    expect(count($selectedLocations))->toBe(2);
+});
+
+test('trends chart data reflects selected locations only', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $jws = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    $rankine = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
+
+    actingAs($manager);
+
+    // Select only JWS
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->set('selectedLocations', [(string) $jws->id])
+        ->set('tab', 'trends');
+
+    $selectedLocations = $component->viewData('selectedLocations');
+
+    expect($selectedLocations)->toContain((string) $jws->id);
+    expect($selectedLocations)->not->toContain((string) $rankine->id);
+});
+
+test('trends chart shows message when no locations selected', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->set('selectedLocations', [])
+        ->set('tab', 'trends')
+        ->assertSee('No locations selected')
+        ->assertSee('Select at least one location to view the trend chart');
+});
+
+test('chart colors are assigned to each location', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+
+    $chartColors = $component->viewData('chartColors');
+
+    expect($chartColors)->toBeArray();
+    expect(count($chartColors))->toBe(2);
+
+    foreach ($chartColors as $locationId => $colorData) {
+        expect($colorData)->toHaveKey('name');
+        expect($colorData)->toHaveKey('color');
+    }
 });

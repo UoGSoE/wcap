@@ -22,6 +22,7 @@
             <flux:tab name="today">Date</flux:tab>
             <flux:tab name="period">Heatmap</flux:tab>
             <flux:tab name="summary">Stats</flux:tab>
+            <flux:tab name="trends">Trends</flux:tab>
         </flux:tabs>
 
         <flux:tab.panel name="today">
@@ -224,6 +225,91 @@
                     </ul>
                 </flux:callout.text>
             </flux:callout>
+        </flux:tab.panel>
+
+        <flux:tab.panel name="trends">
+            <div class="flex items-center gap-4 mb-6">
+                <flux:date-picker mode="range" wire:model.live="range" with-today />
+                @if ($aggregation === 'weekly')
+                    <flux:badge color="sky">Showing weekly averages</flux:badge>
+                @endif
+            </div>
+
+            <flux:checkbox.group wire:model.live="selectedLocations" label="Locations" variant="pills" class="mb-6">
+                @foreach ($physicalLocations as $location)
+                    <flux:checkbox value="{{ $location->id }}" label="{{ $location->name }}" />
+                @endforeach
+            </flux:checkbox.group>
+
+            <flux:text size="sm" variant="subtle" class="mb-4">
+                Shows utilization trends over the selected period. Values can exceed 100% when visitors are present.
+            </flux:text>
+
+            @if (count($selectedLocations) > 0)
+                {{-- wire:key hack forces re-render on selection change. Remove once Flux chart reactivity is fixed upstream --}}
+                <flux:chart wire:model="chartData" wire:key="chart-{{ implode('-', $selectedLocations) }}">
+                    <flux:chart.viewport class="min-h-[20rem]">
+                        <flux:chart.svg>
+                            @foreach ($physicalLocations as $location)
+                                @if (in_array((string) $location->id, $selectedLocations))
+                                    <flux:chart.line
+                                        field="{{ $location->name }}"
+                                        style="color: {{ $chartColors[$location->id]['color'] }}"
+                                    />
+                                    <flux:chart.point
+                                        field="{{ $location->name }}"
+                                        style="color: {{ $chartColors[$location->id]['color'] }}"
+                                    />
+                                @endif
+                            @endforeach
+
+                            <flux:chart.axis axis="x" field="date">
+                                <flux:chart.axis.tick />
+                                <flux:chart.axis.line />
+                            </flux:chart.axis>
+
+                            <flux:chart.axis axis="y" :format="[
+                                'style' => 'percent',
+                                'minimumFractionDigits' => 0,
+                                'maximumFractionDigits' => 0,
+                            ]">
+                                <flux:chart.axis.grid />
+                                <flux:chart.axis.tick />
+                            </flux:chart.axis>
+
+                            <flux:chart.cursor />
+                        </flux:chart.svg>
+                    </flux:chart.viewport>
+
+                    <flux:chart.tooltip>
+                        <flux:chart.tooltip.heading field="date" />
+                        @foreach ($physicalLocations as $location)
+                            @if (in_array((string) $location->id, $selectedLocations))
+                                <flux:chart.tooltip.value
+                                    field="{{ $location->name }}"
+                                    label="{{ $location->name }}"
+                                    :format="['style' => 'percent', 'minimumFractionDigits' => 0, 'maximumFractionDigits' => 0]"
+                                />
+                            @endif
+                        @endforeach
+                    </flux:chart.tooltip>
+
+                    <div class="flex justify-center flex-wrap gap-4 pt-4">
+                        @foreach ($physicalLocations as $location)
+                            @if (in_array((string) $location->id, $selectedLocations))
+                                <flux:chart.legend label="{{ $location->name }}">
+                                    <flux:chart.legend.indicator style="background-color: {{ $chartColors[$location->id]['color'] }}" />
+                                </flux:chart.legend>
+                            @endif
+                        @endforeach
+                    </div>
+                </flux:chart>
+            @else
+                <flux:callout icon="information-circle">
+                    <flux:callout.heading>No locations selected</flux:callout.heading>
+                    <flux:callout.text>Select at least one location to view the trend chart.</flux:callout.text>
+                </flux:callout>
+            @endif
         </flux:tab.panel>
     </flux:tab.group>
 </div>

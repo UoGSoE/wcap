@@ -14,6 +14,13 @@ use Illuminate\Support\Facades\Hash;
 class TestDataSeeder extends Seeder
 {
     /**
+     * Number of weeks of historical data to generate.
+     * Set to 0 for current period only (2 weeks).
+     * Default 26 weeks (~6 months) provides good demo data for trends.
+     */
+    private const HISTORICAL_WEEKS = 26;
+
+    /**
      * Run the database seeds.
      */
     public function run(): void
@@ -163,8 +170,14 @@ class TestDataSeeder extends Seeder
 
     private function generatePlanEntries(array $teamMembers): void
     {
-        $startDate = now()->startOfWeek();
+        // Start from historical weeks ago, end at current period + 2 weeks
+        $startDate = now()->startOfWeek()->subWeeks(self::HISTORICAL_WEEKS);
+        $endDate = now()->startOfWeek()->addDays(13);
+        $totalDays = $startDate->diffInDays($endDate) + 1;
+
         $physicalLocations = Location::where('is_physical', true)->get();
+        $remoteLocation = Location::where('slug', 'remote')->first();
+
         $notes = [
             'Support tickets',
             'Server maintenance',
@@ -180,7 +193,14 @@ class TestDataSeeder extends Seeder
             'Troubleshooting',
         ];
 
-        // Create entries for 10 weekdays (2 weeks)
+        $unavailableNotes = [
+            'Annual leave',
+            'Holiday',
+            'Training course',
+            'Conference',
+            'Sick leave',
+        ];
+
         foreach ($teamMembers as $member) {
             // Use the member's default location as their primary (home) location
             $primaryLocation = $member->defaultLocation;
@@ -189,7 +209,7 @@ class TestDataSeeder extends Seeder
             $otherLocations = $physicalLocations->where('id', '!=', $primaryLocation?->id);
             $secondaryLocation = $otherLocations->isNotEmpty() ? $otherLocations->random() : $primaryLocation;
 
-            for ($dayOffset = 0; $dayOffset < 14; $dayOffset++) {
+            for ($dayOffset = 0; $dayOffset < $totalDays; $dayOffset++) {
                 $date = $startDate->copy()->addDays($dayOffset);
 
                 // Skip weekends
@@ -197,19 +217,33 @@ class TestDataSeeder extends Seeder
                     continue;
                 }
 
-                // 80% at home location, 20% visiting another office
-                $location = (rand(1, 10) <= 8) ? $primaryLocation : $secondaryLocation;
+                // Determine availability: 70% ONSITE, 20% REMOTE, 10% NOT_AVAILABLE
+                $availabilityRoll = rand(1, 10);
 
-                // Pick a random note
-                $note = $notes[array_rand($notes)];
+                if ($availabilityRoll <= 7) {
+                    // ONSITE - 80% at home location, 20% visiting another office
+                    $location = (rand(1, 10) <= 8) ? $primaryLocation : $secondaryLocation;
+                    $availabilityStatus = AvailabilityStatus::ONSITE;
+                    $note = $notes[array_rand($notes)];
+                } elseif ($availabilityRoll <= 9) {
+                    // REMOTE
+                    $location = $remoteLocation;
+                    $availabilityStatus = AvailabilityStatus::REMOTE;
+                    $note = $notes[array_rand($notes)].' (remote)';
+                } else {
+                    // NOT_AVAILABLE
+                    $location = null;
+                    $availabilityStatus = AvailabilityStatus::NOT_AVAILABLE;
+                    $note = $unavailableNotes[array_rand($unavailableNotes)];
+                }
 
                 PlanEntry::create([
                     'user_id' => $member->id,
                     'entry_date' => $date,
-                    'location_id' => $location->id,
+                    'location_id' => $location?->id,
                     'note' => $note,
                     'category' => null,
-                    'availability_status' => AvailabilityStatus::ONSITE,
+                    'availability_status' => $availabilityStatus,
                     'is_holiday' => false,
                     'created_by_manager' => false,
                 ]);
