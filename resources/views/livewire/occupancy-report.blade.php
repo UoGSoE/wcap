@@ -263,6 +263,10 @@
                                 @endif
                             @endforeach
 
+                            {{-- Average line across all locations --}}
+                            <flux:chart.line field="Average" style="color: #71717a" />
+                            <flux:chart.point field="Average" style="color: #71717a" />
+
                             <flux:chart.axis axis="x" field="date">
                                 <flux:chart.axis.tick />
                                 <flux:chart.axis.line />
@@ -292,6 +296,11 @@
                                 />
                             @endif
                         @endforeach
+                        <flux:chart.tooltip.value
+                            field="Average"
+                            label="Average"
+                            :format="['style' => 'percent', 'minimumFractionDigits' => 0, 'maximumFractionDigits' => 0]"
+                        />
                     </flux:chart.tooltip>
 
                     <div class="flex justify-center flex-wrap gap-4 pt-4">
@@ -302,6 +311,9 @@
                                 </flux:chart.legend>
                             @endif
                         @endforeach
+                        <flux:chart.legend label="Average">
+                            <flux:chart.legend.indicator style="background-color: #71717a" />
+                        </flux:chart.legend>
                     </div>
                 </flux:chart>
             @else

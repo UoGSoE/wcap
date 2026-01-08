@@ -814,3 +814,54 @@ test('chart colors are assigned to each location', function () {
         expect($colorData)->toHaveKey('color');
     }
 });
+
+test('chart data includes average utilization of selected locations only', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $jws = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    $rankine = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
+
+    // 1 user at JWS (capacity 1), 2 users at Rankine (capacity 2)
+    User::factory()->create(['default_location_id' => $jws->id]);
+    $rankineUsers = User::factory()->count(2)->create(['default_location_id' => $rankine->id]);
+
+    $monday = now()->startOfWeek();
+
+    // JWS: 1 person present at capacity 1 = 100% utilization
+    PlanEntry::factory()->onsite()->create([
+        'user_id' => User::where('default_location_id', $jws->id)->first()->id,
+        'entry_date' => $monday,
+        'location_id' => $jws->id,
+    ]);
+
+    // Rankine: 1 person present at capacity 2 = 50% utilization
+    PlanEntry::factory()->onsite()->create([
+        'user_id' => $rankineUsers[0]->id,
+        'entry_date' => $monday,
+        'location_id' => $rankine->id,
+    ]);
+
+    actingAs($manager);
+
+    // With both locations selected, average = (100% + 50%) / 2 = 75%
+    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+        ->set('tab', 'trends');
+
+    $chartData = $component->viewData('chartData');
+
+    expect($chartData[0])->toHaveKey('Average');
+    expect($chartData[0]['Average'])->toBe(0.75);
+
+    // With only JWS selected, average = 100%
+    $component->set('selectedLocations', [(string) $jws->id]);
+    $chartData = $component->viewData('chartData');
+
+    expect($chartData[0]['Average'])->toBe(1.0);
+
+    // With only Rankine selected, average = 50%
+    $component->set('selectedLocations', [(string) $rankine->id]);
+    $chartData = $component->viewData('chartData');
+
+    expect($chartData[0]['Average'])->toBe(0.5);
+});

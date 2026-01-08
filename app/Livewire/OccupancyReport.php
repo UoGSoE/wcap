@@ -93,10 +93,22 @@ class OccupancyReport extends Component
                 'date' => $day['date']->format('j M'),
             ];
 
+            $utilizationValues = [];
             foreach ($periodMatrix as $locationRow) {
                 // Use utilization percentage as decimal (0.5 = 50%) for chart formatting
-                $row[$locationRow['location_name']] = $locationRow['days'][$index]['utilization_pct'] / 100;
+                $utilization = $locationRow['days'][$index]['utilization_pct'] / 100;
+                $row[$locationRow['location_name']] = $utilization;
+
+                // Only include selected locations in the average
+                if (in_array((string) $locationRow['location_id'], $this->selectedLocations)) {
+                    $utilizationValues[] = $utilization;
+                }
             }
+
+            // Calculate average across selected locations only
+            $row['Average'] = count($utilizationValues) > 0
+                ? array_sum($utilizationValues) / count($utilizationValues)
+                : 0;
 
             $chartData[] = $row;
         }
