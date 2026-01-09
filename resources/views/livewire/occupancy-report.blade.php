@@ -118,15 +118,7 @@
                             </flux:tooltip>
                         </div>
                         @foreach ($row['days'] as $dayData)
-                            @php
-                                $cellClass = match(true) {
-                                    $dayData['utilization_pct'] >= 80 => 'bg-emerald-200 dark:bg-emerald-800',
-                                    $dayData['utilization_pct'] >= 50 => 'bg-emerald-100 dark:bg-emerald-900',
-                                    $dayData['utilization_pct'] > 0 => 'bg-amber-100 dark:bg-amber-900/50',
-                                    default => 'bg-zinc-100 dark:bg-zinc-800',
-                                };
-                            @endphp
-                            <div class="p-2 text-center text-sm {{ $cellClass }} rounded">
+                            <div class="p-2 text-center text-sm {{ $dayData['cell_class'] }} rounded">
                                 @if ($dayData['total_present'] > 0)
                                     <span class="font-medium">{{ $dayData['total_present'] }}</span>
                                 @else

@@ -207,6 +207,11 @@ class ManagerReportService
                 }
             }
 
+            // Add show_danger flag after members are populated
+            foreach ($locationData as $locationId => $locData) {
+                $locationData[$locationId]['show_danger'] = empty($locData['members']) && $locData['is_physical'];
+            }
+
             $result[] = [
                 'date' => $day['date'],
                 'locations' => $locationData,

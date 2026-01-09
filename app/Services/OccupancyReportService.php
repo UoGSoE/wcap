@@ -160,6 +160,7 @@ class OccupancyReportService
                     'visitor_count' => $visitorCount,
                     'total_present' => $totalPresent,
                     'utilization_pct' => $utilizationPct,
+                    'cell_class' => $this->getUtilizationCellClass($utilizationPct),
                 ];
             }
 
@@ -268,6 +269,16 @@ class OccupancyReportService
         return $values[$middle];
     }
 
+    private function getUtilizationCellClass(float $utilizationPct): string
+    {
+        return match (true) {
+            $utilizationPct >= 80 => 'bg-emerald-200 dark:bg-emerald-800',
+            $utilizationPct >= 50 => 'bg-emerald-100 dark:bg-emerald-900',
+            $utilizationPct > 0 => 'bg-amber-100 dark:bg-amber-900/50',
+            default => 'bg-zinc-100 dark:bg-zinc-800',
+        };
+    }
+
     private function condenseToWeeks(array $days, array $periodMatrix): array
     {
         // Group days by week (using Monday's date as key)
@@ -315,6 +326,7 @@ class OccupancyReportService
                     'visitor_count' => $avgVisitorCount,
                     'total_present' => $avgTotalPresent,
                     'utilization_pct' => $avgUtilizationPct,
+                    'cell_class' => $this->getUtilizationCellClass($avgUtilizationPct),
                 ];
             }
 

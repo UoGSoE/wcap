@@ -126,12 +126,9 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             @foreach ($dayData['locations'] as $location)
-                                @php
-                                    $showDanger = empty($location['members']) && $location['is_physical'];
-                                @endphp
-                                <flux:callout :icon="$showDanger ? 'x-circle' : 'check-circle'" :heading="$location['label']" :variant="$showDanger ? 'danger' : 'secondary'">
+                                <flux:callout :icon="$location['show_danger'] ? 'x-circle' : 'check-circle'" :heading="$location['label']" :variant="$location['show_danger'] ? 'danger' : 'secondary'">
                                     <flux:callout.text>
-                                        @if (empty($location['members']) && $location['is_physical'])
+                                        @if ($location['show_danger'])
                                             <flux:text variant="strong">No staff</flux:text>
                                         @elseif (!empty($location['members']))
                                             <ul class="space-y-1">

@@ -93,4 +93,8 @@ When creating children of an epic, bd auto-generates hierarchical IDs:
 - Labels are useful for categorisation: `nice-to-have`, `blocked-external`, etc.
 - The `--suggest-next` flag on close helps maintain flow
 
+## Finally
+
+**NEVER** close an issue without checking the user is happy with the work. This is a critical part of the workflow.
+
 
