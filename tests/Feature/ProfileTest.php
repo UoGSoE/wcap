@@ -21,6 +21,37 @@ test('profile page renders', function () {
         ->assertSee('Default Work Category');
 });
 
+test('regular staff cannot see API Access section', function () {
+    $user = User::factory()->create(['is_admin' => false]);
+
+    actingAs($user);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->assertDontSee('API Access')
+        ->assertDontSee('Generate New Token');
+});
+
+test('managers can see API Access section', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->assertSee('API Access')
+        ->assertSee('Generate New Token');
+});
+
+test('admins can see API Access section', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    actingAs($admin);
+
+    Livewire::test(\App\Livewire\Profile::class)
+        ->assertSee('API Access')
+        ->assertSee('Generate New Token');
+});
+
 test('profile loads existing defaults', function () {
     $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
     $user = User::factory()->create([
@@ -77,14 +108,15 @@ test('profile allows empty defaults', function () {
     expect($user->default_category)->toBe('');
 });
 
-test('non-admin users only see their own tokens', function () {
-    $user = User::factory()->create(['is_admin' => false]);
+test('non-admin managers only see their own tokens', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
     $otherUser = User::factory()->create();
 
-    $userToken = $user->createToken('My Token', ['view:own-plan']);
+    $managerToken = $manager->createToken('My Token', ['view:own-plan']);
     $otherToken = $otherUser->createToken('Other Token', ['view:own-plan']);
 
-    actingAs($user);
+    actingAs($manager);
 
     Livewire::test(\App\Livewire\Profile::class)
         ->assertSet('showAllTokens', false)
@@ -205,10 +237,11 @@ test('clicking same token again clears selectedTokenId', function () {
 });
 
 test('documentation shows correct endpoints for view:own-plan only', function () {
-    $user = User::factory()->create(['is_admin' => false]);
-    $token = $user->createToken('Staff Token', ['view:own-plan']);
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+    $token = $manager->createToken('Manager Token', ['view:own-plan']);
 
-    actingAs($user);
+    actingAs($manager);
 
     Livewire::test(\App\Livewire\Profile::class)
         ->call('selectToken', $token->accessToken->id)
@@ -252,10 +285,11 @@ test('no documentation section when user has no tokens', function () {
 });
 
 test('token placeholder appears in CLI examples', function () {
-    $user = User::factory()->create();
-    $token = $user->createToken('Test Token', ['view:own-plan']);
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+    $token = $manager->createToken('Test Token', ['view:own-plan']);
 
-    actingAs($user);
+    actingAs($manager);
 
     Livewire::test(\App\Livewire\Profile::class)
         ->call('selectToken', $token->accessToken->id)
@@ -266,10 +300,11 @@ test('token placeholder appears in CLI examples', function () {
 });
 
 test('token placeholder appears in PowerBI examples', function () {
-    $user = User::factory()->create();
-    $token = $user->createToken('Test Token', ['view:own-plan']);
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+    $token = $manager->createToken('Test Token', ['view:own-plan']);
 
-    actingAs($user);
+    actingAs($manager);
 
     Livewire::test(\App\Livewire\Profile::class)
         ->call('selectToken', $token->accessToken->id)
@@ -279,10 +314,11 @@ test('token placeholder appears in PowerBI examples', function () {
 });
 
 test('documentation shows CRUD endpoints for view:own-plan', function () {
-    $user = User::factory()->create();
-    $token = $user->createToken('Test Token', ['view:own-plan']);
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+    $token = $manager->createToken('Test Token', ['view:own-plan']);
 
-    actingAs($user);
+    actingAs($manager);
 
     Livewire::test(\App\Livewire\Profile::class)
         ->call('selectToken', $token->accessToken->id)

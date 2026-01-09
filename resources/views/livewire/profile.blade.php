@@ -39,6 +39,7 @@
             </div>
         </flux:card>
 
+        @adminOrManager
         <flux:card>
             <div class="space-y-6">
                 <div class="flex justify-between items-center">
@@ -102,8 +103,10 @@
                 </flux:modal.trigger>
             </div>
         </flux:card>
+        @endadminOrManager
     </div>
 
+    @adminOrManager
     {{-- API Documentation Section --}}
     @if($this->tokens->isNotEmpty() && $this->selectedToken)
         <flux:spacer class="mt-6" />
@@ -444,4 +447,5 @@
             </div>
         @endif
     </flux:modal>
+    @endadminOrManager
 </div>

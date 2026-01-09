@@ -419,3 +419,130 @@ test('cannot export team they do not manage', function () {
         ->call('export')
         ->assertForbidden();
 });
+
+// Edit Defaults tests
+
+test('manager sees edit defaults button when team member is selected', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create(['forenames' => 'Alice', 'surname' => 'Adams']);
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
+        ->set('selectedUserId', $member->id)
+        ->assertSeeHtml("Edit Alice's Defaults");
+});
+
+test('manager can open edit defaults modal for team member', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $location = Location::factory()->create();
+    $member = User::factory()->create([
+        'default_location_id' => $location->id,
+        'default_category' => 'Support',
+        'default_availability_status' => AvailabilityStatus::REMOTE,
+    ]);
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
+        ->call('openEditDefaults', $member->id)
+        ->assertSet('editingDefaultsForUserId', $member->id)
+        ->assertSet('default_location_id', $location->id)
+        ->assertSet('default_category', 'Support')
+        ->assertSet('default_availability_status', AvailabilityStatus::REMOTE->value);
+});
+
+test('manager can save defaults for team member', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $location = Location::factory()->create();
+    $member = User::factory()->create([
+        'forenames' => 'Bob',
+        'default_location_id' => null,
+        'default_category' => '',
+    ]);
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
+        ->call('openEditDefaults', $member->id)
+        ->set('default_location_id', $location->id)
+        ->set('default_category', 'Project Work')
+        ->set('default_availability_status', AvailabilityStatus::ONSITE->value)
+        ->call('saveDefaults')
+        ->assertOk();
+
+    $member->refresh();
+    expect($member->default_location_id)->toBe($location->id);
+    expect($member->default_category)->toBe('Project Work');
+    expect($member->default_availability_status)->toBe(AvailabilityStatus::ONSITE);
+});
+
+test('manager cannot edit defaults for user they do not manage', function () {
+    $manager = User::factory()->create();
+    $otherManager = User::factory()->create();
+
+    $ownTeam = Team::factory()->create(['manager_id' => $manager->id]);
+    $otherTeam = Team::factory()->create(['manager_id' => $otherManager->id]);
+
+    $outsideUser = User::factory()->create();
+    $otherTeam->users()->attach($outsideUser->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->call('openEditDefaults', $outsideUser->id)
+        ->assertForbidden();
+});
+
+test('manager cannot save defaults for user they do not manage', function () {
+    $manager = User::factory()->create();
+    $otherManager = User::factory()->create();
+
+    $ownTeam = Team::factory()->create(['manager_id' => $manager->id]);
+    $otherTeam = Team::factory()->create(['manager_id' => $otherManager->id]);
+
+    $outsideUser = User::factory()->create(['default_category' => 'Original']);
+    $otherTeam->users()->attach($outsideUser->id);
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('editingDefaultsForUserId', $outsideUser->id)
+        ->set('default_category', 'Hacked')
+        ->call('saveDefaults')
+        ->assertForbidden();
+
+    $outsideUser->refresh();
+    expect($outsideUser->default_category)->toBe('Original');
+});
+
+test('manager can edit their own defaults via My Plan', function () {
+    $manager = User::factory()->create([
+        'default_category' => '',
+    ]);
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $location = Location::factory()->create();
+
+    actingAs($manager);
+
+    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+        ->set('selectedTeamId', 0)
+        ->call('openEditDefaults', $manager->id)
+        ->set('default_location_id', $location->id)
+        ->set('default_category', 'Management Tasks')
+        ->call('saveDefaults')
+        ->assertOk();
+
+    $manager->refresh();
+    expect($manager->default_location_id)->toBe($location->id);
+    expect($manager->default_category)->toBe('Management Tasks');
+});
