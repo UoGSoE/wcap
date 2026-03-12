@@ -35,6 +35,10 @@ cache:
   # - vendor/
   # - node_modules/
 
+default:
+  tags:
+    - cupcake
+
 unit-tests:
   stage: test
   image: $QA_IMAGE_NAME
@@ -135,7 +139,7 @@ deploy_to_qa:
   extends:
     - .deployment
   when: manual
-  environment: 
+  environment:
     name: qa
     url: http://${TRAEFIK_QA_HOSTNAME}
   needs:
@@ -158,7 +162,7 @@ deploy_to_prod:
   - master
   needs:
   - build-prod
-  environment: 
+  environment:
     name: prod
     url: https://${TRAEFIK_PROD_HOSTNAME}
   variables:
@@ -171,7 +175,7 @@ deploy_to_prod:
     DOTENV: ${PROD_DOTENV}
 
 .build:
-  image: docker:stable
+  image: docker:228
   variables:
     DOCKER_TARGET: ""
     IMAGE_NAME: ""
@@ -182,7 +186,7 @@ deploy_to_prod:
 
 .deployment:
   when: manual
-  image: docker:stable
+  image: docker:28
   variables:
     IMAGE_NAME: ""
     TRAEFIK_BACKEND: ""
