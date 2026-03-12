@@ -208,6 +208,7 @@ test('import updates existing entries with same user and date', function () {
     $importer = new PlanEntryImport($rows);
     $importer->import();
 
+    dump(PlanEntry::all());
     expect(PlanEntry::count())->toBe(1);
 
     $entry = PlanEntry::first();
