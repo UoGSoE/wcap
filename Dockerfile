@@ -72,6 +72,9 @@ FROM node:22 as frontend
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
+ENV http_proxy="http://wwwcache.gla.ac.uk:8080"
+ENV https_proxy="http://wwwcache.gla.ac.uk:8080"
+ENV no_proxy="docker:2375,docker:2376"
 
 # workaround for mix.version() webpack bug
 RUN ln -s /home/node/public /public
