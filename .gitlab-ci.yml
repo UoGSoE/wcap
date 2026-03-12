@@ -175,7 +175,7 @@ deploy_to_prod:
     DOTENV: ${PROD_DOTENV}
 
 .build:
-  image: docker:228
+  image: docker:28
   variables:
     DOCKER_TARGET: ""
     IMAGE_NAME: ""

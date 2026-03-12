@@ -19,6 +19,7 @@
         "livewire/livewire": "^3.7",
         "maatwebsite/excel": "^3.1",
         "ohffs/simple-spout": "^2.0",
+        "sentry/sentry-laravel": "^4.21",
         "socialiteproviders/keycloak": "^5.3"
     },
     "require-dev": {
