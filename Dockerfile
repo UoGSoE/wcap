@@ -5,6 +5,8 @@ ARG PHP_VERSION=8.4
 ### Placeholder for basic dev stage for use with docker-compose
 FROM uogsoe/soe-php-apache:${PHP_VERSION} as dev
 
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
 COPY docker/app-start docker/app-healthcheck /usr/local/bin/
 RUN chmod u+x /usr/local/bin/app-start /usr/local/bin/app-healthcheck
 CMD ["tini", "--", "/usr/local/bin/app-start"]
@@ -13,10 +15,16 @@ CMD ["tini", "--", "/usr/local/bin/app-start"]
 
 ### Prod php dependencies
 FROM dev as prod-composer
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
 ARG FLUX_USERNAME
 ARG FLUX_LICENSE_KEY
 ENV APP_ENV=production
 ENV APP_DEBUG=0
+
+ENV http_proxy="http://wwwcache.gla.ac.uk:8080"
+ENV https_proxy="http://wwwcache.gla.ac.uk:8080"
+ENV no_proxy="docker:2375,docker:2376"
 
 WORKDIR /var/www/html
 
@@ -44,6 +52,8 @@ RUN composer install \
 
 ### QA php dependencies
 FROM prod-composer as qa-composer
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
 ARG FLUX_USERNAME
 ARG FLUX_LICENSE_KEY
 ENV APP_ENV=local
@@ -59,6 +69,9 @@ RUN composer install \
 
 ### Build JS/css assets
 FROM node:20.13.1 as frontend
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
 
 # workaround for mix.version() webpack bug
 RUN ln -s /home/node/public /public
@@ -83,6 +96,9 @@ RUN npm install && \
 
 ### And build the prod app
 FROM dev as prod
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
 
 WORKDIR /var/www/html
 
@@ -125,6 +141,9 @@ HEALTHCHECK --start-period=30s CMD /usr/local/bin/app-healthcheck
 
 ### Build the ci version of the app (prod+dev packages)
 FROM prod as ci
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
 
 ENV APP_ENV=local
 ENV APP_DEBUG=0
