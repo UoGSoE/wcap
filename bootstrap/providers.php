@@ -1,7 +1,11 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\HorizonServiceProvider;
+use App\Providers\SSOServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\HorizonServiceProvider::class,
-    App\Providers\SSOServiceProvider::class,
+    AppServiceProvider::class,
+    HorizonServiceProvider::class,
+    SSOServiceProvider::class,
 ];
