@@ -65,6 +65,7 @@ php-codestyle-check:
   stage: test
   image: $QA_IMAGE_NAME
   script:
+    - cd /var/www/html
     - php ./vendor/bin/pint --test
 
 stray-die-and-dump-check:
@@ -77,12 +78,14 @@ php-security-scan:
   stage: test
   image: $QA_IMAGE_NAME
   script:
+    - cd /var/www/html
     - composer audit
 
 laravel-env-key-check:
   stage: test
   image: $QA_IMAGE_NAME
   script:
+    - cd /var/www/html
     - echo "Checking prod dotenv for keys missing compared to laravel repo"
     - php docker/env_key_check.php --env-var=PROD_DOTENV
     - echo "Checking qa dotenv for keys missing compared to laravel repo"
@@ -97,6 +100,7 @@ dotenv-example-missing-keys-check:
     expire_in: 1 week
   script:
     - set +eo pipefail
+    - cd /var/www/html
     - echo 'diff --new-line-format='\'''\'' --unchanged-line-format='\'''\'' <(sort $1 | egrep -v '\''^#'\'' | sed -e '\''s/=.*//'\'') <(sort $2 | egrep -v '\''^#'\'' | sed -e '\''s/=.*//'\'')' > envdiff.sh
     - chmod +x envdiff.sh
     - echo "Checking prod dotenv for keys missing in .env.example" | tee -a envdiff.txt
