@@ -82,6 +82,7 @@ php-security-scan:
     FLUX_LICENSE_KEY: ${FLUX_LICENSE_KEY}
   script:
     - cd /var/www/html
+    - composer config http-basic.composer.fluxui.dev "${FLUX_USERNAME}" "${FLUX_LICENSE_KEY}"
     - composer audit
 
 laravel-env-key-check:
