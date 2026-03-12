@@ -68,7 +68,7 @@ RUN composer install \
     --prefer-dist
 
 ### Build JS/css assets
-FROM node:20.13.1 as frontend
+FROM node:22 as frontend
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
