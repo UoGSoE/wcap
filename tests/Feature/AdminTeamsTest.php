@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\AdminTeams;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -40,7 +41,7 @@ test('admin can see all teams in the list', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->assertOk()
         ->assertSee('Infrastructure')
         ->assertSee('Support')
@@ -56,7 +57,7 @@ test('admin can create a new team', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('createTeam')
         ->set('teamName', 'New Team')
         ->set('managerId', $manager->id)
@@ -79,7 +80,7 @@ test('team name must be unique when creating', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('createTeam')
         ->set('teamName', 'Existing Team')
         ->set('managerId', $manager->id)
@@ -101,7 +102,7 @@ test('admin can edit an existing team', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('editTeam', $team->id)
         ->assertSet('editingTeamId', $team->id)
         ->assertSet('teamName', 'Original Name')
@@ -127,14 +128,14 @@ test('team name must be unique when updating but can keep same name', function (
     actingAs($admin);
 
     // Try to change team2's name to team1's name - should fail
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('editTeam', $team2->id)
         ->set('teamName', 'Team One')
         ->call('save')
         ->assertHasErrors(['teamName' => 'unique']);
 
     // Keeping the same name should work
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('editTeam', $team2->id)
         ->set('teamName', 'Team Two')
         ->call('save')
@@ -156,7 +157,7 @@ test('admin can update team members', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('editTeam', $team->id)
         ->set('selectedUserIds', [$newMember1->id, $newMember2->id])
         ->call('save');
@@ -180,7 +181,7 @@ test('admin can delete a team without transferring members', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('confirmDelete', $team->id)
         ->assertSet('deletingTeamId', $team->id)
         ->call('deleteTeam');
@@ -203,7 +204,7 @@ test('admin can delete a team and transfer members to another team', function ()
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('confirmDelete', $teamToDelete->id)
         ->set('transferTeamId', $targetTeam->id)
         ->call('deleteTeam');
@@ -221,7 +222,7 @@ test('validation requires team name', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('createTeam')
         ->set('teamName', '')
         ->set('managerId', $manager->id)
@@ -234,7 +235,7 @@ test('validation requires manager', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminTeams::class)
+    Livewire::test(AdminTeams::class)
         ->call('createTeam')
         ->set('teamName', 'Test Team')
         ->set('managerId', null)
@@ -261,7 +262,7 @@ test('team list shows correct member counts', function () {
 
     actingAs($admin);
 
-    $component = Livewire::test(\App\Livewire\AdminTeams::class);
+    $component = Livewire::test(AdminTeams::class);
 
     $teams = $component->viewData('teams');
 

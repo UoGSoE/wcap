@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\TeamFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Team extends Model
 {
-    /** @use HasFactory<\Database\Factories\TeamFactory> */
+    /** @use HasFactory<TeamFactory> */
     use HasFactory;
 
     protected $fillable = [

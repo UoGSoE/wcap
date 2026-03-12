@@ -1,17 +1,22 @@
 <?php
 
 use App\Enums\AvailabilityStatus;
+use App\Livewire\ImportPlanEntries;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\PlanEntryImport;
 use App\Services\PlanEntryRowValidator;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Testing\FileFactory;
+use Illuminate\Support\Carbon;
 use Livewire\Livewire;
+use Ohffs\SimpleSpout\ExcelSheet;
 
 use function Pest\Laravel\actingAs;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // Authorization tests
 
@@ -38,7 +43,7 @@ test('import page shows file upload form', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+    Livewire::test(ImportPlanEntries::class)
         ->assertSee('Upload Excel File')
         ->assertSee('Drop file here or click to browse');
 });
@@ -189,7 +194,7 @@ test('import updates existing entries with same user and date', function () {
     $user = User::factory()->create(['email' => 'test@example.com']);
     $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
     $locationJwn = Location::factory()->create(['slug' => 'jwn', 'name' => 'JWN']);
-    $targetDate = \Illuminate\Support\Carbon::createFromFormat('d/m/Y', '15/12/2025');
+    $targetDate = Carbon::createFromFormat('d/m/Y', '15/12/2025');
 
     PlanEntry::factory()->create([
         'user_id' => $user->id,
@@ -224,7 +229,7 @@ test('isEmailNotFoundError returns true for email not found error', function () 
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+    Livewire::test(ImportPlanEntries::class)
         ->call('isEmailNotFoundError', 'The selected email is invalid.')
         ->assertReturned(true);
 });
@@ -235,7 +240,7 @@ test('isEmailNotFoundError returns false for other email errors', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+    Livewire::test(ImportPlanEntries::class)
         ->call('isEmailNotFoundError', 'The email field must be a valid email address.')
         ->assertReturned(false);
 });
@@ -246,7 +251,7 @@ test('openCreateUserModal sets email and pre-selects team', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+    Livewire::test(ImportPlanEntries::class)
         ->call('openCreateUserModal', 0, 'NewUser@Example.com')
         ->assertSet('newUserEmail', 'newuser@example.com')
         ->assertSet('creatingForRowIndex', 0)
@@ -260,12 +265,12 @@ test('saveNewUser creates user and attaches to team', function () {
 
     // Create a real Excel file with unknown email
     $data = [['john.smith@example.com', '15/12/2025', 'jws', 'Note', 'O']];
-    $tempPath = (new \Ohffs\SimpleSpout\ExcelSheet)->generate($data);
-    $file = (new \Illuminate\Http\Testing\FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
+    $tempPath = (new ExcelSheet)->generate($data);
+    $file = (new FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+    Livewire::test(ImportPlanEntries::class)
         ->set('file', $file)
         ->call('parseFile')
         ->set('newUserForenames', 'John')
@@ -294,12 +299,12 @@ test('saveNewUser lowercases the email', function () {
 
     // Create a real Excel file with unknown email (uppercase)
     $data = [['Jane.Doe@EXAMPLE.COM', '15/12/2025', 'jws', 'Note', 'O']];
-    $tempPath = (new \Ohffs\SimpleSpout\ExcelSheet)->generate($data);
-    $file = (new \Illuminate\Http\Testing\FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
+    $tempPath = (new ExcelSheet)->generate($data);
+    $file = (new FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+    Livewire::test(ImportPlanEntries::class)
         ->set('file', $file)
         ->call('parseFile')
         ->set('newUserForenames', 'Jane')
@@ -318,7 +323,7 @@ test('saveNewUser validates required fields', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+    Livewire::test(ImportPlanEntries::class)
         ->set('newUserForenames', '')
         ->set('newUserSurname', '')
         ->set('newUserEmail', '')
@@ -338,7 +343,7 @@ test('saveNewUser validates unique email and username', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ImportPlanEntries::class)
+    Livewire::test(ImportPlanEntries::class)
         ->set('newUserForenames', 'Test')
         ->set('newUserSurname', 'User')
         ->set('newUserEmail', 'existing@example.com')

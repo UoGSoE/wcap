@@ -4,13 +4,14 @@ namespace App\Models;
 
 use App\Enums\AvailabilityStatus;
 use App\Enums\Category;
+use Database\Factories\PlanEntryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlanEntry extends Model
 {
-    /** @use HasFactory<\Database\Factories\PlanEntryFactory> */
+    /** @use HasFactory<PlanEntryFactory> */
     use HasFactory;
 
     protected $fillable = [

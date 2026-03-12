@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\ManagerReport;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Service;
@@ -18,7 +19,7 @@ test('service availability tab is visible', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Service Availability');
 })->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
@@ -33,7 +34,7 @@ test('service availability tab displays all services', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
 
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
@@ -70,7 +71,7 @@ test('only counts entries where availability_status is available', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
     $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
@@ -97,7 +98,7 @@ test('shows zero when no one is available', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
     $emptyServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Empty Service');
@@ -155,7 +156,7 @@ test('shows correct counts with multiple available people', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
     $popularServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Popular Service');
@@ -195,7 +196,7 @@ test('services always show all members regardless of admin toggle', function () 
 
     actingAs($admin);
 
-    $componentWithToggleOn = Livewire::test(\App\Livewire\ManagerReport::class)
+    $componentWithToggleOn = Livewire::test(ManagerReport::class)
         ->set('showAllUsers', true);
 
     $serviceMatrixToggleOn = $componentWithToggleOn->viewData('serviceAvailabilityMatrix');
@@ -203,7 +204,7 @@ test('services always show all members regardless of admin toggle', function () 
 
     expect($testServiceRowToggleOn['entries'][0]['count'])->toBe(2);
 
-    $componentWithToggleOff = Livewire::test(\App\Livewire\ManagerReport::class)
+    $componentWithToggleOff = Livewire::test(ManagerReport::class)
         ->set('showAllUsers', false);
 
     $serviceMatrixToggleOff = $componentWithToggleOff->viewData('serviceAvailabilityMatrix');
@@ -220,7 +221,7 @@ test('service with no members shows zero availability', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
     $unmannedServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Unmanned Service');
@@ -255,7 +256,7 @@ test('service availability counts across all 10 weekdays', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
     $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
@@ -287,7 +288,7 @@ test('manager only coverage shows manager_only flag', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
     $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
@@ -331,7 +332,7 @@ test('manager available but members also available shows count not manager_only'
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
     $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
@@ -360,7 +361,7 @@ test('manager unavailable when count is zero shows blank cell', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
     $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');
@@ -392,7 +393,7 @@ test('manager is also a service member counts in regular count', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $serviceAvailabilityMatrix = $component->viewData('serviceAvailabilityMatrix');
 
     $testServiceRow = collect($serviceAvailabilityMatrix)->firstWhere('label', 'Test Service');

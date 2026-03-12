@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\AdminLocations;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\User;
@@ -44,7 +45,7 @@ test('admin can see all locations in the list', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->assertOk()
         ->assertSee('James Watt South')
         ->assertSee('JWS')
@@ -57,7 +58,7 @@ test('admin can create a new location', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('createLocation')
         ->set('locationName', 'New Building')
         ->set('shortLabel', 'NB')
@@ -82,7 +83,7 @@ test('slug is generated uniquely when creating location', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('createLocation')
         ->set('locationName', 'Test Building 2')
         ->set('shortLabel', 'TB2')
@@ -100,7 +101,7 @@ test('location name must be unique when creating', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('createLocation')
         ->set('locationName', 'Existing Building')
         ->set('shortLabel', 'EB')
@@ -121,7 +122,7 @@ test('admin can edit an existing location', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('editLocation', $location->id)
         ->assertSet('editingLocationId', $location->id)
         ->assertSet('locationName', 'Original Name')
@@ -150,7 +151,7 @@ test('editing location updates its slug if the name changes', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('editLocation', $location->id)
         ->set('locationName', 'Completely Different Name')
         ->call('save');
@@ -170,14 +171,14 @@ test('location name must be unique when updating but can keep same name', functi
     actingAs($admin);
 
     // Try to change location2's name to location1's name - should fail
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('editLocation', $location2->id)
         ->set('locationName', 'Location One')
         ->call('save')
         ->assertHasErrors(['locationName' => 'unique']);
 
     // Keeping the same name should work
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('editLocation', $location2->id)
         ->set('locationName', 'Location Two')
         ->call('save')
@@ -191,7 +192,7 @@ test('admin can delete a location', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('confirmDelete', $location->id)
         ->assertSet('deletingLocationId', $location->id)
         ->call('deleteLocation');
@@ -210,7 +211,7 @@ test('replacement location is pre-selected when deleting location in use', funct
     actingAs($admin);
 
     // Replacement should be pre-selected, so delete works immediately
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('confirmDelete', $locationToDelete->id)
         ->assertSet('planEntryCount', 1)
         ->assertSet('userDefaultCount', 0)
@@ -233,7 +234,7 @@ test('can delete location in use by migrating both plan entries and user default
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('confirmDelete', $locationToDelete->id)
         ->assertSet('planEntryCount', 2)
         ->assertSet('userDefaultCount', 1)
@@ -261,7 +262,7 @@ test('replacement location list excludes the location being deleted', function (
 
     actingAs($admin);
 
-    $component = Livewire::test(\App\Livewire\AdminLocations::class)
+    $component = Livewire::test(AdminLocations::class)
         ->call('confirmDelete', $locationToDelete->id);
 
     $replacementLocations = $component->viewData('replacementLocations');
@@ -277,7 +278,7 @@ test('required fields must be present', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminLocations::class)
+    Livewire::test(AdminLocations::class)
         ->call('createLocation')
         ->set('locationName', '')
         ->set('shortLabel', '')

@@ -2,10 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\Team;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Team>
+ * @extends Factory<Team>
  */
 class TeamFactory extends Factory
 {
@@ -23,7 +25,7 @@ class TeamFactory extends Factory
                 'Infrastructure Team',
                 'Security Team',
             ]),
-            'manager_id' => \App\Models\User::factory(),
+            'manager_id' => User::factory(),
         ];
     }
 }

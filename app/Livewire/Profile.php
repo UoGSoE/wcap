@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use Flux\Flux;
+use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -55,7 +56,7 @@ class Profile extends Component
         $user = auth()->user();
 
         if ($user->isAdmin() && $this->showAllTokens) {
-            return \Laravel\Sanctum\PersonalAccessToken::query()
+            return PersonalAccessToken::query()
                 ->with('tokenable')
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -116,7 +117,7 @@ class Profile extends Component
 
         // Admins with toggle on can revoke any token
         if ($user->isAdmin() && $this->showAllTokens) {
-            $token = \Laravel\Sanctum\PersonalAccessToken::find($tokenId);
+            $token = PersonalAccessToken::find($tokenId);
         } else {
             $token = $user->tokens()->find($tokenId);
         }

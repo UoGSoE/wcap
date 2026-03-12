@@ -1,15 +1,18 @@
 <?php
 
 use App\Enums\AvailabilityStatus;
+use App\Livewire\ManageTeamEntries;
+use App\Livewire\PlanEntryEditor;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('non-manager cannot access page', function () {
     $user = User::factory()->create();
@@ -42,7 +45,7 @@ test('manager sees their teams in selector when multiple teams', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->assertSee('Alpha Team')
         ->assertSee('Beta Team');
 });
@@ -56,7 +59,7 @@ test('team selector always shows with My Plan and real teams', function () {
     actingAs($manager);
 
     // With My Plan + one real team = 2 options, selector should show
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->assertSee('My Plan')
         ->assertSee('Only Team');
 });
@@ -71,7 +74,7 @@ test('manager sees team members as tabs when real team selected', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $team->id) // Switch to real team
         ->assertSee('Adams, A')
         ->assertSee('Brown, B');
@@ -90,7 +93,7 @@ test('real teams are ordered by name in selector', function () {
     actingAs($manager);
 
     // My Plan appears first, then real teams alphabetically
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->assertSeeInOrder(['My Plan', 'Alpha Team', 'Zebra Team']);
 });
 
@@ -104,7 +107,7 @@ test('selecting real team defaults to first user ordered by surname', function (
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $team->id)
         ->assertSet('selectedUserId', $memberA->id);
 });
@@ -121,7 +124,7 @@ test('changing team resets to first user of new team', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->assertSet('selectedTeamId', 0) // Defaults to My Plan
         ->set('selectedTeamId', $teamA->id)
         ->assertSet('selectedUserId', $memberA->id)
@@ -136,7 +139,7 @@ test('shows warning when team has no members', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $team->id) // Switch to the empty team
         ->assertSee('This team has no members');
 });
@@ -155,7 +158,7 @@ test('cannot select team they do not manage', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $otherTeam->id)
         ->assertDontSee($otherMember->surname);
 });
@@ -174,7 +177,7 @@ test('cannot select user outside their teams', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedUserId', $outsideUser->id)
         ->assertSet('selectedUserId', null);
 });
@@ -200,7 +203,7 @@ test('saving via editor sets created_by_manager flag', function () {
         ];
     })->toArray();
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class, [
+    Livewire::test(PlanEntryEditor::class, [
         'user' => $member,
         'readOnly' => false,
         'createdByManager' => true,
@@ -223,7 +226,7 @@ test('manager sees My Plan in team selector', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->assertSee('My Plan')
         ->assertSee('Real Team');
 });
@@ -236,7 +239,7 @@ test('manager defaults to My Plan on mount', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->assertSet('selectedTeamId', 0)
         ->assertSet('selectedUserId', $manager->id);
 });
@@ -262,7 +265,7 @@ test('manager can save their own entries via My Plan', function () {
         ];
     })->toArray();
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class, [
+    Livewire::test(PlanEntryEditor::class, [
         'user' => $manager,
         'readOnly' => false,
         'createdByManager' => false,
@@ -295,7 +298,7 @@ test('own entries have created_by_manager false', function () {
         ];
     })->toArray();
 
-    Livewire::test(\App\Livewire\PlanEntryEditor::class, [
+    Livewire::test(PlanEntryEditor::class, [
         'user' => $manager,
         'readOnly' => false,
         'createdByManager' => false,
@@ -316,7 +319,7 @@ test('switching from My Plan to real team selects first team member', function (
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->assertSet('selectedTeamId', 0)
         ->assertSet('selectedUserId', $manager->id)
         ->set('selectedTeamId', $team->id)
@@ -331,7 +334,7 @@ test('switching back to My Plan selects manager', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $team->id)
         ->assertSet('selectedUserId', $member->id)
         ->set('selectedTeamId', 0)
@@ -356,7 +359,7 @@ test('manager can export team plan entries', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $team->id)
         ->call('export')
         ->assertFileDownloaded();
@@ -370,7 +373,7 @@ test('export button is hidden when viewing My Plan', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', 0)
         ->assertDontSee('Export');
 });
@@ -383,7 +386,7 @@ test('export button is visible when viewing a real team', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $team->id)
         ->assertSee('Export');
 });
@@ -396,7 +399,7 @@ test('export does nothing when My Plan is selected', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', 0)
         ->call('export')
         ->assertOk();
@@ -414,7 +417,7 @@ test('cannot export team they do not manage', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $otherTeam->id)
         ->call('export')
         ->assertForbidden();
@@ -430,7 +433,7 @@ test('manager sees edit defaults button when team member is selected', function 
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $team->id)
         ->set('selectedUserId', $member->id)
         ->assertSeeHtml("Edit Alice's Defaults");
@@ -449,7 +452,7 @@ test('manager can open edit defaults modal for team member', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $team->id)
         ->call('openEditDefaults', $member->id)
         ->assertSet('editingDefaultsForUserId', $member->id)
@@ -471,7 +474,7 @@ test('manager can save defaults for team member', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', $team->id)
         ->call('openEditDefaults', $member->id)
         ->set('default_location_id', $location->id)
@@ -498,7 +501,7 @@ test('manager cannot edit defaults for user they do not manage', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->call('openEditDefaults', $outsideUser->id)
         ->assertForbidden();
 });
@@ -515,7 +518,7 @@ test('manager cannot save defaults for user they do not manage', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('editingDefaultsForUserId', $outsideUser->id)
         ->set('default_category', 'Hacked')
         ->call('saveDefaults')
@@ -534,7 +537,7 @@ test('manager can edit their own defaults via My Plan', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManageTeamEntries::class)
+    Livewire::test(ManageTeamEntries::class)
         ->set('selectedTeamId', 0)
         ->call('openEditDefaults', $manager->id)
         ->set('default_location_id', $location->id)

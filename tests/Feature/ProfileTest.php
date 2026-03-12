@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Profile;
 use App\Models\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,7 +15,7 @@ test('profile page renders', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertOk()
         ->assertSee('Profile Settings')
         ->assertSee('Default Location')
@@ -26,7 +27,7 @@ test('regular staff cannot see API Access section', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertDontSee('API Access')
         ->assertDontSee('Generate New Token');
 });
@@ -37,7 +38,7 @@ test('managers can see API Access section', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertSee('API Access')
         ->assertSee('Generate New Token');
 });
@@ -47,7 +48,7 @@ test('admins can see API Access section', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertSee('API Access')
         ->assertSee('Generate New Token');
 });
@@ -61,7 +62,7 @@ test('profile loads existing defaults', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertSet('default_location_id', $location->id)
         ->assertSet('default_category', 'Active Directory');
 });
@@ -75,7 +76,7 @@ test('saving profile updates user defaults', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->set('default_location_id', $location->id)
         ->set('default_category', 'Support Tickets')
         ->call('save')
@@ -96,7 +97,7 @@ test('profile allows empty defaults', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->set('default_location_id', null)
         ->set('default_category', '')
         ->call('save')
@@ -118,7 +119,7 @@ test('non-admin managers only see their own tokens', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertSet('showAllTokens', false)
         ->assertSee('My Token')
         ->assertDontSee('Other Token');
@@ -133,7 +134,7 @@ test('admin users can toggle to view all tokens', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertSet('showAllTokens', false)
         ->assertSee('Admin Token')
         ->assertDontSee('User Token')
@@ -148,7 +149,7 @@ test('non-admin users cannot see showAllTokens toggle', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertDontSee('View All Tokens');
 });
 
@@ -157,7 +158,7 @@ test('admin users can see showAllTokens toggle', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertSee('View All Tokens');
 });
 
@@ -170,7 +171,7 @@ test('non-admin users can only revoke their own tokens', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->call('revokeToken', $otherToken->accessToken->id);
 
     expect($user->tokens()->count())->toBe(1);
@@ -186,7 +187,7 @@ test('admin users can revoke any token when toggle is on', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->set('showAllTokens', true)
         ->call('revokeToken', $otherToken->accessToken->id);
 
@@ -203,7 +204,7 @@ test('admin users cannot revoke other tokens when toggle is off', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->set('showAllTokens', false)
         ->call('revokeToken', $otherToken->accessToken->id);
 
@@ -217,7 +218,7 @@ test('clicking token name sets selectedTokenId', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertSet('selectedTokenId', null)
         ->call('selectToken', $token->accessToken->id)
         ->assertSet('selectedTokenId', $token->accessToken->id);
@@ -229,7 +230,7 @@ test('clicking same token again clears selectedTokenId', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->call('selectToken', $token->accessToken->id)
         ->assertSet('selectedTokenId', $token->accessToken->id)
         ->call('selectToken', $token->accessToken->id)
@@ -243,7 +244,7 @@ test('documentation shows correct endpoints for view:own-plan only', function ()
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->call('selectToken', $token->accessToken->id)
         ->assertSee('Personal Plan')
         ->assertSee('/api/v1/plan')
@@ -258,7 +259,7 @@ test('documentation shows all endpoints for view:team-plans ability', function (
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\Profile::class)
+    $component = Livewire::test(Profile::class)
         ->call('selectToken', $token->accessToken->id)
         ->assertSee('Personal Plan')
         ->assertSee('/api/v1/plan')
@@ -280,7 +281,7 @@ test('no documentation section when user has no tokens', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->assertDontSee('How to Use Your API Token');
 });
 
@@ -291,7 +292,7 @@ test('token placeholder appears in CLI examples', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->call('selectToken', $token->accessToken->id)
         ->assertSee('Authorization: Bearer YOUR_TOKEN_HERE')
         ->assertSee('Replace')
@@ -306,7 +307,7 @@ test('token placeholder appears in PowerBI examples', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->call('selectToken', $token->accessToken->id)
         ->assertSee('Bearer YOUR_TOKEN_HERE')
         ->assertSee('Replace')
@@ -320,7 +321,7 @@ test('documentation shows CRUD endpoints for view:own-plan', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\Profile::class)
+    Livewire::test(Profile::class)
         ->call('selectToken', $token->accessToken->id)
         ->assertSee('Personal Plan')
         ->assertSee('Create/Update Plan Entries')

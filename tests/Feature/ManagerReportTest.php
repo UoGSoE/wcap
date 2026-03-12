@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\ManagerReport;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
@@ -18,7 +19,7 @@ test('manager can view team report page', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Team Report')
         ->assertSee('My Reports')
@@ -30,7 +31,7 @@ test('non-manager cannot access team report page', function () {
 
     actingAs($user);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertForbidden();
 });
 
@@ -45,7 +46,7 @@ test('manager sees their team members', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Smith, John')
         ->assertSee('Doe, Jane');
@@ -57,7 +58,7 @@ test('page shows 10 weekdays only', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
 
     // Should see weekday names
     $component->assertSee('Mon')
@@ -89,7 +90,7 @@ test('existing plan entries display correctly in team view', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Smith, John')
         ->assertSee('Other');
@@ -104,7 +105,7 @@ test('empty entries are handled gracefully', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Jones, Bob')
         ->assertSee('-'); // Empty entry indicator
@@ -139,7 +140,7 @@ test('by location view groups team members correctly', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Other')
         ->assertSee('JWS')
@@ -158,7 +159,7 @@ test('manager sees multiple team members from same team', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
 
     expect(count($component->viewData('teamRows')))->toBe(5);
 });
@@ -177,7 +178,7 @@ test('manager with multiple teams sees all team members', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Alpha, User')
         ->assertSee('Beta, User')
@@ -197,7 +198,7 @@ test('duplicate team members across teams only shown once', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
 
     // Should only appear once
     expect(count($component->viewData('teamRows')))->toBe(1);
@@ -211,7 +212,7 @@ test('manager can download excel report', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->call('exportAll')
         ->assertFileDownloaded('manager-report-20240101-20240112.xlsx');
 
@@ -237,7 +238,7 @@ test('toggle switch changes display between location and note', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSet('showLocation', true)
         ->assertSee('Other')
@@ -275,7 +276,7 @@ test('coverage tab shows location coverage grid', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
 
     $coverageMatrix = $component->viewData('coverageMatrix');
 
@@ -304,7 +305,7 @@ test('admin can see toggle switch for all users', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('View All Users');
 });
@@ -315,7 +316,7 @@ test('non-admin does not see toggle switch', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertDontSee('View All Users');
 });
@@ -333,7 +334,7 @@ test('admin with toggle enabled sees all users not just team', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSet('showAllUsers', true)
         ->assertSee('McAdmin, Admin')
@@ -359,7 +360,7 @@ test('admin with toggle disabled sees only their team', function () {
 
     actingAs($admin);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
 
     // Default state - toggle is on for admins
     expect(count($component->viewData('teamRows')))->toBe(3);
@@ -375,7 +376,7 @@ test('manager sees team filter pillbox with their teams', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Teams')
         ->assertSee('Infrastructure Team')
@@ -395,7 +396,7 @@ test('filtering by specific team shows only that team members', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Alpha, User')
         ->assertSee('Beta, User')
@@ -420,7 +421,7 @@ test('filtering by multiple teams shows all their members', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->set('selectedTeams', [$team1->id, $team2->id])
         ->assertSee('One, User')
@@ -444,7 +445,7 @@ test('admin with show all users enabled can filter by any team', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->set('showAllUsers', true)
         ->assertSee('Other Team') // Should see all teams in pillbox
@@ -464,7 +465,7 @@ test('team filtering overrides show all users toggle', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->set('showAllUsers', true)
         ->assertSee('TeamMember, John')
@@ -492,7 +493,7 @@ test('unavailable users with null location show as away in my team tab', functio
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\ManagerReport::class)
+    Livewire::test(ManagerReport::class)
         ->assertOk()
         ->assertSee('Smith, John')
         ->assertSee('Away');
@@ -526,7 +527,7 @@ test('unavailable users do not appear in by location view', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
 
     $locationDays = $component->viewData('locationDays');
 
@@ -569,7 +570,7 @@ test('unavailable users do not appear in coverage counts', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $coverageMatrix = $component->viewData('coverageMatrix');
 
     // Find the 'Other' location row
@@ -599,7 +600,7 @@ test('coverage matrix only shows physical locations', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class);
     $coverageMatrix = $component->viewData('coverageMatrix');
 
     $labels = collect($coverageMatrix)->pluck('label')->toArray();

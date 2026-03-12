@@ -2,10 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\Service;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Service>
+ * @extends Factory<Service>
  */
 class ServiceFactory extends Factory
 {
@@ -25,7 +27,7 @@ class ServiceFactory extends Factory
                 'Database Service',
                 'Web Hosting Service',
             ]),
-            'manager_id' => \App\Models\User::factory(),
+            'manager_id' => User::factory(),
         ];
     }
 }

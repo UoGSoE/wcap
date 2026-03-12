@@ -1,6 +1,8 @@
 <?php
 
+use App\Livewire\AdminUsers;
 use App\Models\Location;
+use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,7 +43,7 @@ test('admin can see all users in the list', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->assertOk()
         ->assertSee('Smith, John')
         ->assertSee('jsmith')
@@ -56,7 +58,7 @@ test('admin can create a new user', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('createUser')
         ->set('username', 'newuser')
         ->set('email', 'newuser@example.com')
@@ -82,7 +84,7 @@ test('username must be unique when creating', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('createUser')
         ->set('username', 'existinguser')
         ->set('email', 'unique@example.com')
@@ -100,7 +102,7 @@ test('email must be unique when creating', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('createUser')
         ->set('username', 'uniqueuser')
         ->set('email', 'existing@example.com')
@@ -125,7 +127,7 @@ test('admin can edit an existing user', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('editUser', $user->id)
         ->assertSet('editingUserId', $user->id)
         ->assertSet('username', 'oldusername')
@@ -154,14 +156,14 @@ test('username must be unique when updating but can keep same username', functio
     actingAs($admin);
 
     // Try to change user2's username to user1's - should fail
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('editUser', $user2->id)
         ->set('username', 'user1')
         ->call('save')
         ->assertHasErrors(['username' => 'unique']);
 
     // Keeping the same username should work
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('editUser', $user2->id)
         ->set('username', 'user2')
         ->set('surname', 'Updated')
@@ -177,14 +179,14 @@ test('email must be unique when updating but can keep same email', function () {
     actingAs($admin);
 
     // Try to change user2's email to user1's - should fail
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('editUser', $user2->id)
         ->set('email', 'user1@example.com')
         ->call('save')
         ->assertHasErrors(['email' => 'unique']);
 
     // Keeping the same email should work
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('editUser', $user2->id)
         ->set('email', 'user2@example.com')
         ->set('surname', 'Updated')
@@ -198,7 +200,7 @@ test('admin can promote user to admin', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('editUser', $user->id)
         ->set('isAdmin', true)
         ->call('save');
@@ -214,7 +216,7 @@ test('admin can demote another admin', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('editUser', $otherAdmin->id)
         ->set('isAdmin', false)
         ->call('save');
@@ -230,7 +232,7 @@ test('admin can change staff status', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('editUser', $user->id)
         ->set('isStaff', false)
         ->call('save');
@@ -246,7 +248,7 @@ test('admin can delete a user', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('confirmDelete', $user->id)
         ->assertSet('deletingUserId', $user->id)
         ->call('deleteUser');
@@ -264,7 +266,7 @@ test('deleting user removes team associations', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('confirmDelete', $user->id)
         ->call('deleteUser');
 
@@ -284,11 +286,11 @@ test('deleting user removes their plan entries', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('confirmDelete', $user->id)
         ->call('deleteUser');
 
-    expect(\App\Models\PlanEntry::find($planEntry->id))->toBeNull();
+    expect(PlanEntry::find($planEntry->id))->toBeNull();
 });
 
 test('deleting user unassigns them as manager from teams', function () {
@@ -298,7 +300,7 @@ test('deleting user unassigns them as manager from teams', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('confirmDelete', $manager->id)
         ->call('deleteUser');
 
@@ -312,7 +314,7 @@ test('validation requires username', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('createUser')
         ->set('username', '')
         ->set('email', 'test@example.com')
@@ -327,7 +329,7 @@ test('validation requires email', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('createUser')
         ->set('username', 'testuser')
         ->set('email', '')
@@ -342,7 +344,7 @@ test('validation requires valid email format', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('createUser')
         ->set('username', 'testuser')
         ->set('email', 'invalid-email')
@@ -357,7 +359,7 @@ test('validation requires surname', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('createUser')
         ->set('username', 'testuser')
         ->set('email', 'test@example.com')
@@ -372,7 +374,7 @@ test('validation requires forenames', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminUsers::class)
+    Livewire::test(AdminUsers::class)
         ->call('createUser')
         ->set('username', 'testuser')
         ->set('email', 'test@example.com')
@@ -390,7 +392,7 @@ test('user list shows admin and staff badges', function () {
 
     actingAs($admin);
 
-    $component = Livewire::test(\App\Livewire\AdminUsers::class);
+    $component = Livewire::test(AdminUsers::class);
 
     $users = $component->viewData('users');
 

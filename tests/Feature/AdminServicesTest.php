@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\AdminServices;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,7 +43,7 @@ test('admin can see all services in the list', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->assertOk()
         ->assertSee('Active Directory Service')
         ->assertSee('Email Service')
@@ -58,7 +59,7 @@ test('admin can create a new service', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('createService')
         ->set('serviceName', 'New Service')
         ->set('managerId', $manager->id)
@@ -79,7 +80,7 @@ test('service name must be unique when creating', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('createService')
         ->set('serviceName', 'Existing Service')
         ->set('managerId', $manager->id)
@@ -101,7 +102,7 @@ test('admin can edit an existing service', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('editService', $service->id)
         ->assertSet('editingServiceId', $service->id)
         ->assertSet('serviceName', 'Original Name')
@@ -127,14 +128,14 @@ test('service name must be unique when updating but can keep same name', functio
     actingAs($admin);
 
     // Try to change service2's name to service1's name - should fail
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('editService', $service2->id)
         ->set('serviceName', 'Service One')
         ->call('save')
         ->assertHasErrors(['serviceName' => 'unique']);
 
     // Keeping the same name should work
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('editService', $service2->id)
         ->set('serviceName', 'Service Two')
         ->call('save')
@@ -156,7 +157,7 @@ test('admin can update service members', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('editService', $service->id)
         ->set('selectedUserIds', [$newMember1->id, $newMember2->id])
         ->call('save');
@@ -180,7 +181,7 @@ test('admin can delete a service without transferring members', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('confirmDelete', $service->id)
         ->assertSet('deletingServiceId', $service->id)
         ->call('deleteService');
@@ -203,7 +204,7 @@ test('admin can delete a service and transfer members to another service', funct
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('confirmDelete', $serviceToDelete->id)
         ->set('transferServiceId', $targetService->id)
         ->call('deleteService');
@@ -221,7 +222,7 @@ test('validation requires service name', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('createService')
         ->set('serviceName', '')
         ->set('managerId', $manager->id)
@@ -234,7 +235,7 @@ test('validation requires manager', function () {
 
     actingAs($admin);
 
-    Livewire::test(\App\Livewire\AdminServices::class)
+    Livewire::test(AdminServices::class)
         ->call('createService')
         ->set('serviceName', 'Test Service')
         ->set('managerId', null)
@@ -261,7 +262,7 @@ test('service list shows correct member counts', function () {
 
     actingAs($admin);
 
-    $component = Livewire::test(\App\Livewire\AdminServices::class);
+    $component = Livewire::test(AdminServices::class);
 
     $services = $component->viewData('services');
 

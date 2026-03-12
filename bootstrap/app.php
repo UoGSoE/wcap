@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Middleware\ManagerMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
+use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -14,9 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'ability' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
-            'abilities' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
-            'manager' => \App\Http\Middleware\ManagerMiddleware::class,
+            'ability' => CheckAbilities::class,
+            'abilities' => CheckForAnyAbility::class,
+            'manager' => ManagerMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\OccupancyReport;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
@@ -18,7 +19,7 @@ test('manager can view occupancy report page', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\OccupancyReport::class)
+    Livewire::test(OccupancyReport::class)
         ->assertOk()
         ->assertSee('Office Occupancy Report')
         ->assertSee('Date')
@@ -42,7 +43,7 @@ test('page shows 10 weekdays', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
 
     expect(count($component->viewData('days')))->toBe(10);
 });
@@ -70,7 +71,7 @@ test('home occupants are users with matching default_location_id who are ONSITE'
 
     Date::setTestNow($monday->copy()->setTime(10, 0));
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
@@ -106,7 +107,7 @@ test('visitors are users with different default_location_id who are ONSITE at lo
 
     Date::setTestNow($monday->copy()->setTime(10, 0));
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
@@ -141,7 +142,7 @@ test('REMOTE entries do not count as physically present', function () {
 
     Date::setTestNow($monday->copy()->setTime(10, 0));
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
@@ -176,7 +177,7 @@ test('NOT_AVAILABLE entries do not count as present', function () {
 
     Date::setTestNow($monday->copy()->setTime(10, 0));
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
@@ -196,7 +197,7 @@ test('base capacity reflects users assigned to location', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
@@ -213,7 +214,7 @@ test('only physical locations appear in report', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $locationNames = collect($daySnapshot)->pluck('location_name')->toArray();
@@ -253,7 +254,7 @@ test('period matrix shows correct occupancy over multiple days', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $periodMatrix = $component->viewData('periodMatrix');
 
     $jwsRow = collect($periodMatrix)->firstWhere('location_name', 'JWS');
@@ -283,7 +284,7 @@ test('summary stats calculate mean correctly', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $summaryStats = $component->viewData('summaryStats');
 
     $jwsStats = collect($summaryStats)->firstWhere('location_name', 'JWS');
@@ -329,7 +330,7 @@ test('summary stats identify peak occupancy and date', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $summaryStats = $component->viewData('summaryStats');
 
     $jwsStats = collect($summaryStats)->firstWhere('location_name', 'JWS');
@@ -346,7 +347,7 @@ test('location with no assigned users shows zero capacity', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $emptyData = collect($daySnapshot)->firstWhere('location_name', 'Empty Office');
@@ -374,7 +375,7 @@ test('weekend viewing shows Monday data', function () {
 
     Date::setTestNow($saturday->copy()->setTime(10, 0));
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $snapshotDate = $component->viewData('snapshotDate');
 
     expect($snapshotDate->isMonday())->toBeTrue();
@@ -406,7 +407,7 @@ test('user working at non-default location counts as visitor there and absent fr
 
     Date::setTestNow($monday->copy()->setTime(10, 0));
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $homeData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
@@ -429,7 +430,7 @@ test('tab switching works correctly', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\OccupancyReport::class)
+    Livewire::test(OccupancyReport::class)
         ->assertSet('tab', 'today')
         ->assertSee('Base capacity')
         ->set('tab', 'period')
@@ -478,7 +479,7 @@ test('utilization percentage is based on total present including visitors', func
 
     Date::setTestNow($monday->copy()->setTime(10, 0));
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
@@ -530,7 +531,7 @@ test('utilization can exceed 100 percent when visitors push occupancy above capa
 
     Date::setTestNow($monday->copy()->setTime(10, 0));
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
     $daySnapshot = $component->viewData('daySnapshot');
 
     $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
@@ -552,7 +553,7 @@ test('heatmap shows daily aggregation for ranges under 25 weekdays', function ()
     actingAs($manager);
 
     // Default 2-week range has 10 weekdays - should be daily
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
 
     expect($component->viewData('aggregation'))->toBe('daily');
     expect(count($component->viewData('days')))->toBe(10);
@@ -570,7 +571,7 @@ test('heatmap switches to weekly aggregation for ranges of 25+ weekdays', functi
     $start = now()->startOfWeek();
     $end = $start->copy()->addWeeks(6)->subDay();
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+    $component = Livewire::test(OccupancyReport::class)
         ->set('range', [
             'start' => $start->toDateString(),
             'end' => $end->toDateString(),
@@ -605,7 +606,7 @@ test('weekly aggregation calculates averages correctly', function () {
     $start = $monday;
     $end = $monday->copy()->addWeeks(6)->subDay();
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+    $component = Livewire::test(OccupancyReport::class)
         ->set('range', [
             'start' => $start->toDateString(),
             'end' => $end->toDateString(),
@@ -626,7 +627,7 @@ test('export current view downloads excel file', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\OccupancyReport::class)
+    Livewire::test(OccupancyReport::class)
         ->call('exportCurrent')
         ->assertFileDownloaded();
 });
@@ -639,7 +640,7 @@ test('export detailed downloads excel file', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\OccupancyReport::class)
+    Livewire::test(OccupancyReport::class)
         ->call('exportDetailed')
         ->assertFileDownloaded();
 });
@@ -670,7 +671,7 @@ test('export detailed skips weekly aggregation for large ranges', function () {
     $start = $monday;
     $end = $monday->copy()->addWeeks(6)->subDay();
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+    $component = Livewire::test(OccupancyReport::class)
         ->set('range', [
             'start' => $start->toDateString(),
             'end' => $end->toDateString(),
@@ -698,7 +699,7 @@ test('export current view respects aggregation for large ranges', function () {
     $start = now()->startOfWeek();
     $end = $start->copy()->addWeeks(6)->subDay();
 
-    $result = Livewire::test(\App\Livewire\OccupancyReport::class)
+    $result = Livewire::test(OccupancyReport::class)
         ->set('range', [
             'start' => $start->toDateString(),
             'end' => $end->toDateString(),
@@ -727,7 +728,7 @@ test('trends tab shows chart with utilization percentages', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+    $component = Livewire::test(OccupancyReport::class)
         ->set('tab', 'trends');
 
     $component->assertSee('Shows utilization trends over the selected period')
@@ -751,7 +752,7 @@ test('trends tab defaults to all locations selected', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
 
     $selectedLocations = $component->viewData('selectedLocations');
 
@@ -768,7 +769,7 @@ test('trends chart data reflects selected locations only', function () {
     actingAs($manager);
 
     // Select only JWS
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+    $component = Livewire::test(OccupancyReport::class)
         ->set('selectedLocations', [(string) $jws->id])
         ->set('tab', 'trends');
 
@@ -786,7 +787,7 @@ test('trends chart shows message when no locations selected', function () {
 
     actingAs($manager);
 
-    Livewire::test(\App\Livewire\OccupancyReport::class)
+    Livewire::test(OccupancyReport::class)
         ->set('selectedLocations', [])
         ->set('tab', 'trends')
         ->assertSee('No locations selected')
@@ -802,7 +803,7 @@ test('chart colors are assigned to each location', function () {
 
     actingAs($manager);
 
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class);
+    $component = Livewire::test(OccupancyReport::class);
 
     $chartColors = $component->viewData('chartColors');
 
@@ -845,7 +846,7 @@ test('chart data includes average utilization of selected locations only', funct
     actingAs($manager);
 
     // With both locations selected, average = (100% + 50%) / 2 = 75%
-    $component = Livewire::test(\App\Livewire\OccupancyReport::class)
+    $component = Livewire::test(OccupancyReport::class)
         ->set('tab', 'trends');
 
     $chartData = $component->viewData('chartData');
