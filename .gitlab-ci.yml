@@ -77,6 +77,9 @@ stray-die-and-dump-check:
 php-security-scan:
   stage: test
   image: $QA_IMAGE_NAME
+  variables:
+    FLUX_USERNAME: ${FLUX_USERNAME}
+    FLUX_LICENSE_KEY: ${FLUX_LICENSE_KEY}
   script:
     - cd /var/www/html
     - composer audit
@@ -84,6 +87,9 @@ php-security-scan:
 laravel-env-key-check:
   stage: test
   image: $QA_IMAGE_NAME
+  variables:
+    PROD_DOTENV: ${PROD_DOTENV}
+    QA_DOTENV: ${QA_DOTENV}
   script:
     - cd /var/www/html
     - echo "Checking prod dotenv for keys missing compared to laravel repo"
