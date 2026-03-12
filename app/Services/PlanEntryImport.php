@@ -66,15 +66,18 @@ class PlanEntryImport
             // Use provided note, or fall back to user's default category
             $note = ! empty($validated['note']) ? $validated['note'] : ($user->default_category ?? '');
 
-            PlanEntry::updateOrCreate(
-                ['user_id' => $user->id, 'entry_date' => $entryDate],
-                [
-                    'note' => $note,
-                    'location_id' => $location->id,
-                    'availability_status' => $availabilityStatus,
-                    'created_by_manager' => true,
-                ]
-            );
+            $planEntry = PlanEntry::where('user_id', $user->id)->whereDate('entry_date', $entryDate->toDateString())->first();
+            if (! $planEntry) {
+                $planEntry = PlanEntry::make([
+                    'user_id' => $user->id,
+                    'entry_date' => $entryDate,
+                ]);
+            }
+            $planEntry->note = $note;
+            $planEntry->location_id = $location->id;
+            $planEntry->availability_status = $availabilityStatus;
+            $planEntry->created_by_manager = true;
+            $planEntry->save();
         }
 
         return $errors;
