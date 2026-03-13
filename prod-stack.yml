@@ -70,7 +70,7 @@ services:
         - "traefik.http.routers.${TRAEFIK_BACKEND}-secured.rule=Host(`${TRAEFIK_HOSTNAME}`)"
         - "traefik.http.routers.${TRAEFIK_BACKEND}-secured.entrypoints=web-secured"
         - "traefik.http.routers.${TRAEFIK_BACKEND}-secured.tls.certresolver=mytlschallenge"
-    stop_grace_period: 2m
+    stop_grace_period: 1m
     logging: *default-logging
 
   scheduler:
