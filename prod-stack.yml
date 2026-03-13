@@ -26,9 +26,6 @@ x-deploy:
   replicas: 1
   labels:
     - "traefik.enable=false"
-  placement:
-    constraints:
-      - "node.labels.weaksauce==false"
   resources:
     limits:
       memory: 2048M
