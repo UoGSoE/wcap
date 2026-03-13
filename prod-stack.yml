@@ -11,9 +11,6 @@ x-deploy-php:
   replicas: 1
   labels:
     - "traefik.enable=false"
-  placement:
-    constraints:
-      - "node.labels.weaksauce==false"
   resources:
     limits:
       memory: 2048M
@@ -54,12 +51,7 @@ services:
       - source: dotenv
         target: .env
     deploy:
-      replicas: 2
-      placement:
-        constraints:
-          - "node.labels.weaksauce==false"
-        preferences:
-          - spread: node.labels.site
+      replicas: 1
       update_config:
         parallelism: 1
         failure_action: rollback
