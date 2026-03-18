@@ -38,8 +38,6 @@ COPY database/factories database/factories
 
 
 COPY --chown=nobody composer.* ./
-RUN echo ${FLUX_USERNAME}
-RUN echo ${FLUX_LICENSE_KEY}
 
 RUN composer config http-basic.composer.fluxui.dev "${FLUX_USERNAME}" "${FLUX_LICENSE_KEY}"
 
