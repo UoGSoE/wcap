@@ -12,11 +12,9 @@ test('home page loads the profile page for regular users', function () {
     $this->actingAs($user)->get(route('home'))->assertRedirect(route('profile'));
 });
 
-test('home page redirects to manager edit entries page for managers and admins', function () {
+test('home page redirects to manager edit entries page for managers', function () {
     $manager = User::factory()->create();
-    $admin = User::factory()->admin()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
     $this->actingAs($manager)->get(route('home'))->assertRedirect(route('manager.entries'));
-    $this->actingAs($admin)->get(route('home'))->assertRedirect(route('manager.entries'));
 });

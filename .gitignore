@@ -46,3 +46,4 @@ fluxui*
 *.xlsx
 heatmap-table.blade.php
 .beads
+.ait

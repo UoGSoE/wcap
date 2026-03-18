@@ -8,7 +8,7 @@ class HomeRedirectController extends Controller
 {
     public function __invoke(Request $request)
     {
-        if ($request->user()->isManager() || $request->user()->isAdmin()) {
+        if ($request->user()->isManager()) {
             return redirect()->route('manager.entries');
         }
 

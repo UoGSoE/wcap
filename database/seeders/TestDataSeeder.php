@@ -25,14 +25,13 @@ class TestDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // Seed locations first (migrating from enum values)
-        $this->seedLocations();
-
         $admin = User::factory()->admin()->create([
             'username' => 'admin2x',
             'email' => 'admin2x@example.com',
             'password' => Hash::make('secret'),
         ]);
+
+        $this->seedLocations();
 
         // Create API token for admin user (for Power BI demo)
         $token = $admin->createToken('Power BI - Executive Dashboard', [
