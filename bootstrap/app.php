@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'abilities' => CheckForAnyAbility::class,
             'manager' => ManagerMiddleware::class,
         ]);
+        $middleware->trustProxies(at: [
+            '*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         Integration::handles($exceptions);
