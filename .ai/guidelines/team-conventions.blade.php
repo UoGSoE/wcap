@@ -57,7 +57,7 @@ Also note that we like 'fat models' - helper methods, methods that make the main
 
 We like enums over hardcoded strings for things like statuses, roles, etc.  Use laravel's casts to convert the enum to a value.  Our convention is to use \App\Enums\ .  Where is makes sense - we add helper methods to our enums for `label()` (even if it's just doing a `ucfirst()` call - it makes presentation in templates/mailables more consistent) and also `colour()` so we again - get consistent presentation in templates (we usually follow flux-ui's colour names of 'zinc, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose'.
 
-Eloquents `findOrFail` or `firstOrFail` methods are your friend.  We have sentry.io exception reporting.  If the application user is trying to do something weird with a non-existent records - let it blow up in their face and be reported to the developers.  
+Eloquents `findOrFail` or `firstOrFail` methods are your friend.  We have sentry.io exception reporting.  If the application user is trying to do something weird with a non-existent records - let it blow up in their face and be reported to the developers.
 
 ### Livewire component class conventions
 
@@ -65,7 +65,7 @@ Our conventions for livewire components are:
 
 1. Properties and attributes at the top
 1.1. Any properties which are used as filters/search or active-tab parameters in the component should use the `#[Url]` livewire attribute
-1.2. Be careful of the `#[Url]` attributes though.  You should avoid using type hints on the properties being tracked in the URL due to the way livewire works.  They will always come through as strings, so you might need to cast or handle those as appropriate. 
+1.2. Be careful of the `#[Url]` attributes though.  You should avoid using type hints on the properties being tracked in the URL due to the way livewire works.  They will always come through as strings, so you might need to cast or handle those as appropriate.
 2. The mount() method followed by the render() method
 3. Any lifecycle methods (such as updatedFoo()) next
 4. Any custom methods after all that.
@@ -155,9 +155,9 @@ Simplicity and readability of the code.  If you read the code and you can't imag
 
 ### Use of lando
 
-We use lando for local development - but we also have functional local development environments.  You can run laravel/artisan commands directly without using lando.  
+We use lando for local development - but we also have functional local development environments.  You can run laravel/artisan commands directly without using lando.
 
-Do not try and run any commands or tools that interact with the database.  Either lando or artisan or boost.  The user will run migrations for you if you ask.  
+Do not try and run any commands or tools that interact with the database.  Either lando or artisan or boost.  The user will run migrations for you if you ask.
 
 Note: The local test environment uses an in-memory database via the RefreshDatabase trait.  So there is no need to run migrations or seeders in the test environment.
 

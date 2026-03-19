@@ -1,104 +1,4 @@
 <laravel-boost-guidelines>
-=== .ai/beads rules ===
-
-# Beads (`bd`) - Issue Tracker Quick Reference
-
-Beads is a lightweight CLI issue tracker with first-class dependency support. Use it instead of TodoWrite for tracking work across sessions.
-
-## Essential Commands
-
-### View Issues
-```bash
-bd status              # Overview: counts by status
-bd list                # List open issues (default limit 50)
-bd list --all          # Include closed issues
-bd list -l "label"     # Filter by label
-bd list --parent ID    # Show children of an epic
-bd ready               # Show issues with no blockers (ready to work on)
-bd show <id>           # Full details of an issue
-bd graph <id>          # Visual dependency graph
-```
-
-### Create Issues
-```bash
-bd create "Title" -d "Description"                    # Basic task
-bd create "Title" --type=feature -d "Description"     # Feature
-bd create "Title" --type=bug -d "Description"         # Bug
-bd create "Title" --type=epic -d "Description"        # Epic (group of issues)
-bd create "Title" --parent=<epic-id>                  # Child of an epic
-bd create "Title" -l "label1,label2"                  # With labels
-bd create "Title" -p P1                               # With priority (P0-P4, P0=highest)
-```
-
-### Update Issues
-```bash
-bd update <id> -s in_progress     # Start working
-bd update <id> -s open            # Back to open
-bd update <id> --title "New"      # Change title
-bd update <id> -d "New desc"      # Change description
-bd update <id> --add-label "foo"  # Add label
-bd update <id> -p P1              # Change priority
-bd update <id> --claim            # Claim issue (assigns to you + in_progress)
-```
-
-### Close Issues
-```bash
-bd close <id>                     # Close an issue
-bd close <id> -r "Reason"         # Close with reason
-bd close <id> --suggest-next      # Close and show newly unblocked issues
-bd reopen <id>                    # Reopen a closed issue
-```
-
-### Dependencies
-```bash
-bd dep <blocker-id> --blocks <blocked-id>   # A blocks B
-bd dep add <blocked-id> <blocker-id>        # Same as above
-bd dep list <id>                            # Show dependencies
-bd dep remove <blocked-id> <blocker-id>     # Remove dependency
-bd dep tree <id>                            # Show dependency tree
-```
-
-## Issue Types
-- `task` (default) - General work item
-- `feature` - New functionality
-- `bug` - Something broken
-- `epic` - Container for related issues
-- `chore` - Maintenance work
-
-## Priorities
-- `P0` - Critical/urgent
-- `P1` - High priority
-- `P2` - Normal (default)
-- `P3` - Low priority
-- `P4` - Nice to have
-
-## Workflow Pattern
-
-1. **Starting a session**: Run `bd ready` to see what's unblocked
-2. **Pick work**: `bd update <id> --claim` to claim an issue
-3. **Check details**: `bd show <id>` for full context
-4. **Work**: Try to complete the task
-5. **User QA Test**: Stop and ask the user for to test/check the work
-6. **Complete work**: `bd close <id> --suggest-next` to close and see what's newly unblocked
-7. **End of session**: `bd status` to see overall state
-
-## Hierarchical IDs
-
-When creating children of an epic, bd auto-generates hierarchical IDs:
-- Epic: `wcap-qj4`
-- Children: `wcap-qj4.1`, `wcap-qj4.2`, etc.
-
-## Tips
-
-- Use `bd list --long` for detailed multi-line output
-- Use `bd search "keyword"` to search issue text
-- Labels are useful for categorisation: `nice-to-have`, `blocked-external`, etc.
-- The `--suggest-next` flag on close helps maintain flow
-
-## Finally
-
-**NEVER** close an issue without checking the user is happy with the work. This is a critical part of the workflow.
-
 === .ai/team-conventions rules ===
 
 ## Developer Team Guidelines
@@ -158,7 +58,7 @@ Also note that we like 'fat models' - helper methods, methods that make the main
 
 We like enums over hardcoded strings for things like statuses, roles, etc.  Use laravel's casts to convert the enum to a value.  Our convention is to use \App\Enums\ .  Where is makes sense - we add helper methods to our enums for `label()` (even if it's just doing a `ucfirst()` call - it makes presentation in templates/mailables more consistent) and also `colour()` so we again - get consistent presentation in templates (we usually follow flux-ui's colour names of 'zinc, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose'.
 
-Eloquents `findOrFail` or `firstOrFail` methods are your friend.  We have sentry.io exception reporting.  If the application user is trying to do something weird with a non-existent records - let it blow up in their face and be reported to the developers.  
+Eloquents `findOrFail` or `firstOrFail` methods are your friend.  We have sentry.io exception reporting.  If the application user is trying to do something weird with a non-existent records - let it blow up in their face and be reported to the developers.
 
 ### Livewire component class conventions
 
@@ -166,7 +66,7 @@ Our conventions for livewire components are:
 
 1. Properties and attributes at the top
 1.1. Any properties which are used as filters/search or active-tab parameters in the component should use the `#[Url]` livewire attribute
-1.2. Be careful of the `#[Url]` attributes though.  You should avoid using type hints on the properties being tracked in the URL due to the way livewire works.  They will always come through as strings, so you might need to cast or handle those as appropriate. 
+1.2. Be careful of the `#[Url]` attributes though.  You should avoid using type hints on the properties being tracked in the URL due to the way livewire works.  They will always come through as strings, so you might need to cast or handle those as appropriate.
 2. The mount() method followed by the render() method
 3. Any lifecycle methods (such as updatedFoo()) next
 4. Any custom methods after all that.
@@ -251,9 +151,9 @@ Simplicity and readability of the code.  If you read the code and you can't imag
 
 ### Use of lando
 
-We use lando for local development - but we also have functional local development environments.  You can run laravel/artisan commands directly without using lando.  
+We use lando for local development - but we also have functional local development environments.  You can run laravel/artisan commands directly without using lando.
 
-Do not try and run any commands or tools that interact with the database.  Either lando or artisan or boost.  The user will run migrations for you if you ask.  
+Do not try and run any commands or tools that interact with the database.  Either lando or artisan or boost.  The user will run migrations for you if you ask.
 
 Note: The local test environment uses an in-memory database via the RefreshDatabase trait.  So there is no need to run migrations or seeders in the test environment.
 
@@ -300,7 +200,6 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/sail (SAIL) - v1
 - pestphp/pest (PEST) - v4
 - phpunit/phpunit (PHPUNIT) - v12
-- tailwindcss (TAILWINDCSS) - v4
 
 ## Conventions
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
@@ -668,68 +567,4 @@ $pages = visit(['/', '/about', '/contact']);
 
 $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 </code-snippet>
-
-=== tailwindcss/core rules ===
-
-## Tailwind CSS
-
-- Use Tailwind CSS classes to style HTML; check and use existing Tailwind conventions within the project before writing your own.
-- Offer to extract repeated patterns into components that match the project's conventions (i.e. Blade, JSX, Vue, etc.).
-- Think through class placement, order, priority, and defaults. Remove redundant classes, add classes to parent or child carefully to limit repetition, and group elements logically.
-- You can use the `search-docs` tool to get exact examples from the official documentation when needed.
-
-### Spacing
-- When listing items, use gap utilities for spacing; don't use margins.
-
-<code-snippet name="Valid Flex Gap Spacing Example" lang="html">
-    <div class="flex gap-8">
-        <div>Superior</div>
-        <div>Michigan</div>
-        <div>Erie</div>
-    </div>
-</code-snippet>
-
-### Dark Mode
-- If existing pages and components support dark mode, new pages and components must support dark mode in a similar way, typically using `dark:`.
-
-=== tailwindcss/v4 rules ===
-
-## Tailwind CSS 4
-
-- Always use Tailwind CSS v4; do not use the deprecated utilities.
-- `corePlugins` is not supported in Tailwind v4.
-- In Tailwind v4, configuration is CSS-first using the `@theme` directive — no separate `tailwind.config.js` file is needed.
-
-<code-snippet name="Extending Theme in CSS" lang="css">
-@theme {
-  --color-brand: oklch(0.72 0.11 178);
-}
-</code-snippet>
-
-- In Tailwind v4, you import Tailwind using a regular CSS `@import` statement, not using the `@tailwind` directives used in v3:
-
-<code-snippet name="Tailwind v4 Import Tailwind Diff" lang="diff">
-   - @tailwind base;
-   - @tailwind components;
-   - @tailwind utilities;
-   + @import "tailwindcss";
-</code-snippet>
-
-### Replaced Utilities
-- Tailwind v4 removed deprecated utilities. Do not use the deprecated option; use the replacement.
-- Opacity values are still numeric.
-
-| Deprecated |	Replacement |
-|------------+--------------|
-| bg-opacity-* | bg-black/* |
-| text-opacity-* | text-black/* |
-| border-opacity-* | border-black/* |
-| divide-opacity-* | divide-black/* |
-| ring-opacity-* | ring-black/* |
-| placeholder-opacity-* | placeholder-black/* |
-| flex-shrink-* | shrink-* |
-| flex-grow-* | grow-* |
-| overflow-ellipsis | text-ellipsis |
-| decoration-slice | box-decoration-slice |
-| decoration-clone | box-decoration-clone |
 </laravel-boost-guidelines>
