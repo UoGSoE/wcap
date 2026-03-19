@@ -24,7 +24,7 @@
                     <flux:sidebar.collapse class="in-data-flux-sidebar-on-desktop:not-in-data-flux-sidebar-collapsed-desktop:-mr-2" />
                 </flux:sidebar.header>
                 <flux:sidebar.nav>
-                    <flux:sidebar.item icon="home" href="/" wire:navigate>Home</flux:sidebar.item>
+                    <flux:sidebar.item icon="home" href="{{ route('home') }}" :current="request()->is('home')" wire:navigate>Home</flux:sidebar.item>
                     <flux:separator class="my-2" />
                     @if (auth()->user()->isManager())
                         <flux:sidebar.item icon="pencil-square" href="{{ route('manager.entries') }}" :current="request()->is('manager/entries')" wire:navigate>Team Planning</flux:sidebar.item>
