@@ -309,6 +309,29 @@ test('deleting user unassigns them as manager from teams', function () {
     expect($team->manager_id)->toBeNull();
 });
 
+test('admin cannot delete themselves', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    actingAs($admin);
+
+    Livewire::test(AdminUsers::class)
+        ->call('confirmDelete', $admin->id)
+        ->call('deleteUser');
+
+    expect(User::find($admin->id))->not->toBeNull();
+});
+
+test('delete button is not shown for the current user', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $otherUser = User::factory()->create();
+
+    actingAs($admin);
+
+    Livewire::test(AdminUsers::class)
+        ->assertSeeHtml('wire:click="confirmDelete('.$otherUser->id.')"')
+        ->assertDontSeeHtml('wire:click="confirmDelete('.$admin->id.')"');
+});
+
 test('validation requires username', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 

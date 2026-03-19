@@ -47,8 +47,10 @@
                         <flux:table.cell class="flex gap-2 justify-end">
                             <flux:button size="sm" icon="pencil" wire:click="editUser({{ $user->id }})">
                             </flux:button>
-                            <flux:button size="sm" variant="danger" icon="trash" wire:click="confirmDelete({{ $user->id }})">
-                            </flux:button>
+                            @if ($user->id !== auth()->id())
+                                <flux:button size="sm" variant="danger" icon="trash" wire:click="confirmDelete({{ $user->id }})">
+                                </flux:button>
+                            @endif
                         </flux:table.cell>
                     </flux:table.row>
                 @empty

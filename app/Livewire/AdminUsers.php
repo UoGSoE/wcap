@@ -134,6 +134,10 @@ class AdminUsers extends Component
     {
         $user = User::findOrFail($this->deletingUserId);
 
+        if ($user->id === auth()->id()) {
+            return;
+        }
+
         $user->teams()->detach();
         $user->planEntries()->delete();
         $user->managedTeams()->update(['manager_id' => null]);
