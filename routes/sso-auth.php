@@ -4,8 +4,6 @@ use App\Http\Controllers\Auth\SSOController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::redirect('/', '/login');
-
     Route::get('/login', [SSOController::class, 'login'])->name('login');
     // Or as a Livewire component if you prefer
     // Route::get('/login', App\Livewire\Login::class)->name('login');

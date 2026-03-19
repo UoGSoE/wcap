@@ -6,6 +6,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+test('guests are redirected to the login page', function () {
+    $this->get('/')->assertRedirect(route('login'));
+});
+
 test('home page loads the profile page for regular users', function () {
     $user = User::factory()->create();
 
