@@ -24,8 +24,8 @@ class ManagerReport extends Component
     {
         $user = auth()->user();
 
-        // Check if user is a manager
-        if ($user->managedTeams->isEmpty()) {
+        // Check if user is a manager or admin
+        if (! $user->isAdmin() && $user->managedTeams->isEmpty()) {
             abort(403, 'You do not manage any teams.');
         }
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\AdminTeams;
+use App\Livewire\ManagerReport;
 use App\Livewire\ManageTeamEntries;
 use App\Models\Team;
 use App\Models\User;
@@ -194,4 +195,21 @@ it('admin team list shows parent team name', function () {
 
     Livewire::test(AdminTeams::class)
         ->assertSee('Glasgow IT');
+});
+
+it('admin without managed teams can access manager report', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    actingAs($admin);
+
+    Livewire::test(ManagerReport::class)
+        ->assertSuccessful();
+});
+
+it('admin without managed teams sees manager nav links', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $this->actingAs($admin)
+        ->get(route('profile'))
+        ->assertSee('Team Report');
 });
