@@ -17,13 +17,15 @@ class AdminTeams extends Component
 
     public array $selectedUserIds = [];
 
+    public ?int $parentTeamId = null;
+
     public ?int $deletingTeamId = null;
 
     public ?int $transferTeamId = null;
 
     public function render()
     {
-        $teams = Team::with(['manager', 'users'])->orderBy('name')->get();
+        $teams = Team::with(['manager', 'users', 'parentTeam'])->orderBy('name')->get();
         $users = User::orderBy('surname')->orderBy('forenames')->get();
 
         return view('livewire.admin-teams', [
@@ -38,6 +40,7 @@ class AdminTeams extends Component
         $this->teamName = '';
         $this->managerId = null;
         $this->selectedUserIds = [];
+        $this->parentTeamId = null;
         Flux::modal('team-editor')->show();
     }
 
@@ -49,6 +52,7 @@ class AdminTeams extends Component
         $this->teamName = $team->name;
         $this->managerId = $team->manager_id;
         $this->selectedUserIds = $team->users->pluck('id')->toArray();
+        $this->parentTeamId = $team->parent_team_id;
         Flux::modal('team-editor')->show();
     }
 
@@ -63,11 +67,22 @@ class AdminTeams extends Component
             'managerId' => 'required|integer|exists:users,id',
             'selectedUserIds' => 'array',
             'selectedUserIds.*' => 'integer|exists:users,id',
+            'parentTeamId' => 'nullable|integer|exists:teams,id',
         ], [
             'teamName.required' => 'Team name is required.',
             'teamName.unique' => 'A team with this name already exists.',
             'managerId.required' => 'Manager is required.',
         ]);
+
+        if ($validated['parentTeamId'] && $this->editingTeamId !== -1) {
+            $team = Team::findOrFail($this->editingTeamId);
+            $invalidIds = array_merge([$team->id], $team->descendantIds());
+            if (in_array($validated['parentTeamId'], $invalidIds)) {
+                $this->addError('parentTeamId', 'A team cannot be its own ancestor.');
+
+                return;
+            }
+        }
 
         $team = $this->editingTeamId === -1
             ? new Team
@@ -76,6 +91,7 @@ class AdminTeams extends Component
         $team->fill([
             'name' => $validated['teamName'],
             'manager_id' => $validated['managerId'],
+            'parent_team_id' => $validated['parentTeamId'],
         ])->save();
 
         $action = $team->wasRecentlyCreated ? 'created' : 'updated';
@@ -92,6 +108,7 @@ class AdminTeams extends Component
         $this->teamName = '';
         $this->managerId = null;
         $this->selectedUserIds = [];
+        $this->parentTeamId = null;
     }
 
     public function confirmDelete(int $teamId): void

@@ -17,6 +17,7 @@
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>Team Name</flux:table.column>
+                <flux:table.column>Parent Team</flux:table.column>
                 <flux:table.column>Manager</flux:table.column>
                 <flux:table.column>Members</flux:table.column>
                 <flux:table.column></flux:table.column>
@@ -27,6 +28,9 @@
                     <flux:table.row :key="$team->id">
                         <flux:table.cell>
                             <flux:text class="font-medium">{{ $team->name }}</flux:text>
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            <flux:text>{{ $team->parentTeam?->name ?? '—' }}</flux:text>
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:text>{{ $team->manager->full_name }}</flux:text>
@@ -43,7 +47,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="4">
+                        <flux:table.cell colspan="5">
                             <flux:text class="text-center text-zinc-500">No teams yet. Create your first team!</flux:text>
                         </flux:table.cell>
                     </flux:table.row>
@@ -66,6 +70,16 @@
                     <flux:label>Team Name</flux:label>
                     <flux:description>A unique name for this team.</flux:description>
                     <flux:input wire:model="teamName" placeholder="e.g., Infrastructure Team" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Parent Team</flux:label>
+                    <flux:description>Optional. Set a parent team to create a hierarchy.</flux:description>
+                    <flux:select variant="combobox" clearable placeholder="None (top-level team)" wire:model="parentTeamId">
+                        @foreach ($teams->reject(fn ($t) => $t->id === $editingTeamId) as $availableTeam)
+                            <flux:select.option value="{{ $availableTeam->id }}">{{ $availableTeam->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
                 </flux:field>
 
                 <flux:field>

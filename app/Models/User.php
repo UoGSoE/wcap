@@ -102,6 +102,19 @@ class User extends Authenticatable
         return $this->is_admin;
     }
 
+    /** @return array<int> */
+    public function allManagedTeamIds(): array
+    {
+        $directIds = $this->managedTeams()->pluck('id')->toArray();
+        $allIds = $directIds;
+
+        foreach (Team::whereIn('id', $directIds)->get() as $team) {
+            $allIds = array_merge($allIds, $team->descendantIds());
+        }
+
+        return array_values(array_unique($allIds));
+    }
+
     public function canManagePlanFor(User $targetUser): bool
     {
         if ($this->isAdmin()) {
@@ -112,7 +125,7 @@ class User extends Authenticatable
             return true;
         }
 
-        return $this->managedTeams()
+        return Team::whereIn('id', $this->allManagedTeamIds())
             ->whereHas('users', fn ($q) => $q->where('users.id', $targetUser->id))
             ->exists();
     }

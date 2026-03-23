@@ -106,6 +106,21 @@ class TestDataSeeder extends Seeder
             }
         }
 
+        // Create parent teams and set hierarchy
+        $serviceOps = Team::create([
+            'name' => 'Service Operations',
+            'manager_id' => $admin->id,
+        ]);
+        Team::where('name', 'like', 'Service Operations / %')
+            ->update(['parent_team_id' => $serviceOps->id]);
+
+        $serviceDelivery = Team::create([
+            'name' => 'Service Delivery',
+            'manager_id' => $managers['Service Delivery / Help Desk']->id,
+        ]);
+        Team::where('name', 'like', 'Service Delivery / %')
+            ->update(['parent_team_id' => $serviceDelivery->id]);
+
         // Create services with members
         $serviceNames = [
             'Active Directory Service',

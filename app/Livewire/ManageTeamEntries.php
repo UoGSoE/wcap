@@ -59,7 +59,7 @@ class ManageTeamEntries extends Component
         $selfTeam = new Team;
         $selfTeam->id = 0;
         $selfTeam->name = 'My Plan';
-        $managedTeams = $user->managedTeams()->orderBy('name')->get()->prepend($selfTeam);
+        $managedTeams = Team::whereIn('id', $user->allManagedTeamIds())->orderBy('name')->get()->prepend($selfTeam);
         $teamMembers = $this->getTeamMembers();
         $selectedUser = $this->getSelectedUser();
         $this->locations = Location::orderBy('name')->get();
@@ -111,18 +111,12 @@ class ManageTeamEntries extends Component
 
     private function canManageTeam(Team $team): bool
     {
-        return auth()->user()->managedTeams()->where('teams.id', $team->id)->exists();
+        return in_array($team->id, auth()->user()->allManagedTeamIds());
     }
 
     private function canManageUser(User $targetUser): bool
     {
-        if ($targetUser->id === auth()->id()) {
-            return true;
-        }
-
-        return auth()->user()->managedTeams()
-            ->whereHas('users', fn ($q) => $q->where('users.id', $targetUser->id))
-            ->exists();
+        return auth()->user()->canManagePlanFor($targetUser);
     }
 
     private function editingMyOwnPlan(): bool

@@ -26,6 +26,14 @@ class TeamFactory extends Factory
                 'Security Team',
             ]),
             'manager_id' => User::factory(),
+            'parent_team_id' => null,
         ];
+    }
+
+    public function childOf(Team $parent): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'parent_team_id' => $parent->id,
+        ]);
     }
 }

@@ -6,6 +6,7 @@ use App\Enums\AvailabilityStatus;
 use App\Http\Requests\ManagerUpsertPlanEntriesRequest;
 use App\Models\Location;
 use App\Models\PlanEntry;
+use App\Models\Team;
 use App\Models\User;
 use App\Services\ManagerReportService;
 use Illuminate\Http\JsonResponse;
@@ -152,7 +153,7 @@ class ManagerPlanController
             return User::orderBy('surname')->get();
         }
 
-        return $user->managedTeams()
+        return Team::whereIn('id', $user->allManagedTeamIds())
             ->with('users')
             ->get()
             ->flatMap(fn ($team) => $team->users)

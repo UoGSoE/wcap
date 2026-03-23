@@ -390,8 +390,8 @@ class ManagerReportService
             return User::orderBy('surname')->get();
         }
 
-        // Get all users from teams managed by this user
-        return $user->managedTeams()
+        // Get all users from teams managed by this user (including descendant teams)
+        return Team::whereIn('id', $user->allManagedTeamIds())
             ->with('users')
             ->get()
             ->flatMap(fn ($team) => $team->users)
@@ -408,8 +408,8 @@ class ManagerReportService
             return Team::orderBy('name')->get();
         }
 
-        // Otherwise, show only teams managed by this user
-        return $user->managedTeams()->orderBy('name')->get();
+        // Otherwise, show only teams managed by this user (including descendant teams)
+        return Team::whereIn('id', $user->allManagedTeamIds())->orderBy('name')->get();
     }
 
     /**
@@ -424,7 +424,7 @@ class ManagerReportService
     {
         return match ($tokenAbility) {
             'view:own-plan' => [$user->id],
-            'view:team-plans' => $user->managedTeams()
+            'view:team-plans' => Team::whereIn('id', $user->allManagedTeamIds())
                 ->with('users')
                 ->get()
                 ->flatMap(fn ($team) => $team->users)

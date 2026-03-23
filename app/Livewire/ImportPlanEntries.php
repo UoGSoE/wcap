@@ -132,7 +132,7 @@ class ImportPlanEntries extends Component
         $this->newUserUsername = '';
         $this->newUserDefaultLocationId = null;
         $this->newUserDefaultCategory = '';
-        $this->newUserTeamId = auth()->user()->managedTeams()->orderBy('name')->first()?->id;
+        $this->newUserTeamId = Team::whereIn('id', auth()->user()->allManagedTeamIds())->orderBy('name')->first()?->id;
         Flux::modal('create-user')->show();
     }
 
@@ -184,7 +184,7 @@ class ImportPlanEntries extends Component
     public function render()
     {
         return view('livewire.import-plan-entries', [
-            'managerTeams' => auth()->user()->managedTeams()->orderBy('name')->get(),
+            'managerTeams' => Team::whereIn('id', auth()->user()->allManagedTeamIds())->orderBy('name')->get(),
             'locations' => Location::orderBy('name')->get(),
         ]);
     }
