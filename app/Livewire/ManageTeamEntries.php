@@ -35,7 +35,7 @@ class ManageTeamEntries extends Component
     {
         $user = auth()->user();
 
-        if (! $user->isManager()) {
+        if (! $user->isAdmin() && ! $user->isManager()) {
             abort(403, 'You do not manage any teams.');
         }
 

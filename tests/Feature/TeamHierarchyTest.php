@@ -206,6 +206,15 @@ it('admin without managed teams can access manager report', function () {
         ->assertSuccessful();
 });
 
+it('admin without managed teams can access team planning', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    actingAs($admin);
+
+    Livewire::test(ManageTeamEntries::class)
+        ->assertSuccessful();
+});
+
 it('admin without managed teams sees manager nav links', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
