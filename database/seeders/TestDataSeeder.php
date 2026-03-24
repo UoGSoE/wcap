@@ -488,17 +488,17 @@ class TestDataSeeder extends Seeder
     private function seedLocations(): void
     {
         $locations = [
-            ['name' => 'JWS', 'short_label' => 'JWS', 'slug' => 'jws', 'is_physical' => true],
-            ['name' => 'JWN', 'short_label' => 'JWN', 'slug' => 'jwn', 'is_physical' => true],
-            ['name' => 'Rankine', 'short_label' => 'Rank', 'slug' => 'rankine', 'is_physical' => true],
-            ['name' => 'Boyd-Orr', 'short_label' => 'BO', 'slug' => 'boyd-orr', 'is_physical' => true],
-            ['name' => 'Other', 'short_label' => 'Other', 'slug' => 'other', 'is_physical' => false],
-            ['name' => 'Remote', 'short_label' => 'Remote', 'slug' => 'remote', 'is_physical' => false],
-            ['name' => 'Joseph Black', 'short_label' => 'JB', 'slug' => 'joseph-black', 'is_physical' => true],
-            ['name' => 'Alwyn William', 'short_label' => 'AW', 'slug' => 'alwyn-william', 'is_physical' => true],
-            ['name' => 'Gilbert Scott', 'short_label' => 'GS', 'slug' => 'gilbert-scott', 'is_physical' => true],
-            ['name' => 'Kelvin', 'short_label' => 'Kelv', 'slug' => 'kelvin', 'is_physical' => true],
-            ['name' => 'Maths', 'short_label' => 'Maths', 'slug' => 'maths', 'is_physical' => true],
+            ['name' => 'JWS', 'short_label' => 'JWS', 'slug' => 'jws', 'is_physical' => true, 'base_capacity' => 20],
+            ['name' => 'JWN', 'short_label' => 'JWN', 'slug' => 'jwn', 'is_physical' => true, 'base_capacity' => 15],
+            ['name' => 'Rankine', 'short_label' => 'Rank', 'slug' => 'rankine', 'is_physical' => true, 'base_capacity' => 25],
+            ['name' => 'Boyd-Orr', 'short_label' => 'BO', 'slug' => 'boyd-orr', 'is_physical' => true, 'base_capacity' => 12],
+            ['name' => 'Other', 'short_label' => 'Other', 'slug' => 'other', 'is_physical' => false, 'base_capacity' => 0],
+            ['name' => 'Remote', 'short_label' => 'Remote', 'slug' => 'remote', 'is_physical' => false, 'base_capacity' => 0],
+            ['name' => 'Joseph Black', 'short_label' => 'JB', 'slug' => 'joseph-black', 'is_physical' => true, 'base_capacity' => 10],
+            ['name' => 'Alwyn William', 'short_label' => 'AW', 'slug' => 'alwyn-william', 'is_physical' => true, 'base_capacity' => 8],
+            ['name' => 'Gilbert Scott', 'short_label' => 'GS', 'slug' => 'gilbert-scott', 'is_physical' => true, 'base_capacity' => 18],
+            ['name' => 'Kelvin', 'short_label' => 'Kelv', 'slug' => 'kelvin', 'is_physical' => true, 'base_capacity' => 14],
+            ['name' => 'Maths', 'short_label' => 'Maths', 'slug' => 'maths', 'is_physical' => true, 'base_capacity' => 10],
         ];
 
         foreach ($locations as $location) {

@@ -224,12 +224,8 @@ class OccupancyReportService
             fn ($e) => $e->location_id,
         ]);
 
-        $this->baseCapacities = User::query()
-            ->whereNotNull('default_location_id')
-            ->whereHas('defaultLocation', fn ($q) => $q->where('is_physical', true))
-            ->selectRaw('default_location_id, COUNT(*) as count')
-            ->groupBy('default_location_id')
-            ->pluck('count', 'default_location_id');
+        $this->baseCapacities = Location::physical()
+            ->pluck('base_capacity', 'id');
 
         $this->userDefaultLocations = User::query()
             ->whereNotNull('default_location_id')

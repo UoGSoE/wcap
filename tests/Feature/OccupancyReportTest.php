@@ -187,13 +187,11 @@ test('NOT_AVAILABLE entries do not count as present', function () {
     Date::setTestNow();
 });
 
-test('base capacity reflects users assigned to location', function () {
+test('base capacity reflects the manually set value on the location', function () {
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
-
-    User::factory()->count(3)->create(['default_location_id' => $location->id]);
+    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true, 'base_capacity' => 25]);
 
     actingAs($manager);
 
@@ -202,7 +200,7 @@ test('base capacity reflects users assigned to location', function () {
 
     $jwsData = collect($daySnapshot)->firstWhere('location_name', 'JWS');
 
-    expect($jwsData['base_capacity'])->toBe(3);
+    expect($jwsData['base_capacity'])->toBe(25);
 });
 
 test('only physical locations appear in report', function () {
@@ -227,7 +225,7 @@ test('period matrix shows correct occupancy over multiple days', function () {
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true, 'base_capacity' => 5]);
 
     $user1 = User::factory()->create(['default_location_id' => $location->id]);
     $user2 = User::factory()->create(['default_location_id' => $location->id]);
@@ -259,7 +257,7 @@ test('period matrix shows correct occupancy over multiple days', function () {
 
     $jwsRow = collect($periodMatrix)->firstWhere('location_name', 'JWS');
 
-    expect($jwsRow['base_capacity'])->toBe(2);
+    expect($jwsRow['base_capacity'])->toBe(5);
     expect($jwsRow['days'][0]['home_count'])->toBe(1);
     expect($jwsRow['days'][1]['home_count'])->toBe(2);
 });
@@ -339,11 +337,11 @@ test('summary stats identify peak occupancy and date', function () {
     expect($jwsStats['peak_date']->toDateString())->toBe($wednesday->toDateString());
 });
 
-test('location with no assigned users shows zero capacity', function () {
+test('location with zero base capacity shows zero', function () {
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    $location = Location::factory()->create(['name' => 'Empty Office', 'is_physical' => true]);
+    $location = Location::factory()->create(['name' => 'Empty Office', 'is_physical' => true, 'base_capacity' => 0]);
 
     actingAs($manager);
 
@@ -387,8 +385,8 @@ test('user working at non-default location counts as visitor there and absent fr
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    $homeLocation = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
-    $visitLocation = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
+    $homeLocation = Location::factory()->create(['name' => 'JWS', 'is_physical' => true, 'base_capacity' => 10]);
+    $visitLocation = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true, 'base_capacity' => 8]);
 
     $user = User::factory()->create([
         'default_location_id' => $homeLocation->id,
@@ -414,7 +412,7 @@ test('user working at non-default location counts as visitor there and absent fr
     $visitData = collect($daySnapshot)->firstWhere('location_name', 'Rankine');
 
     expect($homeData['home_count'])->toBe(0);
-    expect($homeData['base_capacity'])->toBe(1);
+    expect($homeData['base_capacity'])->toBe(10);
 
     expect($visitData['visitor_count'])->toBe(1);
     expect($visitData['home_count'])->toBe(0);
@@ -445,11 +443,10 @@ test('utilization percentage is based on total present including visitors', func
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
-    $otherLocation = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
+    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true, 'base_capacity' => 4]);
+    $otherLocation = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true, 'base_capacity' => 5]);
 
-    // 4 users assigned to JWS (base capacity = 4)
-    $homeUsers = User::factory()->count(4)->create(['default_location_id' => $location->id]);
+    $homeUsers = User::factory()->count(2)->create(['default_location_id' => $location->id]);
 
     // 1 visitor from another location
     $visitor = User::factory()->create(['default_location_id' => $otherLocation->id]);
@@ -498,10 +495,9 @@ test('utilization can exceed 100 percent when visitors push occupancy above capa
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
-    $otherLocation = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
+    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true, 'base_capacity' => 2]);
+    $otherLocation = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true, 'base_capacity' => 5]);
 
-    // 2 users assigned to JWS (base capacity = 2)
     $homeUsers = User::factory()->count(2)->create(['default_location_id' => $location->id]);
 
     // 2 visitors from another location
@@ -715,7 +711,7 @@ test('trends tab shows chart with utilization percentages', function () {
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
+    $location = Location::factory()->create(['name' => 'JWS', 'is_physical' => true, 'base_capacity' => 1]);
     $user = User::factory()->create(['default_location_id' => $location->id]);
 
     $monday = now()->startOfWeek();
@@ -820,25 +816,24 @@ test('chart data includes average utilization of selected locations only', funct
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    $jws = Location::factory()->create(['name' => 'JWS', 'is_physical' => true]);
-    $rankine = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true]);
+    $jws = Location::factory()->create(['name' => 'JWS', 'is_physical' => true, 'base_capacity' => 1]);
+    $rankine = Location::factory()->create(['name' => 'Rankine', 'is_physical' => true, 'base_capacity' => 2]);
 
-    // 1 user at JWS (capacity 1), 2 users at Rankine (capacity 2)
-    User::factory()->create(['default_location_id' => $jws->id]);
-    $rankineUsers = User::factory()->count(2)->create(['default_location_id' => $rankine->id]);
+    $jwsUser = User::factory()->create(['default_location_id' => $jws->id]);
+    $rankineUser = User::factory()->create(['default_location_id' => $rankine->id]);
 
     $monday = now()->startOfWeek();
 
     // JWS: 1 person present at capacity 1 = 100% utilization
     PlanEntry::factory()->onsite()->create([
-        'user_id' => User::where('default_location_id', $jws->id)->first()->id,
+        'user_id' => $jwsUser->id,
         'entry_date' => $monday,
         'location_id' => $jws->id,
     ]);
 
     // Rankine: 1 person present at capacity 2 = 50% utilization
     PlanEntry::factory()->onsite()->create([
-        'user_id' => $rankineUsers[0]->id,
+        'user_id' => $rankineUser->id,
         'entry_date' => $monday,
         'location_id' => $rankine->id,
     ]);

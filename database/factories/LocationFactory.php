@@ -22,6 +22,7 @@ class LocationFactory extends Factory
             'short_label' => fake()->unique()->lexify('???'),
             'slug' => fake()->unique()->slug(2),
             'is_physical' => true,
+            'base_capacity' => fake()->numberBetween(5, 30),
         ];
     }
 

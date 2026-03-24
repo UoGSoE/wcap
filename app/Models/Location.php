@@ -18,12 +18,14 @@ class Location extends Model
         'short_label',
         'slug',
         'is_physical',
+        'base_capacity',
     ];
 
     protected function casts(): array
     {
         return [
             'is_physical' => 'boolean',
+            'base_capacity' => 'integer',
         ];
     }
 

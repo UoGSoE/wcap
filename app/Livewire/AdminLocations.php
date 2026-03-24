@@ -17,6 +17,8 @@ class AdminLocations extends Component
 
     public bool $isPhysical = true;
 
+    public int $baseCapacity = 0;
+
     public ?int $deletingLocationId = null;
 
     public ?int $replacementLocationId = null;
@@ -45,6 +47,7 @@ class AdminLocations extends Component
         $this->locationName = '';
         $this->shortLabel = '';
         $this->isPhysical = true;
+        $this->baseCapacity = 0;
         Flux::modal('location-editor')->show();
     }
 
@@ -56,6 +59,7 @@ class AdminLocations extends Component
         $this->locationName = $location->name;
         $this->shortLabel = $location->short_label;
         $this->isPhysical = $location->is_physical;
+        $this->baseCapacity = $location->base_capacity;
         Flux::modal('location-editor')->show();
     }
 
@@ -69,6 +73,7 @@ class AdminLocations extends Component
             'locationName' => 'required|string|max:255|'.$uniqueNameRule,
             'shortLabel' => 'required|string|max:20',
             'isPhysical' => 'boolean',
+            'baseCapacity' => 'required|integer|min:0',
         ]);
 
         $slug = Str::slug($validated['locationName']);
@@ -89,6 +94,7 @@ class AdminLocations extends Component
         $location->short_label = $validated['shortLabel'];
         $location->slug = $slug;
         $location->is_physical = $validated['isPhysical'];
+        $location->base_capacity = $validated['baseCapacity'];
         $location->save();
 
         Flux::toast(
@@ -102,6 +108,7 @@ class AdminLocations extends Component
         $this->locationName = '';
         $this->shortLabel = '';
         $this->isPhysical = true;
+        $this->baseCapacity = 0;
     }
 
     public function confirmDelete(int $locationId): void

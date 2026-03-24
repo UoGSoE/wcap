@@ -19,6 +19,7 @@
                 <flux:table.column>Name</flux:table.column>
                 <flux:table.column>Short Label</flux:table.column>
                 <flux:table.column>Slug</flux:table.column>
+                <flux:table.column>Base Capacity</flux:table.column>
                 <flux:table.column>Physical?</flux:table.column>
                 <flux:table.column></flux:table.column>
             </flux:table.columns>
@@ -36,6 +37,9 @@
                             <flux:text>{{ $location->slug }}</flux:text>
                         </flux:table.cell>
                         <flux:table.cell>
+                            <flux:text>{{ $location->base_capacity }}</flux:text>
+                        </flux:table.cell>
+                        <flux:table.cell>
                             @if ($location->isPhysical())
                                 Yes
                             @else
@@ -49,7 +53,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="5">
+                        <flux:table.cell colspan="6">
                             <flux:text>No locations yet. Create your first location!</flux:text>
                         </flux:table.cell>
                     </flux:table.row>
@@ -71,6 +75,8 @@
                 <flux:input wire:model="locationName" placeholder="e.g., James Watt South" label="Location Name" />
 
                 <flux:input wire:model="shortLabel" placeholder="e.g., JWS" label="Short Label" />
+
+                <flux:input wire:model="baseCapacity" type="number" min="0" label="Base Capacity" description="The maximum number of staff this location can accommodate." />
 
                 <flux:checkbox wire:model="isPhysical" label="Physical Location?" description="Is this an actual building? Non-physical locations (like 'Other') won't show alerts when empty." />
 

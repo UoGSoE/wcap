@@ -53,7 +53,7 @@ test('admin can see all locations in the list', function () {
         ->assertSee('BO');
 });
 
-test('admin can create a new location', function () {
+test('admin can create a new location with base capacity', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
     actingAs($admin);
@@ -63,6 +63,7 @@ test('admin can create a new location', function () {
         ->set('locationName', 'New Building')
         ->set('shortLabel', 'NB')
         ->set('isPhysical', true)
+        ->set('baseCapacity', 15)
         ->call('save')
         ->assertSet('editingLocationId', -1);
 
@@ -71,6 +72,7 @@ test('admin can create a new location', function () {
     expect($location->short_label)->toBe('NB');
     expect($location->slug)->toBe('new-building');
     expect($location->is_physical)->toBeTrue();
+    expect($location->base_capacity)->toBe(15);
 });
 
 test('slug is generated uniquely when creating location', function () {
@@ -118,6 +120,7 @@ test('admin can edit an existing location', function () {
         'name' => 'Original Name',
         'short_label' => 'ON',
         'is_physical' => true,
+        'base_capacity' => 10,
     ]);
 
     actingAs($admin);
@@ -128,9 +131,11 @@ test('admin can edit an existing location', function () {
         ->assertSet('locationName', 'Original Name')
         ->assertSet('shortLabel', 'ON')
         ->assertSet('isPhysical', true)
+        ->assertSet('baseCapacity', 10)
         ->set('locationName', 'Updated Name')
         ->set('shortLabel', 'UN')
         ->set('isPhysical', false)
+        ->set('baseCapacity', 20)
         ->call('save')
         ->assertSet('editingLocationId', -1);
 
@@ -139,6 +144,7 @@ test('admin can edit an existing location', function () {
     expect($location->name)->toBe('Updated Name');
     expect($location->short_label)->toBe('UN');
     expect($location->is_physical)->toBeFalse();
+    expect($location->base_capacity)->toBe(20);
 });
 
 test('editing location updates its slug if the name changes', function () {
