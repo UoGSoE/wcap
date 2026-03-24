@@ -22,6 +22,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/manager/occupancy', OccupancyReport::class)->name('manager.occupancy');
         Route::get('/manager/entries', ManageTeamEntries::class)->name('manager.entries');
         Route::get('/manager/import', ImportPlanEntries::class)->name('manager.import');
+    });
+    Route::group(['middleware' => 'admin'], function () {
         Route::get('/admin/teams', AdminTeams::class)->name('admin.teams');
         Route::get('/admin/services', AdminServices::class)->name('admin.services');
         Route::get('/admin/locations', AdminLocations::class)->name('admin.locations');

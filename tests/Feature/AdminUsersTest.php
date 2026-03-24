@@ -18,6 +18,13 @@ test('non-admin cannot access user management page', function () {
     $this->actingAs($user)->get(route('admin.users'))->assertForbidden();
 });
 
+test('manager who is not an admin cannot access user management page', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $this->actingAs($manager)->get(route('admin.users'))->assertForbidden();
+});
+
 test('admin can view user management page', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 

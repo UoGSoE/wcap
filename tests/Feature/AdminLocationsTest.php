@@ -3,6 +3,7 @@
 use App\Livewire\AdminLocations;
 use App\Models\Location;
 use App\Models\PlanEntry;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -15,6 +16,13 @@ test('non-admin cannot access location management page', function () {
     $user = User::factory()->create(['is_admin' => false]);
 
     $this->actingAs($user)->get(route('admin.locations'))->assertForbidden();
+});
+
+test('manager who is not an admin cannot access location management page', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $this->actingAs($manager)->get(route('admin.locations'))->assertForbidden();
 });
 
 test('admin can view location management page', function () {

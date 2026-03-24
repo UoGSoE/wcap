@@ -2,6 +2,7 @@
 
 use App\Livewire\AdminServices;
 use App\Models\Service;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -14,6 +15,13 @@ test('non-admin cannot access service management page', function () {
     $user = User::factory()->create(['is_admin' => false]);
 
     $this->actingAs($user)->get(route('admin.services'))->assertForbidden();
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+
+test('manager who is not an admin cannot access service management page', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $this->actingAs($manager)->get(route('admin.services'))->assertForbidden();
 })->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('admin can view service management page', function () {
