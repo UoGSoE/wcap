@@ -421,6 +421,72 @@ test('existing entries load availability_status value', function () {
         ->assertSet('entries.1.availability_status', AvailabilityStatus::ONSITE->value);
 });
 
+test('copy next works for remote availability with non-physical location', function () {
+    $user = User::factory()->create();
+    $remoteLocation = Location::factory()->nonPhysical()->create(['slug' => 'remote', 'name' => 'Remote']);
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => '',
+            'location_id' => null,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
+        ];
+    })->toArray();
+
+    $entries[0]['note'] = 'Working from home';
+    $entries[0]['location_id'] = $remoteLocation->id;
+    $entries[0]['availability_status'] = AvailabilityStatus::REMOTE->value;
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $user])
+        ->set('entries', $entries)
+        ->call('copyNext', 0)
+        ->assertSet('entries.1.note', 'Working from home')
+        ->assertSet('entries.1.location_id', $remoteLocation->id)
+        ->assertSet('entries.1.availability_status', AvailabilityStatus::REMOTE->value)
+        ->assertSet('entries.2.note', '')
+        ->assertSet('entries.2.location_id', null)
+        ->assertSet('entries.2.availability_status', AvailabilityStatus::ONSITE->value);
+});
+
+test('copy rest works for remote availability with non-physical location', function () {
+    $user = User::factory()->create();
+    $remoteLocation = Location::factory()->nonPhysical()->create(['slug' => 'remote', 'name' => 'Remote']);
+
+    actingAs($user);
+
+    $entries = collect(range(0, 13))->map(function ($offset) {
+        $date = now()->startOfWeek()->addDays($offset);
+
+        return [
+            'id' => null,
+            'entry_date' => $date->format('Y-m-d'),
+            'note' => '',
+            'location_id' => null,
+            'availability_status' => AvailabilityStatus::ONSITE->value,
+        ];
+    })->toArray();
+
+    $entries[0]['note'] = 'Working from home';
+    $entries[0]['location_id'] = $remoteLocation->id;
+    $entries[0]['availability_status'] = AvailabilityStatus::REMOTE->value;
+
+    $component = Livewire::test(PlanEntryEditor::class, ['user' => $user])
+        ->set('entries', $entries)
+        ->call('copyRest', 0);
+
+    for ($i = 1; $i < 14; $i++) {
+        $component->assertSet("entries.{$i}.note", 'Working from home')
+            ->assertSet("entries.{$i}.location_id", $remoteLocation->id)
+            ->assertSet("entries.{$i}.availability_status", AvailabilityStatus::REMOTE->value);
+    }
+});
+
 test('read-only mode prevents saving', function () {
     $user = User::factory()->create();
     $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
