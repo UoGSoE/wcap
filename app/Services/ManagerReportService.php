@@ -7,6 +7,7 @@ use App\Models\PlanEntry;
 use App\Models\Service;
 use App\Models\Team;
 use App\Models\User;
+use Carbon\Carbon;
 
 class ManagerReportService
 {
@@ -86,8 +87,12 @@ class ManagerReportService
         return $payload;
     }
 
-    public function buildDays(): array
+    public function buildDays(?string $from = null, ?string $to = null): array
     {
+        if ($from && $to) {
+            return $this->buildDaysForRange($from, $to);
+        }
+
         $start = now()->startOfWeek();
         $days = [];
 
@@ -100,6 +105,25 @@ class ManagerReportService
                     'key' => $day->toDateString(),
                 ];
             }
+        }
+
+        return $days;
+    }
+
+    private function buildDaysForRange(string $from, string $to): array
+    {
+        $cursor = Carbon::parse($from);
+        $end = Carbon::parse($to);
+        $days = [];
+
+        while ($cursor->lte($end)) {
+            if ($cursor->isWeekday()) {
+                $days[] = [
+                    'date' => $cursor->copy(),
+                    'key' => $cursor->toDateString(),
+                ];
+            }
+            $cursor->addDay();
         }
 
         return $days;

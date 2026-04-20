@@ -207,14 +207,6 @@ class TestDataSeeder extends Seeder
             'Troubleshooting',
         ];
 
-        $unavailableNotes = [
-            'Annual leave',
-            'Holiday',
-            'Training course',
-            'Conference',
-            'Sick leave',
-        ];
-
         foreach ($teamMembers as $member) {
             // Use the member's default location as their primary (home) location
             $primaryLocation = $member->defaultLocation;
@@ -245,10 +237,11 @@ class TestDataSeeder extends Seeder
                     $availabilityStatus = AvailabilityStatus::REMOTE;
                     $note = $notes[array_rand($notes)].' (remote)';
                 } else {
-                    // NOT_AVAILABLE
+                    // NOT_AVAILABLE — match real app behaviour where the note is
+                    // typically left blank for absences.
                     $location = null;
                     $availabilityStatus = AvailabilityStatus::NOT_AVAILABLE;
-                    $note = $unavailableNotes[array_rand($unavailableNotes)];
+                    $note = null;
                 }
 
                 PlanEntry::create([
@@ -267,14 +260,6 @@ class TestDataSeeder extends Seeder
 
     private function markSomeUsersUnavailable(array $allUsers): void
     {
-        $unavailableReasons = [
-            'Annual leave',
-            'Holiday',
-            'Training course',
-            'Conference',
-            'Sick leave',
-        ];
-
         // Randomly select 5 users to have some unavailable time
         $selectedUsers = collect($allUsers)->random(min(5, count($allUsers)));
 
@@ -290,7 +275,7 @@ class TestDataSeeder extends Seeder
                 $entry->update([
                     'availability_status' => AvailabilityStatus::NOT_AVAILABLE,
                     'location_id' => null,
-                    'note' => $unavailableReasons[array_rand($unavailableReasons)],
+                    'note' => null,
                 ]);
             }
         }
@@ -365,7 +350,7 @@ class TestDataSeeder extends Seeder
                     'user_id' => $serviceMember->id,
                     'entry_date' => $day,
                     'location_id' => null,
-                    'note' => 'On leave',
+                    'note' => null,
                     'category' => null,
                     'availability_status' => AvailabilityStatus::NOT_AVAILABLE,
                     'is_holiday' => false,
