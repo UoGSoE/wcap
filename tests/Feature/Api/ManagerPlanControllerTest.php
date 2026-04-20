@@ -19,12 +19,11 @@ test('unauthenticated request to manager endpoints returns 401', function () {
     $this->deleteJson('/api/v1/manager/team-members/1/plan/1')->assertUnauthorized();
 });
 
-test('token without manage:team-plans ability returns 403', function () {
-    $manager = User::factory()->create();
-    Team::factory()->create(['manager_id' => $manager->id]);
+test('regular staff user cannot access manager endpoints', function () {
+    // Non-admin, not managing any team.
+    $staff = User::factory()->create(['is_admin' => false]);
 
-    // Only view ability, not manage
-    Sanctum::actingAs($manager, ['view:team-plans']);
+    Sanctum::actingAs($staff);
 
     $this->getJson('/api/v1/manager/team-members')->assertForbidden();
 });
@@ -36,7 +35,7 @@ test('manager cannot access non-team member plan', function () {
     $nonTeamMember = User::factory()->create();
     // Note: nonTeamMember is NOT attached to the team
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->getJson("/api/v1/manager/team-members/{$nonTeamMember->id}/plan");
 
@@ -50,7 +49,7 @@ test('manager can access their own team member plan', function () {
     $teamMember = User::factory()->create();
     $team->users()->attach($teamMember);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->getJson("/api/v1/manager/team-members/{$teamMember->id}/plan");
 
@@ -66,7 +65,7 @@ test('admin can access any user plan', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $randomUser = User::factory()->create();
 
-    Sanctum::actingAs($admin, ['manage:team-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson("/api/v1/manager/team-members/{$randomUser->id}/plan");
 
@@ -78,7 +77,7 @@ test('manager can access their own plan via manager endpoint', function () {
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->getJson("/api/v1/manager/team-members/{$manager->id}/plan");
 
@@ -96,7 +95,7 @@ test('manager can list team members', function () {
     $teamMember2 = User::factory()->create(['surname' => 'Brown']);
     $team->users()->attach([$teamMember1->id, $teamMember2->id]);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->getJson('/api/v1/manager/team-members');
 
@@ -115,7 +114,7 @@ test('admin lists all users', function () {
     $admin = User::factory()->create(['is_admin' => true, 'surname' => 'Zebra']);
     User::factory()->count(3)->create();
 
-    Sanctum::actingAs($admin, ['manage:team-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/manager/team-members');
 
@@ -144,7 +143,7 @@ test('manager can view team member plan entries', function () {
         'note' => 'Working on project',
     ]);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->getJson("/api/v1/manager/team-members/{$teamMember->id}/plan");
 
@@ -166,7 +165,7 @@ test('manager can create entry for team member', function () {
 
     $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan", [
         'entries' => [
@@ -206,7 +205,7 @@ test('manager can update entry for team member by id', function () {
         'note' => 'Original note',
     ]);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan", [
         'entries' => [
@@ -244,7 +243,7 @@ test('manager can update entry for team member by date', function () {
         'note' => 'Original note',
     ]);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan", [
         'entries' => [
@@ -281,7 +280,7 @@ test('manager can delete entry for team member', function () {
         'location_id' => $location->id,
     ]);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->deleteJson("/api/v1/manager/team-members/{$teamMember->id}/plan/{$entry->id}");
 
@@ -300,7 +299,7 @@ test('created entries have created_by_manager flag set to true', function () {
 
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan", [
         'entries' => [
@@ -325,7 +324,7 @@ test('manager cannot create entry for non-team member', function () {
 
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->postJson("/api/v1/manager/team-members/{$nonTeamMember->id}/plan", [
         'entries' => [
@@ -354,7 +353,7 @@ test('manager cannot delete entry for non-team member', function () {
         'location_id' => $location->id,
     ]);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->deleteJson("/api/v1/manager/team-members/{$nonTeamMember->id}/plan/{$entry->id}");
 
@@ -370,7 +369,7 @@ test('validation rejects invalid location', function () {
     $teamMember = User::factory()->create();
     $team->users()->attach($teamMember);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan", [
         'entries' => [
@@ -403,7 +402,7 @@ test('validation rejects entry id belonging to different user', function () {
 
     Location::factory()->create(['slug' => 'jwn', 'name' => 'JWN']);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan", [
         'entries' => [
@@ -433,7 +432,7 @@ test('manager can create entries for multiple team members from different teams'
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
     Location::factory()->create(['slug' => 'jwn', 'name' => 'JWN']);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     // Create entry for member in team 1
     $response = $this->postJson("/api/v1/manager/team-members/{$member1->id}/plan", [
@@ -454,7 +453,7 @@ test('manager can create entries for multiple team members from different teams'
 test('returns 404 for non-existent user', function () {
     $manager = User::factory()->create(['is_admin' => true]);
 
-    Sanctum::actingAs($manager, ['manage:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->getJson('/api/v1/manager/team-members/99999/plan');
 

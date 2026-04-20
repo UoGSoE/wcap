@@ -3,6 +3,7 @@
 use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
+use App\Models\Service;
 use App\Models\Team;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -22,7 +23,7 @@ test('unauthenticated request to plan endpoint returns 401', function () {
 test('staff user with token can access plan endpoint', function () {
     $user = User::factory()->create();
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->getJson('/api/v1/plan');
 
@@ -36,11 +37,55 @@ test('staff user with token can access plan endpoint', function () {
 
 // Report Endpoint Tests - Basic Structure
 
+test('regular staff user cannot access reports endpoints', function () {
+    $staff = User::factory()->create(['is_admin' => false]);
+
+    Sanctum::actingAs($staff);
+
+    $this->getJson('/api/v1/reports/team')->assertForbidden();
+    $this->getJson('/api/v1/reports/location')->assertForbidden();
+    $this->getJson('/api/v1/reports/coverage')->assertForbidden();
+});
+
+test('manager report scopes visible users to the manager own team, not everyone', function () {
+    $this->travelTo(now()->startOfWeek());
+
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $ourMember = User::factory()->create(['surname' => 'Ours']);
+    $team->users()->attach($ourMember);
+
+    $someoneElsesTeam = Team::factory()->create();
+    $theirMember = User::factory()->create(['surname' => 'Theirs']);
+    $someoneElsesTeam->users()->attach($theirMember);
+
+    Sanctum::actingAs($manager);
+
+    $response = $this->getJson('/api/v1/reports/team');
+
+    $response->assertOk();
+
+    $memberIds = collect($response->json('team_rows'))->pluck('member_id')->all();
+    expect($memberIds)->toContain($ourMember->id)
+        ->and($memberIds)->not->toContain($theirMember->id);
+});
+
+test('manager with a plain sanctum token (no abilities) can access team report', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Sanctum::actingAs($manager); // no abilities
+
+    $response = $this->getJson('/api/v1/reports/team');
+
+    $response->assertOk();
+});
+
 test('manager can access team report endpoint', function () {
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
 
-    Sanctum::actingAs($manager, ['view:team-plans']);
+    Sanctum::actingAs($manager);
 
     $response = $this->getJson('/api/v1/reports/team');
 
@@ -50,18 +95,18 @@ test('manager can access team report endpoint', function () {
         'days',
         'team_rows',
     ]);
-    expect($response->json('scope'))->toBe('view:team-plans');
+    expect($response->json('scope'))->toBe('team');
 });
 
 test('admin can access all report endpoints', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     // Team report
     $response = $this->getJson('/api/v1/reports/team');
     $response->assertOk();
-    expect($response->json('scope'))->toBe('view:all-plans');
+    expect($response->json('scope'))->toBe('all');
 
     // Location report
     $response = $this->getJson('/api/v1/reports/location');
@@ -89,7 +134,7 @@ test('coverage report golden master — empty scenario, Monday 2026-04-20', func
         'is_physical' => true,
     ]);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/coverage');
     $response->assertOk();
@@ -111,7 +156,7 @@ test('plan endpoint serialises entry_date as YYYY-MM-DD', function () {
         'entry_date' => now()->format('Y-m-d'),
     ]);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->getJson('/api/v1/plan');
 
@@ -131,7 +176,7 @@ test('coverage report serialises all date fields as YYYY-MM-DD', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     Location::factory()->create(['slug' => 'rankine']);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/coverage');
 
@@ -154,7 +199,7 @@ test('location report serialises all date fields as YYYY-MM-DD', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     Location::factory()->create(['slug' => 'rankine']);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/location');
 
@@ -176,7 +221,7 @@ test('team report serialises all date fields as YYYY-MM-DD', function () {
         'entry_date' => now()->format('Y-m-d'),
     ]);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/team');
 
@@ -207,7 +252,7 @@ test('plan endpoint filter[from] and filter[to] narrow the window and return onl
         'entry_date' => '2026-04-28', // outside the requested window
     ]);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->getJson('/api/v1/plan?filter[from]=2026-04-20&filter[to]=2026-04-24');
 
@@ -221,7 +266,7 @@ test('plan endpoint filter[from] and filter[to] narrow the window and return onl
 
 test('team report rejects invalid filter[from] / filter[to] values', function (array $query) {
     $admin = User::factory()->create(['is_admin' => true]);
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/team?'.http_build_query($query));
 
@@ -234,11 +279,107 @@ test('team report rejects invalid filter[from] / filter[to] values', function (a
     'window too large' => [['filter' => ['from' => '2026-01-01', 'to' => '2026-12-31']]],
 ]);
 
+test('service-availability response does not include the scope field (service matrix is not role-scoped)', function () {
+    config(['wcap.services_enabled' => true]);
+
+    $admin = User::factory()->create(['is_admin' => true]);
+    Sanctum::actingAs($admin);
+
+    $response = $this->getJson('/api/v1/reports/service-availability');
+
+    $response->assertOk();
+    expect($response->json())->not->toHaveKey('scope');
+});
+
+test('service-availability filter[manager_only]=true returns only services with a manager-only day', function () {
+    config(['wcap.services_enabled' => true]);
+    $this->travelTo(CarbonImmutable::parse('2026-04-20'));
+
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    // "At risk" service: has a manager, but the only available person that day is the manager.
+    $manager = User::factory()->create();
+    $member = User::factory()->create();
+    $atRisk = Service::factory()->create(['name' => 'At Risk Service', 'manager_id' => $manager->id]);
+    $atRisk->users()->attach($member);
+
+    $manager->planEntries()->create(['entry_date' => '2026-04-20', 'location_id' => null, 'availability_status' => AvailabilityStatus::ONSITE]);
+    // member is not_available that day (no entry → no availability)
+
+    // "Safe" service: member available, so no manager_only flag.
+    $safeMember = User::factory()->create();
+    $location = Location::factory()->create();
+    $safe = Service::factory()->create(['name' => 'Safe Service']);
+    $safe->users()->attach($safeMember);
+    $safeMember->planEntries()->create([
+        'entry_date' => '2026-04-20',
+        'location_id' => $location->id,
+        'availability_status' => AvailabilityStatus::ONSITE,
+    ]);
+
+    Sanctum::actingAs($admin);
+
+    $response = $this->getJson('/api/v1/reports/service-availability?filter[from]=2026-04-20&filter[to]=2026-04-20&filter[manager_only]=true');
+
+    $response->assertOk();
+
+    $names = collect($response->json('service_availability_matrix'))->pluck('service')->all();
+    expect($names)->toContain('At Risk Service')
+        ->and($names)->not->toContain('Safe Service');
+});
+
+test('service-availability filter[service_slug] narrows to one service', function () {
+    config(['wcap.services_enabled' => true]);
+
+    $admin = User::factory()->create(['is_admin' => true]);
+    Service::factory()->create(['name' => 'VPN Service']);
+    Service::factory()->create(['name' => 'Email Service']);
+
+    Sanctum::actingAs($admin);
+
+    $response = $this->getJson('/api/v1/reports/service-availability?filter[service_slug]=vpn-service');
+
+    $response->assertOk();
+
+    $names = collect($response->json('service_availability_matrix'))->pluck('service')->all();
+    expect($names)->toBe(['VPN Service']);
+});
+
+test('service-availability report rejects unknown filter with a Spatie-style message listing allowed filters', function () {
+    config(['wcap.services_enabled' => true]);
+
+    $admin = User::factory()->create(['is_admin' => true]);
+    Sanctum::actingAs($admin);
+
+    $response = $this->getJson('/api/v1/reports/service-availability?filter[wibble]=foo');
+
+    $response->assertStatus(400);
+    $body = $response->json();
+    expect($body['message'] ?? '')->toContain('wibble')
+        ->and($body['message'] ?? '')->toContain('from')
+        ->and($body['message'] ?? '')->toContain('to');
+});
+
+test('service-availability report filter[from] and filter[to] narrow the date window', function () {
+    config(['wcap.services_enabled' => true]);
+    $this->travelTo(CarbonImmutable::parse('2026-04-20'));
+
+    $admin = User::factory()->create(['is_admin' => true]);
+    Sanctum::actingAs($admin);
+
+    $response = $this->getJson('/api/v1/reports/service-availability?filter[from]=2026-04-20&filter[to]=2026-04-22');
+
+    $response->assertOk();
+
+    $dates = collect($response->json('days'))->pluck('date')->all();
+    expect($dates)->toBe(['2026-04-20', '2026-04-21', '2026-04-22']);
+});
+
 test('team report filter[from] and filter[to] narrow the date window', function () {
     $this->travelTo(CarbonImmutable::parse('2026-04-20'));
 
     $admin = User::factory()->create(['is_admin' => true]);
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/team?filter[from]=2026-04-20&filter[to]=2026-04-22');
 
@@ -269,7 +410,7 @@ test('team report filter[location_slug] returns only rows for users at that loca
         'entry_date' => now()->toDateString(),
     ]);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/team?filter[location_slug]=rankine');
 
@@ -300,7 +441,7 @@ test('team report filter[state] returns only rows for users with matching entrie
         'entry_date' => now()->toDateString(),
     ]);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/team?filter[state]=planned');
 
@@ -318,7 +459,7 @@ test('location report filter[is_physical] excludes non-physical locations', func
     $rankine = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine', 'is_physical' => true]);
     $remote = Location::factory()->create(['slug' => 'remote', 'name' => 'Remote', 'is_physical' => false]);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/location?filter[is_physical]=true');
 
@@ -338,7 +479,7 @@ test('location report filter[location_slug] narrows each day to only that locati
     $rankine = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
     $jws = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/location?filter[location_slug]=rankine');
 
@@ -362,7 +503,7 @@ test('plan endpoint fields[entries] returns only the requested keys per entry', 
         'entry_date' => now()->format('Y-m-d'),
     ]);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->getJson('/api/v1/plan?fields[entries]=entry_date,location,note');
 
@@ -376,7 +517,7 @@ test('plan endpoint fields[entries] returns only the requested keys per entry', 
 
 test('plan endpoint rejects unknown fields[entries] with a 4xx', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->getJson('/api/v1/plan?fields[entries]=note,not_a_real_field');
 
@@ -399,7 +540,7 @@ test('plan endpoint filter[location_slug] returns only entries at that location'
         'entry_date' => now()->addDay()->format('Y-m-d'),
     ]);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->getJson('/api/v1/plan?filter[location_slug]=rankine');
 
@@ -416,7 +557,7 @@ test('coverage report filter[location_slug] returns only that locations coverage
     $rankine = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
     Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
 
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/coverage?filter[location_slug]=rankine');
 
@@ -428,7 +569,7 @@ test('coverage report filter[location_slug] returns only that locations coverage
 
 test('team report rejects unknown filter with a 4xx', function () {
     $admin = User::factory()->create(['is_admin' => true]);
-    Sanctum::actingAs($admin, ['view:all-plans']);
+    Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/team?filter[not_a_real_filter]=anything');
 
@@ -442,7 +583,7 @@ test('user can create a new plan entry via API', function () {
     $user = User::factory()->create();
     $location = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->postJson('/api/v1/plan', [
         'entries' => [
@@ -472,7 +613,7 @@ test('user can create multiple plan entries in batch via API', function () {
     $locationJws = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
     $locationJwn = Location::factory()->create(['slug' => 'jwn', 'name' => 'James Watt North']);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->postJson('/api/v1/plan', [
         'entries' => [
@@ -515,7 +656,7 @@ test('user can update plan entry by id via API', function () {
         'note' => 'Original note',
     ]);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->postJson('/api/v1/plan', [
         'entries' => [
@@ -547,7 +688,7 @@ test('user can update plan entry by entry_date via API', function () {
         'note' => 'Original note',
     ]);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->postJson('/api/v1/plan', [
         'entries' => [
@@ -582,7 +723,7 @@ test('user cannot update another users plan entry', function () {
         'note' => 'Other user entry',
     ]);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->postJson('/api/v1/plan', [
         'entries' => [
@@ -616,7 +757,7 @@ test('user can delete their own plan entry via API', function () {
         'note' => 'To be deleted',
     ]);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->deleteJson("/api/v1/plan/{$entry->id}");
 
@@ -639,7 +780,7 @@ test('user cannot delete another users plan entry', function () {
         'note' => 'Other user entry',
     ]);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->deleteJson("/api/v1/plan/{$otherEntry->id}");
 
@@ -654,7 +795,7 @@ test('user cannot delete another users plan entry', function () {
 test('API validates location exists in database', function () {
     $user = User::factory()->create();
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->postJson('/api/v1/plan', [
         'entries' => [
@@ -673,7 +814,7 @@ test('API validates location exists in database', function () {
 test('API requires location field', function () {
     $user = User::factory()->create();
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->postJson('/api/v1/plan', [
         'entries' => [
@@ -692,7 +833,7 @@ test('API allows optional note field', function () {
     $user = User::factory()->create();
     $location = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->postJson('/api/v1/plan', [
         'entries' => [
@@ -718,7 +859,7 @@ test('authenticated user can retrieve locations list', function () {
     $user = User::factory()->create();
     Location::factory()->create(['slug' => 'jws', 'name' => 'JWS', 'short_label' => 'JWS']);
 
-    Sanctum::actingAs($user, ['view:own-plan']);
+    Sanctum::actingAs($user);
 
     $response = $this->getJson('/api/v1/locations');
 

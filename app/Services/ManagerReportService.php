@@ -63,7 +63,7 @@ class ManagerReportService
         $allEntries = PlanEntry::query()
             ->with('location')
             ->whereIn('user_id', $allUserIds->unique()->values()->toArray())
-            ->whereBetween('entry_date', [$start, $end])
+            ->whereDate('entry_date', '>=', $start)->whereDate('entry_date', '<=', $end)
             ->get();
 
         $entriesByUser = $this->indexEntriesByUser($allEntries, $teamMemberIds);
@@ -138,7 +138,7 @@ class ManagerReportService
         $entries = PlanEntry::query()
             ->with('location')
             ->whereIn('user_id', $userIds)
-            ->whereBetween('entry_date', [$start, $end])
+            ->whereDate('entry_date', '>=', $start)->whereDate('entry_date', '<=', $end)
             ->get();
 
         return $this->indexEntriesByUser($entries, $userIds);
@@ -271,9 +271,9 @@ class ManagerReportService
         return $matrix;
     }
 
-    public function buildServiceAvailabilityMatrix(array $days): array
+    public function buildServiceAvailabilityMatrix(array $days, $services = null): array
     {
-        $services = Service::with(['users', 'manager'])->orderBy('name')->get();
+        $services ??= Service::with(['users', 'manager'])->orderBy('name')->get();
 
         $matrix = [];
         $start = $days[0]['key'];
@@ -288,7 +288,7 @@ class ManagerReportService
 
         $allEntries = PlanEntry::query()
             ->whereIn('user_id', $allUserIds)
-            ->whereBetween('entry_date', [$start, $end])
+            ->whereDate('entry_date', '>=', $start)->whereDate('entry_date', '<=', $end)
             ->get()
             ->groupBy('user_id');
 
@@ -437,25 +437,23 @@ class ManagerReportService
     }
 
     /**
-     * Get scoped user IDs based on token ability (for API use).
-     * Returns array of user IDs that the given user can access based on their token ability.
+     * Get user IDs in scope for the given scope label.
      *
-     * @param  User  $user  The authenticated user
-     * @param  string  $tokenAbility  The token ability ('view:own-plan', 'view:team-plans', or 'view:all-plans')
-     * @return array Array of user IDs
+     * @param  string  $scope  'all', 'team', or 'own'
+     * @return array<int>
      */
-    public function getScopedUserIds(User $user, string $tokenAbility): array
+    public function getScopedUserIds(User $user, string $scope): array
     {
-        return match ($tokenAbility) {
-            'view:own-plan' => [$user->id],
-            'view:team-plans' => Team::whereIn('id', $user->allManagedTeamIds())
+        return match ($scope) {
+            'own' => [$user->id],
+            'team' => Team::whereIn('id', $user->allManagedTeamIds())
                 ->with('users')
                 ->get()
                 ->flatMap(fn ($team) => $team->users)
                 ->unique('id')
                 ->pluck('id')
                 ->toArray(),
-            'view:all-plans' => User::pluck('id')->toArray(),
+            'all' => User::pluck('id')->toArray(),
             default => [],
         };
     }

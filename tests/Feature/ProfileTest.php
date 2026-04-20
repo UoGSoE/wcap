@@ -114,8 +114,8 @@ test('non-admin managers only see their own tokens', function () {
     $manager->managedTeams()->create(['name' => 'Test Team']);
     $otherUser = User::factory()->create();
 
-    $managerToken = $manager->createToken('My Token', ['view:own-plan']);
-    $otherToken = $otherUser->createToken('Other Token', ['view:own-plan']);
+    $managerToken = $manager->createToken('My Token');
+    $otherToken = $otherUser->createToken('Other Token');
 
     actingAs($manager);
 
@@ -129,8 +129,8 @@ test('admin users can toggle to view all tokens', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $otherUser = User::factory()->create();
 
-    $adminToken = $admin->createToken('Admin Token', ['view:all-plans']);
-    $otherToken = $otherUser->createToken('User Token', ['view:own-plan']);
+    $adminToken = $admin->createToken('Admin Token');
+    $otherToken = $otherUser->createToken('User Token');
 
     actingAs($admin);
 
@@ -166,8 +166,8 @@ test('non-admin users can only revoke their own tokens', function () {
     $user = User::factory()->create(['is_admin' => false]);
     $otherUser = User::factory()->create();
 
-    $userToken = $user->createToken('My Token', ['view:own-plan']);
-    $otherToken = $otherUser->createToken('Other Token', ['view:own-plan']);
+    $userToken = $user->createToken('My Token');
+    $otherToken = $otherUser->createToken('Other Token');
 
     actingAs($user);
 
@@ -182,8 +182,8 @@ test('admin users can revoke any token when toggle is on', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $otherUser = User::factory()->create();
 
-    $adminToken = $admin->createToken('Admin Token', ['view:all-plans']);
-    $otherToken = $otherUser->createToken('User Token', ['view:own-plan']);
+    $adminToken = $admin->createToken('Admin Token');
+    $otherToken = $otherUser->createToken('User Token');
 
     actingAs($admin);
 
@@ -199,8 +199,8 @@ test('admin users cannot revoke other tokens when toggle is off', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $otherUser = User::factory()->create();
 
-    $adminToken = $admin->createToken('Admin Token', ['view:all-plans']);
-    $otherToken = $otherUser->createToken('User Token', ['view:own-plan']);
+    $adminToken = $admin->createToken('Admin Token');
+    $otherToken = $otherUser->createToken('User Token');
 
     actingAs($admin);
 
@@ -214,7 +214,7 @@ test('admin users cannot revoke other tokens when toggle is off', function () {
 
 test('clicking token name sets selectedTokenId', function () {
     $user = User::factory()->create();
-    $token = $user->createToken('Test Token', ['view:own-plan']);
+    $token = $user->createToken('Test Token');
 
     actingAs($user);
 
@@ -226,7 +226,7 @@ test('clicking token name sets selectedTokenId', function () {
 
 test('clicking same token again clears selectedTokenId', function () {
     $user = User::factory()->create();
-    $token = $user->createToken('Test Token', ['view:own-plan']);
+    $token = $user->createToken('Test Token');
 
     actingAs($user);
 
@@ -237,25 +237,10 @@ test('clicking same token again clears selectedTokenId', function () {
         ->assertSet('selectedTokenId', null);
 });
 
-test('documentation shows correct endpoints for view:own-plan only', function () {
+test('documentation shows all endpoints the user has role-based access to', function () {
     $manager = User::factory()->create(['is_admin' => false]);
     $manager->managedTeams()->create(['name' => 'Test Team']);
-    $token = $manager->createToken('Manager Token', ['view:own-plan']);
-
-    actingAs($manager);
-
-    Livewire::test(Profile::class)
-        ->call('selectToken', $token->accessToken->id)
-        ->assertSee('Personal Plan')
-        ->assertSee('/api/v1/plan')
-        ->assertDontSee('/api/v1/reports/team')
-        ->assertDontSee('Team Report');
-});
-
-test('documentation shows all endpoints for view:team-plans ability', function () {
-    $manager = User::factory()->create(['is_admin' => false]);
-    $manager->managedTeams()->create(['name' => 'Test Team']);
-    $token = $manager->createToken('Manager Token', ['view:own-plan', 'view:team-plans']);
+    $token = $manager->createToken('Manager Token');
 
     actingAs($manager);
 
@@ -288,7 +273,7 @@ test('no documentation section when user has no tokens', function () {
 test('token placeholder appears in CLI examples', function () {
     $manager = User::factory()->create(['is_admin' => false]);
     $manager->managedTeams()->create(['name' => 'Test Team']);
-    $token = $manager->createToken('Test Token', ['view:own-plan']);
+    $token = $manager->createToken('Test Token');
 
     actingAs($manager);
 
@@ -303,7 +288,7 @@ test('token placeholder appears in CLI examples', function () {
 test('token placeholder appears in PowerBI examples', function () {
     $manager = User::factory()->create(['is_admin' => false]);
     $manager->managedTeams()->create(['name' => 'Test Team']);
-    $token = $manager->createToken('Test Token', ['view:own-plan']);
+    $token = $manager->createToken('Test Token');
 
     actingAs($manager);
 
@@ -314,10 +299,10 @@ test('token placeholder appears in PowerBI examples', function () {
         ->assertSee('with the token you received when you created it');
 });
 
-test('documentation shows CRUD endpoints for view:own-plan', function () {
+test('documentation shows plan CRUD endpoints', function () {
     $manager = User::factory()->create(['is_admin' => false]);
     $manager->managedTeams()->create(['name' => 'Test Team']);
-    $token = $manager->createToken('Test Token', ['view:own-plan']);
+    $token = $manager->createToken('Test Token');
 
     actingAs($manager);
 

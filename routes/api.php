@@ -23,9 +23,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/locations', [PlanController::class, 'locations']);
 
     // Organizational Reporting
-    // Accessible by: Managers and Admins only (requires view:team-plans OR view:all-plans)
+    // Accessible by: Managers and Admins (role-based, not token-ability-based).
     Route::prefix('reports')
-        ->middleware('abilities:view:team-plans,view:all-plans')
+        ->middleware('can:accessManagerApi')
         ->group(function () {
             Route::get('/team', [ReportController::class, 'team']);
             Route::get('/location', [ReportController::class, 'location']);
@@ -37,9 +37,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         });
 
     // Manager Plan Management
-    // Accessible by: Managers and Admins with manage:team-plans ability
+    // Accessible by: Managers and Admins (role-based, not token-ability-based).
     Route::prefix('manager')
-        ->middleware('abilities:manage:team-plans')
+        ->middleware('can:accessManagerApi')
         ->group(function () {
             Route::get('/team-members', [ManagerPlanController::class, 'teamMembers']);
             Route::get('/team-members/{userId}/plan', [ManagerPlanController::class, 'show']);

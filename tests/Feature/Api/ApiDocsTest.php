@@ -56,3 +56,17 @@ test('each endpoint documents its filter query parameters', function (string $pa
     'coverage' => ['/v1/reports/coverage', ['filter[location_slug]', 'filter[is_physical]', 'filter[from]', 'filter[to]']],
     'plan' => ['/v1/plan', ['filter[location_slug]', 'filter[is_holiday]', 'filter[availability_status]', 'filter[from]', 'filter[to]', 'fields[entries]']],
 ]);
+
+test('service-availability endpoint documents its filter query parameters when services are enabled', function () {
+    config(['wcap.services_enabled' => true]);
+    Gate::define('viewApiDocs', fn (?User $user = null) => true);
+
+    $spec = $this->getJson('/docs/api.json')->json();
+    $params = $spec['paths']['/v1/reports/service-availability']['get']['parameters'] ?? [];
+    $names = collect($params)->pluck('name')->all();
+
+    expect($names)->toContain('filter[from]')
+        ->toContain('filter[to]')
+        ->toContain('filter[service_slug]')
+        ->toContain('filter[manager_only]');
+});

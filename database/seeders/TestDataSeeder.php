@@ -34,11 +34,7 @@ class TestDataSeeder extends Seeder
         $this->seedLocations();
 
         // Create API token for admin user (for Power BI demo)
-        $token = $admin->createToken('Power BI - Executive Dashboard', [
-            'view:own-plan',
-            'view:team-plans',
-            'view:all-plans',
-        ]);
+        $token = $admin->createToken('Power BI - Executive Dashboard');
 
         // Output token for easy reference (only visible during seeding)
         echo "\n===========================================\n";

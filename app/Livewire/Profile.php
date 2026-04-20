@@ -67,39 +67,15 @@ class Profile extends Component
             ->get();
     }
 
-    /**
-     * Determine which token abilities to assign based on user role.
-     */
-    public function determineTokenAbilities(): array
-    {
-        $user = auth()->user();
-
-        // Start with base ability (everyone gets this)
-        $abilities = ['view:own-plan'];
-
-        // Managers get team viewing and management abilities
-        if ($user->isManager()) {
-            $abilities[] = 'view:team-plans';
-            $abilities[] = 'manage:team-plans';
-        }
-
-        // Admins get all abilities
-        if ($user->isAdmin()) {
-            $abilities[] = 'view:all-plans';
-        }
-
-        return $abilities;
-    }
-
     public function createToken(): void
     {
         $this->validate([
             'newTokenName' => 'required|string|max:255',
         ]);
 
-        $abilities = $this->determineTokenAbilities();
-
-        $token = auth()->user()->createToken($this->newTokenName, $abilities);
+        // Tokens grant whatever access the user's role allows — the API gates
+        // on role now, not on token abilities. Sanctum's default ['*'] is fine.
+        $token = auth()->user()->createToken($this->newTokenName);
 
         $this->generatedToken = $token->plainTextToken;
         $this->newTokenName = '';
@@ -167,116 +143,91 @@ class Profile extends Component
     }
 
     /**
-     * Get available endpoints based on token abilities.
+     * Endpoints the current user can hit with their API token.
+     *
+     * Access is role-based now (see `accessManagerApi` gate), so this UI only
+     * runs inside the `@adminOrManager` Blade guard — every viewer gets every
+     * endpoint.
+     *
+     * @return array<int, array{name: string, method: string, path: string, description: string}>
      */
-    public function getAvailableEndpoints(array $abilities): array
+    public function getAvailableEndpoints(): array
     {
-        $endpoints = [];
-
-        // Everyone with a token can access their own plan
-        if (in_array('view:own-plan', $abilities)) {
-            $endpoints[] = [
+        $endpoints = [
+            [
                 'name' => 'Personal Plan',
                 'method' => 'GET',
                 'path' => '/api/v1/plan',
-                'ability' => 'view:own-plan',
                 'description' => 'Get your own plan entries for the next 10 weekdays',
-            ];
-
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'Create/Update Plan Entries',
                 'method' => 'POST',
                 'path' => '/api/v1/plan',
-                'ability' => 'view:own-plan',
                 'description' => 'Create or update plan entries. Always send an entries array. Match by id or entry_date.',
-            ];
-
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'Delete Plan Entry',
                 'method' => 'DELETE',
                 'path' => '/api/v1/plan/{id}',
-                'ability' => 'view:own-plan',
                 'description' => 'Delete a specific plan entry by id',
-            ];
-
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'List Locations',
                 'method' => 'GET',
                 'path' => '/api/v1/locations',
-                'ability' => 'view:own-plan',
                 'description' => 'Get all available locations with their values, labels, and short labels',
-            ];
-        }
-
-        // Managers and admins can access reporting endpoints
-        if (in_array('view:team-plans', $abilities) || in_array('view:all-plans', $abilities)) {
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'Team Report',
                 'method' => 'GET',
                 'path' => '/api/v1/reports/team',
-                'ability' => 'view:team-plans or view:all-plans',
                 'description' => 'Get person × day grid showing team member locations and work',
-            ];
-
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'Location Report',
                 'method' => 'GET',
                 'path' => '/api/v1/reports/location',
-                'ability' => 'view:team-plans or view:all-plans',
                 'description' => 'Get day × location grouping showing who is at each location',
-            ];
-
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'Coverage Report',
                 'method' => 'GET',
                 'path' => '/api/v1/reports/coverage',
-                'ability' => 'view:team-plans or view:all-plans',
                 'description' => 'Get location coverage matrix with people counts per day',
-            ];
-
-            if (config('wcap.services_enabled')) {
-                $endpoints[] = [
-                    'name' => 'Service Availability',
-                    'method' => 'GET',
-                    'path' => '/api/v1/reports/service-availability',
-                    'ability' => 'view:team-plans or view:all-plans',
-                    'description' => 'Get service availability with manager-only indicators',
-                ];
-            }
-        }
-
-        // Managers and admins can manage team members' plans
-        if (in_array('manage:team-plans', $abilities)) {
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'List Team Members',
                 'method' => 'GET',
                 'path' => '/api/v1/manager/team-members',
-                'ability' => 'manage:team-plans',
                 'description' => 'List users you can manage',
-            ];
-
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'Get Team Member Plan',
                 'method' => 'GET',
                 'path' => '/api/v1/manager/team-members/{userId}/plan',
-                'ability' => 'manage:team-plans',
                 'description' => 'Get a team member\'s plan entries for the next 10 weekdays',
-            ];
-
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'Update Team Member Plan',
                 'method' => 'POST',
                 'path' => '/api/v1/manager/team-members/{userId}/plan',
-                'ability' => 'manage:team-plans',
                 'description' => 'Create or update plan entries for a team member',
-            ];
-
-            $endpoints[] = [
+            ],
+            [
                 'name' => 'Delete Team Member Entry',
                 'method' => 'DELETE',
                 'path' => '/api/v1/manager/team-members/{userId}/plan/{entryId}',
-                'ability' => 'manage:team-plans',
                 'description' => 'Delete a specific plan entry for a team member',
+            ],
+        ];
+
+        if (config('wcap.services_enabled')) {
+            $endpoints[] = [
+                'name' => 'Service Availability',
+                'method' => 'GET',
+                'path' => '/api/v1/reports/service-availability',
+                'description' => 'Get service availability with manager-only indicators',
             ];
         }
 

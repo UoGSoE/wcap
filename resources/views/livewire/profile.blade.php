@@ -129,14 +129,11 @@
                         <div class="space-y-6">
                             <flux:text>Copy and paste these examples to access your planning data from the command line.</flux:text>
 
-                            @foreach($this->getAvailableEndpoints($this->selectedToken->abilities) as $endpoint)
+                            @foreach($this->getAvailableEndpoints() as $endpoint)
                                 <div class="space-y-2">
                                     <div class="flex items-center justify-between">
                                         <flux:heading size="md">{{ $endpoint['name'] }}</flux:heading>
-                                        <div class="flex gap-2 items-center">
-                                            <flux:badge size="sm" variant="outline">{{ $endpoint['method'] }}</flux:badge>
-                                            <flux:badge size="sm" variant="subtle">{{ $endpoint['ability'] }}</flux:badge>
-                                        </div>
+                                        <flux:badge size="sm" variant="outline">{{ $endpoint['method'] }}</flux:badge>
                                     </div>
                                     <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400">{{ $endpoint['description'] }}</flux:text>
 
@@ -274,7 +271,7 @@
                                     <flux:text><strong>5.</strong> Enter the URL for the data you want:</flux:text>
 
                                     <div class="ml-6 space-y-2">
-                                        @foreach($this->getAvailableEndpoints($this->selectedToken->abilities) as $endpoint)
+                                        @foreach($this->getAvailableEndpoints() as $endpoint)
                                             <flux:field>
                                                 <flux:label>{{ $endpoint['name'] }}</flux:label>
                                                 <flux:input
@@ -334,13 +331,9 @@
                                 <flux:text>Now you can create reports! Here are some suggestions based on your access:</flux:text>
 
                                 <div class="space-y-3 ml-4">
-                                    @if(in_array('view:own-plan', $this->selectedToken->abilities) && !in_array('view:team-plans', $this->selectedToken->abilities) && !in_array('view:all-plans', $this->selectedToken->abilities))
-                                        <flux:text><strong>Personal Calendar:</strong> Use a calendar visual to show your locations over the next two weeks</flux:text>
-                                    @else
-                                        <flux:text><strong>Team Matrix:</strong> Create a matrix visual with team members as rows and dates as columns, showing locations</flux:text>
-                                        <flux:text><strong>Location Chart:</strong> Use a stacked bar chart to show how many people are at each location per day</flux:text>
-                                        <flux:text><strong>Coverage Heatmap:</strong> Create a matrix with conditional formatting to highlight days with low coverage</flux:text>
-                                    @endif
+                                    <flux:text><strong>Team Matrix:</strong> Create a matrix visual with team members as rows and dates as columns, showing locations</flux:text>
+                                    <flux:text><strong>Location Chart:</strong> Use a stacked bar chart to show how many people are at each location per day</flux:text>
+                                    <flux:text><strong>Coverage Heatmap:</strong> Create a matrix with conditional formatting to highlight days with low coverage</flux:text>
                                 </div>
                             </div>
 
@@ -349,14 +342,14 @@
                             {{-- Your Available Data Sources --}}
                             <div class="space-y-4">
                                 <flux:heading size="md">Your Available Data Sources</flux:heading>
-                                <flux:text>Based on your token permissions, you have access to the following data sources:</flux:text>
+                                <flux:text>Your token can access the following data sources:</flux:text>
 
                                 <div class="space-y-3">
-                                    @foreach($this->getAvailableEndpoints($this->selectedToken->abilities) as $endpoint)
+                                    @foreach($this->getAvailableEndpoints() as $endpoint)
                                         <div class="p-4 bg-zinc-50 dark:bg-zinc-900 rounded">
                                             <div class="flex items-center justify-between mb-2">
                                                 <flux:text class="font-semibold">{{ $endpoint['name'] }}</flux:text>
-                                                <flux:badge size="sm" variant="subtle">{{ $endpoint['ability'] }}</flux:badge>
+                                                <flux:badge size="sm" variant="outline">{{ $endpoint['method'] }}</flux:badge>
                                             </div>
                                             <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400 mb-2">{{ $endpoint['description'] }}</flux:text>
                                             <flux:input
@@ -412,23 +405,12 @@
                     </flux:text>
                 </div>
 
-                {{-- Show which abilities will be assigned --}}
                 <flux:callout variant="info">
-                    <div class="space-y-2">
-                        <flux:text><strong>Automatic Permissions:</strong></flux:text>
-                        <div class="flex gap-1 flex-wrap">
-                            @foreach($this->determineTokenAbilities() as $ability)
-                                <flux:badge size="sm">{{ $ability }}</flux:badge>
-                            @endforeach
-                        </div>
-                        @if(auth()->user()->isAdmin())
-                            <flux:text size="sm">As an admin, you can access all organizational data.</flux:text>
-                        @elseif(auth()->user()->isManager())
-                            <flux:text size="sm">As a manager, you can access your team's data.</flux:text>
-                        @else
-                            <flux:text size="sm">You can access your own planning data.</flux:text>
-                        @endif
-                    </div>
+                    @if(auth()->user()->isAdmin())
+                        <flux:text>As an admin, this token lets you access all organisational data.</flux:text>
+                    @else
+                        <flux:text>As a manager, this token lets you access your team's data.</flux:text>
+                    @endif
                 </flux:callout>
 
                 <flux:field>

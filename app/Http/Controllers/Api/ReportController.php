@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ParsesDateWindowFilter;
 use App\Models\Location;
+use App\Models\Service;
 use App\Models\User;
 use App\Services\ManagerReportService;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -17,28 +19,31 @@ class ReportController
     use ParsesDateWindowFilter;
 
     /**
-     * Determine which token ability the user has for scoping.
+     * Determine the report scope from the authenticated user's role.
+     *
+     * Admins see everyone; managers see only users in teams they manage.
+     * The `can:accessManagerApi` route middleware already blocks regular staff,
+     * so the 'own' case is a safe fallback that should never trigger in practice.
      */
-    private function getTokenAbility(Request $request): string
+    private function getScope(Request $request): string
     {
         $user = $request->user();
 
-        if ($user->tokenCan('view:all-plans')) {
-            return 'view:all-plans';
+        if ($user->isAdmin()) {
+            return 'all';
         }
 
-        if ($user->tokenCan('view:team-plans')) {
-            return 'view:team-plans';
+        if ($user->isManager()) {
+            return 'team';
         }
 
-        // Shouldn't reach here due to middleware, but safe default
-        return 'view:own-plan';
+        return 'own';
     }
 
     /**
      * Get team report (person × day grid).
      *
-     * Requires: view:team-plans or view:all-plans token ability
+     * Requires: admin or manager role (enforced by the accessManagerApi gate).
      */
     #[QueryParameter('filter[location_slug]', description: 'Only return team rows for users with at least one entry at this location (e.g. "rankine").', type: 'string', example: 'rankine')]
     #[QueryParameter('filter[state]', description: 'Only return rows for users with at least one matching entry. "planned" = has a location, "away" = no location.', type: 'string', example: 'planned')]
@@ -47,9 +52,9 @@ class ReportController
     public function team(Request $request, ManagerReportService $service): JsonResponse
     {
         $user = $request->user();
-        $ability = $this->getTokenAbility($request);
+        $scope = $this->getScope($request);
 
-        $userIds = $service->getScopedUserIds($user, $ability);
+        $userIds = $service->getScopedUserIds($user, $scope);
         [$from, $to] = $this->parseDateWindow($request);
         $days = $service->buildDays($from, $to);
 
@@ -78,7 +83,7 @@ class ReportController
         $teamRows = $service->buildTeamRows($teamMembers, $days, $entriesByUser);
 
         return response()->json([
-            'scope' => $ability,
+            'scope' => $scope,
             'days' => array_map(fn ($d) => [
                 'date' => $d['date']->toDateString(),
                 'day_name' => $d['date']->format('l'),
@@ -97,7 +102,7 @@ class ReportController
     /**
      * Get location report (day × location grouping).
      *
-     * Requires: view:team-plans or view:all-plans token ability
+     * Requires: admin or manager role (enforced by the accessManagerApi gate).
      */
     #[QueryParameter('filter[location_slug]', description: 'Narrow each day to a single location (e.g. "rankine").', type: 'string', example: 'rankine')]
     #[QueryParameter('filter[is_physical]', description: 'Exclude non-physical locations like Remote/Other when true.', type: 'boolean', example: true)]
@@ -106,9 +111,9 @@ class ReportController
     public function location(Request $request, ManagerReportService $service): JsonResponse
     {
         $user = $request->user();
-        $ability = $this->getTokenAbility($request);
+        $scope = $this->getScope($request);
 
-        $userIds = $service->getScopedUserIds($user, $ability);
+        $userIds = $service->getScopedUserIds($user, $scope);
         [$from, $to] = $this->parseDateWindow($request);
         $days = $service->buildDays($from, $to);
 
@@ -131,7 +136,7 @@ class ReportController
         $locationDays = $service->buildLocationDays($days, $teamMembers, $entriesByUser, $locations);
 
         return response()->json([
-            'scope' => $ability,
+            'scope' => $scope,
             'location_days' => array_map(function ($day) {
                 return [
                     'date' => $day['date']->toDateString(),
@@ -145,7 +150,7 @@ class ReportController
     /**
      * Get coverage matrix (location × day with counts).
      *
-     * Requires: view:team-plans or view:all-plans token ability
+     * Requires: admin or manager role (enforced by the accessManagerApi gate).
      */
     #[QueryParameter('filter[location_slug]', description: 'Narrow the coverage matrix to a single location.', type: 'string', example: 'rankine')]
     #[QueryParameter('filter[is_physical]', description: 'Exclude non-physical locations like Remote/Other when true.', type: 'boolean', example: true)]
@@ -154,9 +159,9 @@ class ReportController
     public function coverage(Request $request, ManagerReportService $service): JsonResponse
     {
         $user = $request->user();
-        $ability = $this->getTokenAbility($request);
+        $scope = $this->getScope($request);
 
-        $userIds = $service->getScopedUserIds($user, $ability);
+        $userIds = $service->getScopedUserIds($user, $scope);
         [$from, $to] = $this->parseDateWindow($request);
         $days = $service->buildDays($from, $to);
 
@@ -180,7 +185,7 @@ class ReportController
         $coverageMatrix = $service->buildCoverageMatrix($days, $locationDays, $locations);
 
         return response()->json([
-            'scope' => $ability,
+            'scope' => $scope,
             'days' => array_map(fn ($d) => [
                 'date' => $d['date']->toDateString(),
                 'day_name' => $d['date']->format('l'),
@@ -200,18 +205,53 @@ class ReportController
     /**
      * Get service availability matrix (service × day with availability counts).
      *
-     * Requires: view:team-plans or view:all-plans token ability
+     * Requires: admin or manager role (enforced by the accessManagerApi gate).
      *
-     * Note: Shows ALL services (not scoped by user's teams), but counts
-     * may differ based on token ability (team vs all users).
+     * Note: the service list is global (not scoped by team) — availability
+     * counts reflect all users assigned to each service.
      */
+    #[QueryParameter('filter[service_slug]', description: 'Narrow to a single service. Slug is a kebab-case derivation of the service name (e.g. "VPN Service" → "vpn-service").', type: 'string', example: 'vpn-service')]
+    #[QueryParameter('filter[manager_only]', description: 'When true, return only services whose coverage relies on the manager on at least one day in the window — the "at risk" view.', type: 'boolean', example: true)]
+    #[QueryParameter('filter[from]', description: 'Start of a custom date window (YYYY-MM-DD). Must be paired with filter[to].', type: 'string', example: '2026-04-20')]
+    #[QueryParameter('filter[to]', description: 'End of a custom date window (YYYY-MM-DD). Must be paired with filter[from].', type: 'string', example: '2026-04-24')]
     public function serviceAvailability(Request $request, ManagerReportService $service): JsonResponse
     {
-        $days = $service->buildDays();
-        $serviceAvailabilityMatrix = $service->buildServiceAvailabilityMatrix($days);
+        [$from, $to] = $this->parseDateWindow($request);
+        $days = $service->buildDays($from, $to);
 
+        // QueryBuilder is used here purely for its allowlist — unknown filters
+        // raise Spatie's native InvalidFilterQuery (with helpful "allowed
+        // filter(s) are ..." messaging). The non-query filters (service_slug,
+        // manager_only, from/to) are callbacks that no-op at the DB level;
+        // the actual logic lives below in PHP so the matrix shape is preserved.
+        $services = QueryBuilder::for(Service::class)
+            ->allowedFilters(
+                AllowedFilter::callback('service_slug', fn () => null),
+                AllowedFilter::callback('manager_only', fn () => null),
+                AllowedFilter::callback('from', fn () => null),
+                AllowedFilter::callback('to', fn () => null),
+            )
+            ->with(['users', 'manager'])
+            ->orderBy('name')
+            ->get();
+
+        if ($serviceSlug = $request->input('filter.service_slug')) {
+            $services = $services->filter(fn ($s) => Str::slug($s->name) === $serviceSlug)->values();
+        }
+
+        $matrix = $service->buildServiceAvailabilityMatrix($days, $services);
+
+        if ($request->boolean('filter.manager_only')) {
+            $matrix = array_values(array_filter(
+                $matrix,
+                fn ($row) => collect($row['entries'])->contains(fn ($e) => $e['manager_only']),
+            ));
+        }
+
+        // No `scope` field: the service matrix isn't scoped by role — every
+        // caller sees the same services and counts — so surfacing a scope
+        // label here would mislead consumers.
         return response()->json([
-            'scope' => $this->getTokenAbility($request),
             'days' => array_map(fn ($d) => [
                 'date' => $d['date']->toDateString(),
                 'day_name' => $d['date']->format('l'),
@@ -219,13 +259,14 @@ class ReportController
             'service_availability_matrix' => array_map(function ($row) {
                 return [
                     'service' => $row['label'],
+                    'service_slug' => Str::slug($row['label']),
                     'entries' => array_map(fn ($e) => [
                         'date' => $e['date']->toDateString(),
                         'count' => $e['count'],
                         'manager_only' => $e['manager_only'],
                     ], $row['entries']),
                 ];
-            }, $serviceAvailabilityMatrix),
+            }, $matrix),
         ]);
     }
 }
