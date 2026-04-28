@@ -541,6 +541,59 @@ test('read-only mode prevents copy rest', function () {
         ->assertSet('entries.5.note', 'Original');
 });
 
+test('changing a field persists the row without clicking save', function () {
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    $user = User::factory()->create([
+        'default_location_id' => $location->id,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $user])
+        ->set('entries.0.note', 'Live-saved note');
+
+    $entry = PlanEntry::where('user_id', $user->id)
+        ->where('entry_date', now()->startOfWeek())
+        ->first();
+
+    expect($entry)->not->toBeNull();
+    expect($entry->note)->toBe('Live-saved note');
+    expect($entry->location_id)->toBe($location->id);
+});
+
+test('changing a field on an invalid row surfaces an error and does not persist', function () {
+    $user = User::factory()->create(); // no default location
+
+    actingAs($user);
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $user])
+        ->set('entries.0.note', 'Trying to save with no location')
+        ->assertHasErrors(['entries.0.location_id']);
+
+    expect(PlanEntry::where('user_id', $user->id)->count())->toBe(0);
+});
+
+test('copy next persists the copied row without clicking save', function () {
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    $user = User::factory()->create([
+        'default_location_id' => $location->id,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $user])
+        ->set('entries.0.note', 'Source note')
+        ->call('copyNext', 0);
+
+    $copied = PlanEntry::where('user_id', $user->id)
+        ->where('entry_date', now()->startOfWeek()->addDay())
+        ->first();
+
+    expect($copied)->not->toBeNull();
+    expect($copied->note)->toBe('Source note');
+    expect($copied->location_id)->toBe($location->id);
+});
+
 test('cannot update another users entry', function () {
     $userA = User::factory()->create();
     $userB = User::factory()->create();

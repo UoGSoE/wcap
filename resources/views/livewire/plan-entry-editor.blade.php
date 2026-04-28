@@ -1,10 +1,18 @@
 <div>
     @if (! $readOnly)
-        <div class="flex justify-end mb-4">
-            <flux:button size="sm" variant="primary" wire:click="save" wire:loading.attr="disabled">
-                <span wire:loading.remove>Save</span>
-                <span wire:loading>Saving...</span>
-            </flux:button>
+        <div class="flex justify-end items-center gap-2 mb-4">
+            <flux:text size="sm" class="text-zinc-500">
+                <span wire:loading.remove wire:target="save,copyNext,copyRest,entries">Changes save automatically</span>
+                <span wire:loading wire:target="save,copyNext,copyRest,entries">Saving…</span>
+            </flux:text>
+            <flux:button
+                icon="bookmark-square"
+                size="sm"
+                variant="ghost"
+                wire:click="save"
+                wire:loading.attr="disabled"
+                wire:loading.class="animate-pulse"
+            />
         </div>
     @endif
 

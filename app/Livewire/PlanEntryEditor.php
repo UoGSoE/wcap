@@ -6,9 +6,6 @@ use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\User;
-use Flux\Flux;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Fluent;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -33,60 +30,28 @@ class PlanEntryEditor extends Component
         $this->loadEntries($user);
     }
 
+    public function updated(string $name): void
+    {
+        if ($this->readOnly) {
+            return;
+        }
+
+        if (! preg_match('/^entries\.(\d+)\./', $name, $matches)) {
+            return;
+        }
+
+        $this->saveRow((int) $matches[1]);
+    }
+
     public function save(): void
     {
         if ($this->readOnly) {
             return;
         }
 
-        $validator = Validator::make(
-            ['entries' => $this->entries],
-            [
-                'entries.*.id' => [
-                    'nullable',
-                    'integer',
-                    Rule::exists('plan_entries', 'id')->where('user_id', $this->userId),
-                ],
-                'entries.*.note' => 'nullable|string',
-                'entries.*.location_id' => 'nullable|integer|exists:locations,id',
-                'entries.*.entry_date' => 'required|date',
-                'entries.*.availability_status' => ['required', 'integer', Rule::enum(AvailabilityStatus::class)],
-            ],
-            [
-                'entries.*.location_id.required' => 'Location is required when available.',
-            ]
-        );
-
-        $validator->sometimes('entries.*.location_id', 'required', function (Fluent $input, Fluent $item) {
-            return (int) $item->availability_status > 0;
-        });
-
-        $validated = $validator->validate();
-
-        $user = User::find($this->userId);
-
-        foreach ($validated['entries'] as $index => $entry) {
-            $savedEntry = PlanEntry::updateOrCreate(
-                ['id' => $entry['id']],
-                [
-                    'user_id' => $user->id,
-                    'entry_date' => $entry['entry_date'],
-                    'note' => $entry['note'],
-                    'location_id' => $entry['location_id'] ?: null,
-                    'availability_status' => $entry['availability_status'],
-                    'created_by_manager' => $this->createdByManager,
-                ]
-            );
-
-            // Update the entry id in case it was newly created
-            $this->entries[$index]['id'] = $savedEntry->id;
+        foreach (array_keys($this->entries) as $index) {
+            $this->saveRow($index);
         }
-
-        Flux::toast(
-            heading: 'Success!',
-            text: "Plan saved for {$user->full_name}.",
-            variant: 'success'
-        );
     }
 
     public function copyNext(int $dayIndex): void
@@ -99,6 +64,8 @@ class PlanEntryEditor extends Component
             $this->entries[$dayIndex + 1]['note'] = $this->entries[$dayIndex]['note'];
             $this->entries[$dayIndex + 1]['location_id'] = $this->entries[$dayIndex]['location_id'];
             $this->entries[$dayIndex + 1]['availability_status'] = $this->entries[$dayIndex]['availability_status'];
+
+            $this->saveRow($dayIndex + 1);
         }
     }
 
@@ -117,6 +84,56 @@ class PlanEntryEditor extends Component
             $this->entries[$i]['location_id'] = $sourceLocationId;
             $this->entries[$i]['availability_status'] = $sourceAvailabilityStatus;
         }
+
+        for ($i = $dayIndex + 1; $i < 14; $i++) {
+            $this->saveRow($i);
+        }
+    }
+
+    private function saveRow(int $index): void
+    {
+        if (! isset($this->entries[$index])) {
+            return;
+        }
+
+        $row = $this->entries[$index];
+        $rowKey = "entries.{$index}";
+
+        $rules = [
+            "{$rowKey}.id" => [
+                'nullable',
+                'integer',
+                Rule::exists('plan_entries', 'id')->where('user_id', $this->userId),
+            ],
+            "{$rowKey}.note" => 'nullable|string',
+            "{$rowKey}.entry_date" => 'required|date',
+            "{$rowKey}.availability_status" => ['required', 'integer', Rule::enum(AvailabilityStatus::class)],
+            "{$rowKey}.location_id" => [
+                (int) ($row['availability_status'] ?? 0) > 0 ? 'required' : 'nullable',
+                'integer',
+                'exists:locations,id',
+            ],
+        ];
+
+        $messages = [
+            "{$rowKey}.location_id.required" => 'Location is required when available.',
+        ];
+
+        $this->validate($rules, $messages);
+
+        $savedEntry = PlanEntry::updateOrCreate(
+            ['id' => $row['id']],
+            [
+                'user_id' => $this->userId,
+                'entry_date' => $row['entry_date'],
+                'note' => $row['note'],
+                'location_id' => $row['location_id'] ?: null,
+                'availability_status' => $row['availability_status'],
+                'created_by_manager' => $this->createdByManager,
+            ]
+        );
+
+        $this->entries[$index]['id'] = $savedEntry->id;
     }
 
     public function render()
