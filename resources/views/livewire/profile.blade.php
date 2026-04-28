@@ -118,6 +118,12 @@
                     <flux:subheading>Using token: <span class="font-semibold">{{ $this->selectedToken->name }}</span></flux:subheading>
                 </div>
 
+                <flux:callout variant="secondary" icon="book-open">
+                    <flux:callout.text>
+                        For the full reference — every endpoint, every filter, a Try-It console — browse the live spec at <flux:link :href="url('/docs/api')">{{ url('/docs/api') }}</flux:link>. The examples below cover the common cases; the spec covers everything else (date windows, sparse fieldsets, filtering by location and so on).
+                    </flux:callout.text>
+                </flux:callout>
+
                 <flux:tab.group>
                     <flux:tabs>
                         <flux:tab name="cli">CLI</flux:tab>
@@ -227,11 +233,11 @@
                                                 readonly
                                                 rows="3"
                                                 class="font-mono text-xs"
-                                            >curl -X DELETE '{{ $this->baseUrl }}/api/v1/plan/123' \
+                                            >curl -X DELETE '{{ $this->baseUrl }}{{ $endpoint['path'] }}' \
   -H 'Authorization: Bearer YOUR_TOKEN_HERE'</flux:textarea>
                                         </flux:field>
                                         <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400">
-                                            Replace <code class="px-1 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded">123</code> with the entry ID you want to delete.
+                                            Replace any <code class="px-1 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded">{placeholder}</code> values in the URL with the actual IDs.
                                         </flux:text>
                                     @endif
 
@@ -272,15 +278,17 @@
 
                                     <div class="ml-6 space-y-2">
                                         @foreach($this->getAvailableEndpoints() as $endpoint)
-                                            <flux:field>
-                                                <flux:label>{{ $endpoint['name'] }}</flux:label>
-                                                <flux:input
-                                                    value="{{ $this->baseUrl }}{{ $endpoint['path'] }}"
-                                                    readonly
-                                                    copyable
-                                                    class="font-mono text-sm"
-                                                />
-                                            </flux:field>
+                                            @if($endpoint['method'] === 'GET')
+                                                <flux:field>
+                                                    <flux:label>{{ $endpoint['name'] }}</flux:label>
+                                                    <flux:input
+                                                        value="{{ $this->baseUrl }}{{ $endpoint['path'] }}"
+                                                        readonly
+                                                        copyable
+                                                        class="font-mono text-sm"
+                                                    />
+                                                </flux:field>
+                                            @endif
                                         @endforeach
                                     </div>
 
@@ -346,19 +354,21 @@
 
                                 <div class="space-y-3">
                                     @foreach($this->getAvailableEndpoints() as $endpoint)
-                                        <div class="p-4 bg-zinc-50 dark:bg-zinc-900 rounded">
-                                            <div class="flex items-center justify-between mb-2">
-                                                <flux:text class="font-semibold">{{ $endpoint['name'] }}</flux:text>
-                                                <flux:badge size="sm" variant="outline">{{ $endpoint['method'] }}</flux:badge>
+                                        @if($endpoint['method'] === 'GET')
+                                            <div class="p-4 bg-zinc-50 dark:bg-zinc-900 rounded">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <flux:text class="font-semibold">{{ $endpoint['name'] }}</flux:text>
+                                                    <flux:badge size="sm" variant="outline">{{ $endpoint['method'] }}</flux:badge>
+                                                </div>
+                                                <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400 mb-2">{{ $endpoint['description'] }}</flux:text>
+                                                <flux:input
+                                                    value="{{ $this->baseUrl }}{{ $endpoint['path'] }}"
+                                                    readonly
+                                                    copyable
+                                                    class="font-mono text-xs"
+                                                />
                                             </div>
-                                            <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400 mb-2">{{ $endpoint['description'] }}</flux:text>
-                                            <flux:input
-                                                value="{{ $this->baseUrl }}{{ $endpoint['path'] }}"
-                                                readonly
-                                                copyable
-                                                class="font-mono text-xs"
-                                            />
-                                        </div>
+                                        @endif
                                     @endforeach
                                 </div>
                             </div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
@@ -24,10 +25,10 @@ test('the generated OpenAPI spec covers the v1 API surface', function () {
         ->toContain('/v1/reports/coverage');
 });
 
-test('non-admin users cannot view the docs in non-local environments', function () {
-    $nonAdmin = User::factory()->create(['is_admin' => false]);
+test('users who are neither admin nor manager cannot view the docs', function () {
+    $staff = User::factory()->create(['is_admin' => false]); // not on any managedTeams either
 
-    $response = $this->actingAs($nonAdmin)->getJson('/docs/api.json');
+    $response = $this->actingAs($staff)->getJson('/docs/api.json');
 
     $response->assertForbidden();
 });
@@ -36,6 +37,15 @@ test('admins can view the docs', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
     $response = $this->actingAs($admin)->getJson('/docs/api.json');
+
+    $response->assertOk();
+});
+
+test('managers can view the docs', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    $response = $this->actingAs($manager)->getJson('/docs/api.json');
 
     $response->assertOk();
 });

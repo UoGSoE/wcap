@@ -322,3 +322,39 @@ test('documentation shows plan CRUD endpoints', function () {
         ->assertSee('entry_date')
         ->assertSee('location');
 });
+
+test('manager DELETE example uses the team-member path, not the personal-plan path', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+    $token = $manager->createToken('Test Token');
+
+    actingAs($manager);
+
+    Livewire::test(Profile::class)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSee('curl -X DELETE')
+        ->assertSee('/api/v1/manager/team-members/{userId}/plan/{entryId}');
+});
+
+test('admins see a pointer to the live OpenAPI spec at /docs/api', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $token = $admin->createToken('Admin Token');
+
+    actingAs($admin);
+
+    Livewire::test(Profile::class)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSee('/docs/api');
+});
+
+test('managers also see the /docs/api pointer (they have access to the spec)', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+    $token = $manager->createToken('Manager Token');
+
+    actingAs($manager);
+
+    Livewire::test(Profile::class)
+        ->call('selectToken', $token->accessToken->id)
+        ->assertSee('/docs/api');
+});

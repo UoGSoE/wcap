@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
         Blade::if('adminOrManager', fn () => auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isManager()));
         Blade::if('servicesEnabled', fn () => config('wcap.services_enabled'));
 
-        Gate::define('viewApiDocs', fn (?User $user = null) => optional($user)->is_admin);
+        Gate::define('viewApiDocs', fn (?User $user = null) => $user !== null && ($user->isAdmin() || $user->isManager()));
 
         Gate::define('accessManagerApi', fn (User $user) => $user->isAdmin() || $user->isManager());
     }
