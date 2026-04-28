@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\AvailabilityStatus;
+use App\Http\Controllers\Api\Concerns\ParsesDateWindowFilter;
 use App\Http\Requests\ManagerUpsertPlanEntriesRequest;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\ManagerReportService;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ManagerPlanController
 {
+    use ParsesDateWindowFilter;
+
     /**
      * List team members the authenticated user can manage.
      */
@@ -30,13 +34,17 @@ class ManagerPlanController
 
         return response()->json([
             'team_members' => $teamMembers,
-            'count' => $teamMembers->count(),
         ]);
     }
 
     /**
      * Get a team member's plan entries.
+     *
+     * Defaults to the next 10 weekdays starting Monday of the current week.
+     * Supply filter[from]/filter[to] to widen or shift the window.
      */
+    #[QueryParameter('filter[from]', description: 'Start of a custom date window (YYYY-MM-DD). Must be paired with filter[to].', type: 'string', example: '2026-04-20')]
+    #[QueryParameter('filter[to]', description: 'End of a custom date window (YYYY-MM-DD). Must be paired with filter[from].', type: 'string', example: '2026-04-24')]
     public function show(Request $request, int $userId, ManagerReportService $service): JsonResponse
     {
         $user = $request->user();
@@ -46,11 +54,16 @@ class ManagerPlanController
             abort(403, 'You cannot manage this user\'s plan.');
         }
 
-        $days = $service->buildDays();
+        [$from, $to] = $this->parseDateWindow($request);
+        $days = $service->buildDays($from, $to);
         $weekdayDates = array_map(fn ($d) => $d['key'], $days);
 
+        $windowStart = $from ?? $weekdayDates[0];
+        $windowEnd = $to ?? end($weekdayDates);
+
         $entries = $targetUser->planEntries()
-            ->whereBetween('entry_date', [$weekdayDates[0], end($weekdayDates)])
+            ->whereDate('entry_date', '>=', $windowStart)
+            ->whereDate('entry_date', '<=', $windowEnd)
             ->orderBy('entry_date')
             ->get()
             ->map(fn ($entry) => $this->transformEntry($entry));
@@ -61,8 +74,8 @@ class ManagerPlanController
                 'name' => $targetUser->full_name,
             ],
             'date_range' => [
-                'start' => $weekdayDates[0],
-                'end' => end($weekdayDates),
+                'start' => $windowStart,
+                'end' => $windowEnd,
             ],
             'entries' => $entries,
         ]);

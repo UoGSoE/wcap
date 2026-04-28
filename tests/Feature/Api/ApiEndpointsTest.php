@@ -279,7 +279,7 @@ test('team report rejects invalid filter[from] / filter[to] values', function (a
     'window too large' => [['filter' => ['from' => '2026-01-01', 'to' => '2026-12-31']]],
 ]);
 
-test('service-availability response does not include the scope field (service matrix is not role-scoped)', function () {
+test('service-availability response carries scope=global so consumers can rely on the field always being present', function () {
     config(['wcap.services_enabled' => true]);
 
     $admin = User::factory()->create(['is_admin' => true]);
@@ -288,7 +288,7 @@ test('service-availability response does not include the scope field (service ma
     $response = $this->getJson('/api/v1/reports/service-availability');
 
     $response->assertOk();
-    expect($response->json())->not->toHaveKey('scope');
+    expect($response->json('scope'))->toBe('global');
 });
 
 test('service-availability filter[manager_only]=true returns only services with a manager-only day', function () {
@@ -456,8 +456,8 @@ test('location report filter[is_physical] excludes non-physical locations', func
     $this->travelTo(now()->startOfWeek());
 
     $admin = User::factory()->create(['is_admin' => true]);
-    $rankine = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine', 'is_physical' => true]);
-    $remote = Location::factory()->create(['slug' => 'remote', 'name' => 'Remote', 'is_physical' => false]);
+    Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine', 'is_physical' => true]);
+    Location::factory()->create(['slug' => 'remote', 'name' => 'Remote', 'is_physical' => false]);
 
     Sanctum::actingAs($admin);
 
@@ -466,9 +466,10 @@ test('location report filter[is_physical] excludes non-physical locations', func
     $response->assertOk();
 
     foreach ($response->json('location_days') as $day) {
-        expect(array_keys($day['locations']))
-            ->toContain($rankine->id)
-            ->not->toContain($remote->id);
+        $slugs = collect($day['locations'])->pluck('location_slug')->all();
+        expect($slugs)
+            ->toContain('rankine')
+            ->not->toContain('remote');
     }
 });
 
@@ -476,8 +477,8 @@ test('location report filter[location_slug] narrows each day to only that locati
     $this->travelTo(now()->startOfWeek());
 
     $admin = User::factory()->create(['is_admin' => true]);
-    $rankine = Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
-    $jws = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
+    Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
+    Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
 
     Sanctum::actingAs($admin);
 
@@ -486,10 +487,32 @@ test('location report filter[location_slug] narrows each day to only that locati
     $response->assertOk();
 
     foreach ($response->json('location_days') as $day) {
-        expect(array_keys($day['locations']))
-            ->toContain($rankine->id)
-            ->not->toContain($jws->id);
+        $slugs = collect($day['locations'])->pluck('location_slug')->all();
+        expect($slugs)
+            ->toContain('rankine')
+            ->not->toContain('jws');
     }
+});
+
+test('location report locations are an array of objects with location_slug, location, members', function () {
+    $this->travelTo(now()->startOfWeek());
+
+    $admin = User::factory()->create(['is_admin' => true]);
+    Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine', 'is_physical' => true]);
+
+    Sanctum::actingAs($admin);
+
+    $response = $this->getJson('/api/v1/reports/location');
+
+    $response->assertOk();
+
+    $firstDay = $response->json('location_days.0');
+    expect($firstDay['locations'])->toBeArray()
+        ->and(array_is_list($firstDay['locations']))->toBeTrue();
+
+    $rankine = collect($firstDay['locations'])->firstWhere('location_slug', 'rankine');
+    expect($rankine)->not->toBeNull()
+        ->and($rankine)->toHaveKeys(['location_slug', 'location', 'is_physical', 'members']);
 });
 
 test('plan endpoint fields[entries] returns only the requested keys per entry', function () {
@@ -565,6 +588,23 @@ test('coverage report filter[location_slug] returns only that locations coverage
 
     $labels = collect($response->json('coverage_matrix'))->pluck('location')->all();
     expect($labels)->toBe([$rankine->name]);
+});
+
+test('coverage report rows include location_slug alongside the human label', function () {
+    $this->travelTo(now()->startOfWeek());
+
+    $admin = User::factory()->create(['is_admin' => true]);
+    Location::factory()->create(['slug' => 'rankine', 'name' => 'Rankine']);
+
+    Sanctum::actingAs($admin);
+
+    $response = $this->getJson('/api/v1/reports/coverage');
+
+    $response->assertOk();
+
+    $row = collect($response->json('coverage_matrix'))->firstWhere('location_slug', 'rankine');
+    expect($row)->not->toBeNull()
+        ->and($row['location'])->toBe('Rankine');
 });
 
 test('team report rejects unknown filter with a 4xx', function () {

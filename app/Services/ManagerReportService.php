@@ -214,6 +214,7 @@ class ManagerReportService
 
             foreach ($locations as $location) {
                 $locationData[$location->id] = [
+                    'slug' => $location->slug,
                     'label' => $location->label(),
                     'is_physical' => $location->is_physical,
                     'members' => [],
@@ -251,6 +252,7 @@ class ManagerReportService
 
         foreach ($locations as $location) {
             $row = [
+                'slug' => $location->slug,
                 'label' => $location->label(),
                 'is_physical' => $location->is_physical,
                 'entries' => [],

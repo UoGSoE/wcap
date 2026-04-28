@@ -141,7 +141,12 @@ class ReportController
                 return [
                     'date' => $day['date']->toDateString(),
                     'day_name' => $day['date']->format('l'),
-                    'locations' => $day['locations'],
+                    'locations' => array_values(array_map(fn ($loc) => [
+                        'location_slug' => $loc['slug'],
+                        'location' => $loc['label'],
+                        'is_physical' => $loc['is_physical'],
+                        'members' => $loc['members'],
+                    ], $day['locations'])),
                 ];
             }, $locationDays),
         ]);
@@ -193,6 +198,7 @@ class ReportController
             'coverage_matrix' => array_map(function ($row) {
                 return [
                     'location' => $row['label'],
+                    'location_slug' => $row['slug'],
                     'entries' => array_map(fn ($e) => [
                         'date' => $e['date']->toDateString(),
                         'count' => $e['count'],
@@ -248,10 +254,11 @@ class ReportController
             ));
         }
 
-        // No `scope` field: the service matrix isn't scoped by role — every
-        // caller sees the same services and counts — so surfacing a scope
-        // label here would mislead consumers.
+        // The service matrix is not role-scoped — every caller sees the same
+        // services and counts — but we still surface scope=global so consumers
+        // can write generic "always read response.scope" code across reports.
         return response()->json([
+            'scope' => 'global',
             'days' => array_map(fn ($d) => [
                 'date' => $d['date']->toDateString(),
                 'day_name' => $d['date']->format('l'),

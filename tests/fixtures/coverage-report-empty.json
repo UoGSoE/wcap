@@ -45,6 +45,7 @@
     "coverage_matrix": [
         {
             "location": "Rankine",
+            "location_slug": "rankine",
             "entries": [
                 {
                     "date": "2026-04-20",

@@ -5,6 +5,7 @@ use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
@@ -104,10 +105,10 @@ test('manager can list team members', function () {
         'team_members' => [
             '*' => ['id', 'name', 'email'],
         ],
-        'count',
     ]);
 
-    expect($response->json('count'))->toBe(2);
+    expect($response->json('team_members'))->toHaveCount(2)
+        ->and($response->json())->not->toHaveKey('count');
 });
 
 test('admin lists all users', function () {
@@ -120,7 +121,7 @@ test('admin lists all users', function () {
 
     $response->assertOk();
     // Admin + 3 other users = 4 total
-    expect($response->json('count'))->toBe(4);
+    expect($response->json('team_members'))->toHaveCount(4);
 });
 
 // CRUD Tests
@@ -448,6 +449,44 @@ test('manager can create entries for multiple team members from different teams'
 
     expect($member1->planEntries()->count())->toBe(1);
     expect($member2->planEntries()->count())->toBe(1);
+});
+
+test('manager show endpoint accepts filter[from]/filter[to] to widen the date window', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-04-20'));
+
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create();
+    $team->users()->attach($teamMember);
+
+    $location = Location::factory()->create(['slug' => 'rankine']);
+    $teamMember->planEntries()->create([
+        'entry_date' => '2026-05-04', // outside the default 10-weekday window
+        'location_id' => $location->id,
+    ]);
+
+    Sanctum::actingAs($manager);
+
+    $response = $this->getJson("/api/v1/manager/team-members/{$teamMember->id}/plan?filter[from]=2026-05-04&filter[to]=2026-05-08");
+
+    $response->assertOk();
+    expect($response->json('date_range'))->toBe(['start' => '2026-05-04', 'end' => '2026-05-08']);
+
+    $dates = collect($response->json('entries'))->pluck('entry_date')->all();
+    expect($dates)->toBe(['2026-05-04']);
+});
+
+test('manager show endpoint rejects mismatched filter[from]/filter[to] with a 400', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create();
+    $team->users()->attach($teamMember);
+
+    Sanctum::actingAs($manager);
+
+    $response = $this->getJson("/api/v1/manager/team-members/{$teamMember->id}/plan?filter[from]=2026-05-04");
+
+    $response->assertStatus(400);
 });
 
 test('returns 404 for non-existent user', function () {
