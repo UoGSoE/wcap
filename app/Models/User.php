@@ -108,7 +108,7 @@ class User extends Authenticatable
         $directIds = $this->managedTeams()->pluck('id')->toArray();
         $allIds = $directIds;
 
-        foreach (Team::whereIn('id', $directIds)->get() as $team) {
+        foreach (Team::whereIn('id', $directIds)->with('childTeams')->get() as $team) {
             $allIds = array_merge($allIds, $team->descendantIds());
         }
 
