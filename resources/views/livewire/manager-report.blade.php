@@ -2,7 +2,7 @@
     <div class="mb-6 flex justify-between items-center gap-4">
         <div>
             <flux:heading size="xl">Team Report</flux:heading>
-            <flux:subheading>View your team's plans for the next two weeks</flux:subheading>
+            <flux:subheading>Where everyone is over the next two weeks. Filter by team to narrow it down.</flux:subheading>
         </div>
         @adminOrManager
             <div class="flex gap-2">
@@ -38,13 +38,6 @@
                 <flux:pillbox.option :value="$team->id">{{ $team->name }}</flux:pillbox.option>
             @endforeach
         </flux:pillbox>
-        @admin
-            <flux:field variant="inline" class="">
-                <flux:label>View All Users</flux:label>
-                <flux:switch wire:model.live="showAllUsers" />
-            </flux:field>
-        @endadmin
-
     </div>
 
     <flux:tab.group>

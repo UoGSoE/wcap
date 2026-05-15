@@ -165,7 +165,7 @@ test('shows correct counts with multiple available people', function () {
     expect($popularServiceRow['entries'][1]['count'])->toBe(1);
 })->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
-test('services always show all members regardless of admin toggle', function () {
+test('service availability counts all service members regardless of team filter', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $team = Team::factory()->create(['manager_id' => $admin->id]);
 
@@ -196,21 +196,17 @@ test('services always show all members regardless of admin toggle', function () 
 
     actingAs($admin);
 
-    $componentWithToggleOn = Livewire::test(ManagerReport::class)
-        ->set('showAllUsers', true);
+    $unfiltered = Livewire::test(ManagerReport::class);
+    $teamFiltered = Livewire::test(ManagerReport::class)
+        ->set('selectedTeams', [$team->id]);
 
-    $serviceMatrixToggleOn = $componentWithToggleOn->viewData('serviceAvailabilityMatrix');
-    $testServiceRowToggleOn = collect($serviceMatrixToggleOn)->firstWhere('label', 'Test Service');
+    $unfilteredRow = collect($unfiltered->viewData('serviceAvailabilityMatrix'))
+        ->firstWhere('label', 'Test Service');
+    $teamFilteredRow = collect($teamFiltered->viewData('serviceAvailabilityMatrix'))
+        ->firstWhere('label', 'Test Service');
 
-    expect($testServiceRowToggleOn['entries'][0]['count'])->toBe(2);
-
-    $componentWithToggleOff = Livewire::test(ManagerReport::class)
-        ->set('showAllUsers', false);
-
-    $serviceMatrixToggleOff = $componentWithToggleOff->viewData('serviceAvailabilityMatrix');
-    $testServiceRowToggleOff = collect($serviceMatrixToggleOff)->firstWhere('label', 'Test Service');
-
-    expect($testServiceRowToggleOff['entries'][0]['count'])->toBe(2);
+    expect($unfilteredRow['entries'][0]['count'])->toBe(2);
+    expect($teamFilteredRow['entries'][0]['count'])->toBe(2);
 })->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service with no members shows zero availability', function () {

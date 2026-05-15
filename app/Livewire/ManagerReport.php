@@ -15,17 +15,14 @@ class ManagerReport extends Component
 
     public bool $showLocation = true;
 
-    public bool $showAllUsers = false;
-
+    #[Url]
     public array $selectedTeams = [];
 
-    public function mount(): void
+    public function render()
     {
-        $user = auth()->user();
+        $payload = $this->buildReportPayload();
 
-        if ($user->isAdmin() || ! $user->isManager()) {
-            $this->showAllUsers = true;
-        }
+        return view('livewire.manager-report', $payload);
     }
 
     public function exportAll()
@@ -43,19 +40,11 @@ class ManagerReport extends Component
         );
     }
 
-    public function render()
-    {
-        $payload = $this->buildReportPayload();
-
-        return view('livewire.manager-report', $payload);
-    }
-
     private function buildReportPayload(): array
     {
         return app(ManagerReportService::class)
             ->configure(
                 showLocation: $this->showLocation,
-                showAllUsers: $this->showAllUsers,
                 selectedTeams: $this->selectedTeams,
             )
             ->buildReportPayload();

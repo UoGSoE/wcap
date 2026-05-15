@@ -41,6 +41,41 @@ test('regular user can view team report but cannot edit or export', function () 
         ->assertDontSee('Download Excel');
 });
 
+test('manager defaults to seeing all users not just their team', function () {
+    $manager = User::factory()->create(['surname' => 'TheManager', 'forenames' => 'Boss']);
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $teamMember = User::factory()->create(['surname' => 'TeamMember', 'forenames' => 'John']);
+    $otherUser = User::factory()->create(['surname' => 'OtherUser', 'forenames' => 'Jane']);
+
+    $team->users()->attach($teamMember->id);
+
+    actingAs($manager);
+
+    Livewire::test(ManagerReport::class)
+        ->assertOk()
+        ->assertSee('TeamMember, John')
+        ->assertSee('OtherUser, Jane')
+        ->assertSee('TheManager, Boss');
+});
+
+test('selectedTeams is restored from the URL query string', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create(['name' => 'Picked Team']);
+
+    $picked = User::factory()->create(['surname' => 'Picked', 'forenames' => 'User']);
+    $unpicked = User::factory()->create(['surname' => 'Unpicked', 'forenames' => 'User']);
+    $team->users()->attach($picked->id);
+
+    actingAs($user);
+
+    Livewire::withQueryParams(['selectedTeams' => [(string) $team->id]])
+        ->test(ManagerReport::class)
+        ->assertOk()
+        ->assertSee('Picked, User')
+        ->assertDontSee('Unpicked, User');
+});
+
 test('regular user cannot trigger export', function () {
     $user = User::factory()->create();
 
@@ -166,16 +201,19 @@ test('by location view groups team members correctly', function () {
         ->assertSee('Development work');
 });
 
-test('manager sees multiple team members from same team', function () {
+test('filtering by a team scopes the report to that team only', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
     $members = User::factory()->count(5)->create();
     $team->users()->attach($members->pluck('id'));
 
+    User::factory()->count(3)->create(); // unrelated users
+
     actingAs($manager);
 
-    $component = Livewire::test(ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class)
+        ->set('selectedTeams', [$team->id]);
 
     expect(count($component->viewData('teamRows')))->toBe(5);
 });
@@ -201,22 +239,21 @@ test('manager with multiple teams sees all team members', function () {
         ->assertSee('Gamma, User');
 });
 
-test('duplicate team members across teams only shown once', function () {
+test('a member on multiple filtered teams only appears once', function () {
     $manager = User::factory()->create();
     $team1 = Team::factory()->create(['manager_id' => $manager->id]);
     $team2 = Team::factory()->create(['manager_id' => $manager->id]);
 
     $member = User::factory()->create(['surname' => 'Shared', 'forenames' => 'Member']);
 
-    // Same member on both teams
     $team1->users()->attach($member->id);
     $team2->users()->attach($member->id);
 
     actingAs($manager);
 
-    $component = Livewire::test(ManagerReport::class);
+    $component = Livewire::test(ManagerReport::class)
+        ->set('selectedTeams', [$team1->id, $team2->id]);
 
-    // Should only appear once
     expect(count($component->viewData('teamRows')))->toBe(1);
 });
 
@@ -315,76 +352,6 @@ test('coverage tab shows location coverage grid', function () {
         ->assertSee('Location coverage at a glance');
 });
 
-test('admin can see toggle switch for all users', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-    $team = Team::factory()->create(['manager_id' => $admin->id]);
-
-    actingAs($admin);
-
-    Livewire::test(ManagerReport::class)
-        ->assertOk()
-        ->assertSee('View All Users');
-});
-
-test('non-admin does not see toggle switch', function () {
-    $manager = User::factory()->create(['is_admin' => false]);
-    $team = Team::factory()->create(['manager_id' => $manager->id]);
-
-    actingAs($manager);
-
-    Livewire::test(ManagerReport::class)
-        ->assertOk()
-        ->assertDontSee('View All Users');
-});
-
-test('admin with toggle enabled sees all users not just team', function () {
-    $admin = User::factory()->create(['is_admin' => true, 'surname' => 'McAdmin', 'forenames' => 'Admin']);
-    $team = Team::factory()->create(['manager_id' => $admin->id]);
-
-    // Team member
-    $teamMember = User::factory()->create(['surname' => 'TeamMember', 'forenames' => 'John']);
-    $team->users()->attach($teamMember->id);
-
-    // Non-team member
-    $otherUser = User::factory()->create(['surname' => 'OtherUser', 'forenames' => 'Jane']);
-
-    actingAs($admin);
-
-    Livewire::test(ManagerReport::class)
-        ->assertOk()
-        ->assertSet('showAllUsers', true)
-        ->assertSee('McAdmin, Admin')
-        ->assertSee('TeamMember, John')
-        ->assertSee('OtherUser, Jane')
-        ->set('showAllUsers', false)
-        ->assertSet('showAllUsers', false)
-        ->assertSee('TeamMember, John')
-        ->assertDontSee('OtherUser, Jane')
-        ->assertDontSee('McAdmin, Admin');
-});
-
-test('admin with toggle disabled sees only their team', function () {
-    $admin = User::factory()->create(['is_admin' => true, 'surname' => 'McAdmin', 'forenames' => 'Admin']);
-    $team = Team::factory()->create(['manager_id' => $admin->id]);
-
-    // Team member
-    $teamMember = User::factory()->create(['surname' => 'TeamMember', 'forenames' => 'John']);
-    $team->users()->attach($teamMember->id);
-
-    // Non-team member
-    $otherUser = User::factory()->create(['surname' => 'OtherUser', 'forenames' => 'Jane']);
-
-    actingAs($admin);
-
-    $component = Livewire::test(ManagerReport::class);
-
-    // Default state - toggle is on for admins
-    expect(count($component->viewData('teamRows')))->toBe(3);
-    $component->assertSee('TeamMember, John')
-        ->assertSee('OtherUser, Jane')
-        ->assertSee('McAdmin, Admin');
-});
-
 test('manager sees team filter pillbox with their teams', function () {
     $manager = User::factory()->create();
     $team1 = Team::factory()->create(['manager_id' => $manager->id, 'name' => 'Infrastructure Team']);
@@ -443,52 +410,6 @@ test('filtering by multiple teams shows all their members', function () {
         ->assertSee('One, User')
         ->assertSee('Two, User')
         ->assertDontSee('Three, User');
-});
-
-test('admin with show all users enabled can filter by any team', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-    $adminTeam = Team::factory()->create(['manager_id' => $admin->id, 'name' => 'Admin Team']);
-
-    // Another manager's team
-    $otherManager = User::factory()->create();
-    $otherTeam = Team::factory()->create(['manager_id' => $otherManager->id, 'name' => 'Other Team']);
-
-    $adminMember = User::factory()->create(['surname' => 'AdminMember', 'forenames' => 'John']);
-    $otherMember = User::factory()->create(['surname' => 'OtherMember', 'forenames' => 'Jane']);
-
-    $adminTeam->users()->attach($adminMember->id);
-    $otherTeam->users()->attach($otherMember->id);
-
-    actingAs($admin);
-
-    Livewire::test(ManagerReport::class)
-        ->assertOk()
-        ->set('showAllUsers', true)
-        ->assertSee('Other Team') // Should see all teams in pillbox
-        ->set('selectedTeams', [$otherTeam->id])
-        ->assertDontSee('AdminMember, John')
-        ->assertSee('OtherMember, Jane');
-});
-
-test('team filtering overrides show all users toggle', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
-    $team = Team::factory()->create(['manager_id' => $admin->id, 'name' => 'Test Team']);
-
-    $teamMember = User::factory()->create(['surname' => 'TeamMember', 'forenames' => 'John']);
-    $otherUser = User::factory()->create(['surname' => 'OtherUser', 'forenames' => 'Jane']);
-
-    $team->users()->attach($teamMember->id);
-
-    actingAs($admin);
-
-    Livewire::test(ManagerReport::class)
-        ->assertOk()
-        ->set('showAllUsers', true)
-        ->assertSee('TeamMember, John')
-        ->assertSee('OtherUser, Jane')
-        ->set('selectedTeams', [$team->id])
-        ->assertSee('TeamMember, John')
-        ->assertDontSee('OtherUser, Jane'); // Team filter overrides show all
 });
 
 test('unavailable users with null location show as away in my team tab', function () {

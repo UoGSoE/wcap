@@ -16,7 +16,6 @@ class ManagerReportService
      */
     public function __construct(
         private bool $showLocation = true,
-        private bool $showAllUsers = false,
         private array $selectedTeams = [],
     ) {
         //
@@ -27,11 +26,9 @@ class ManagerReportService
      */
     public function configure(
         bool $showLocation = true,
-        bool $showAllUsers = false,
         array $selectedTeams = [],
     ): self {
         $this->showLocation = $showLocation;
-        $this->showAllUsers = $showAllUsers;
         $this->selectedTeams = $selectedTeams;
 
         return $this;
@@ -399,9 +396,6 @@ class ManagerReportService
 
     private function getTeamMembers()
     {
-        $user = auth()->user();
-
-        // If specific teams are selected, show only users from those teams
         if (! empty($this->selectedTeams)) {
             return Team::whereIn('id', $this->selectedTeams)
                 ->with('users')
@@ -411,31 +405,12 @@ class ManagerReportService
                 ->sortBy('surname');
         }
 
-        // If toggle is on for admins, or for users who manage no teams, show everyone
-        if ($this->showAllUsers && ($user->isAdmin() || ! $user->isManager())) {
-            return User::orderBy('surname')->get();
-        }
-
-        // Get all users from teams managed by this user (including descendant teams)
-        return Team::whereIn('id', $user->allManagedTeamIds())
-            ->with('users')
-            ->get()
-            ->flatMap(fn ($team) => $team->users)
-            ->unique('id')
-            ->sortBy('surname');
+        return User::orderBy('surname')->get();
     }
 
     private function getAvailableTeams()
     {
-        $user = auth()->user();
-
-        // Admins and non-managers can browse the full team list
-        if ($this->showAllUsers && ($user->isAdmin() || ! $user->isManager())) {
-            return Team::orderBy('name')->get();
-        }
-
-        // Otherwise, show only teams managed by this user (including descendant teams)
-        return Team::whereIn('id', $user->allManagedTeamIds())->orderBy('name')->get();
+        return Team::orderBy('name')->get();
     }
 
     /**
