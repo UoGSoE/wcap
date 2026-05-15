@@ -26,11 +26,11 @@
                 <flux:sidebar.nav>
                     <flux:sidebar.item icon="home" href="{{ route('home') }}" :current="request()->is('home')" wire:navigate>Home</flux:sidebar.item>
                     <flux:separator class="my-2" />
-                    @if (auth()->user()->isManager() || auth()->user()->isAdmin())
+                    <flux:sidebar.item icon="user-group" href="{{ route('manager.report') }}" :current="request()->is('manager/report')" wire:navigate>Team Report</flux:sidebar.item>
+                    @adminOrManager
                         <flux:sidebar.item icon="pencil-square" href="{{ route('manager.entries') }}" :current="request()->is('manager/entries')" wire:navigate>Team Planning</flux:sidebar.item>
-                        <flux:sidebar.item icon="user-group" href="{{ route('manager.report') }}" :current="request()->is('manager/report')" wire:navigate>Team Report</flux:sidebar.item>
                         <flux:sidebar.item icon="building-office-2" href="{{ route('manager.occupancy') }}" :current="request()->is('manager/occupancy')" wire:navigate>Office Occupancy</flux:sidebar.item>
-                    @endif
+                    @endadminOrManager
                     @admin
                         <flux:separator class="my-2" />
                         <flux:sidebar.item icon="cog-6-tooth" href="{{ route('admin.teams') }}" :current="request()->is('admin/teams')" wire:navigate>Manage Teams</flux:sidebar.item>

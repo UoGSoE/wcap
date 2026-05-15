@@ -26,12 +26,28 @@ test('manager can view team report page', function () {
         ->assertSee('By Location');
 });
 
-test('non-manager cannot access team report page', function () {
+test('regular user can view team report but cannot edit or export', function () {
+    $user = User::factory()->create();
+    $member = User::factory()->create(['surname' => 'Smith', 'forenames' => 'John']);
+    Team::factory()->create()->users()->attach($member->id);
+
+    actingAs($user);
+
+    Livewire::test(ManagerReport::class)
+        ->assertOk()
+        ->assertSee('Team Report')
+        ->assertSee('Smith, John')
+        ->assertDontSee('Edit Plans')
+        ->assertDontSee('Download Excel');
+});
+
+test('regular user cannot trigger export', function () {
     $user = User::factory()->create();
 
     actingAs($user);
 
     Livewire::test(ManagerReport::class)
+        ->call('exportAll')
         ->assertForbidden();
 });
 

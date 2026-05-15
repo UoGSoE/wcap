@@ -17,8 +17,8 @@ require __DIR__.'/sso-auth.php';
 Route::middleware('auth')->group(function () {
     Route::get('/', HomeRedirectController::class)->name('home');
     Route::get('/profile', Profile::class)->name('profile');
+    Route::get('/manager/report', ManagerReport::class)->name('manager.report');
     Route::group(['middleware' => 'manager'], function () {
-        Route::get('/manager/report', ManagerReport::class)->name('manager.report');
         Route::get('/manager/occupancy', OccupancyReport::class)->name('manager.occupancy');
         Route::get('/manager/entries', ManageTeamEntries::class)->name('manager.entries');
         Route::get('/manager/import', ImportPlanEntries::class)->name('manager.import');

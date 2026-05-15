@@ -411,8 +411,8 @@ class ManagerReportService
                 ->sortBy('surname');
         }
 
-        // If admin and toggle is on, show all users
-        if ($user->isAdmin() && $this->showAllUsers) {
+        // If toggle is on for admins, or for users who manage no teams, show everyone
+        if ($this->showAllUsers && ($user->isAdmin() || ! $user->isManager())) {
             return User::orderBy('surname')->get();
         }
 
@@ -429,8 +429,8 @@ class ManagerReportService
     {
         $user = auth()->user();
 
-        // If admin and showing all users, show all teams
-        if ($user->isAdmin() && $this->showAllUsers) {
+        // Admins and non-managers can browse the full team list
+        if ($this->showAllUsers && ($user->isAdmin() || ! $user->isManager())) {
             return Team::orderBy('name')->get();
         }
 

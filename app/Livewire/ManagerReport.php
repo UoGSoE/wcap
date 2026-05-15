@@ -3,7 +3,6 @@
 namespace App\Livewire;
 
 use App\Exports\ManagerReportExport;
-use App\Models\User;
 use App\Services\ManagerReportService;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -24,25 +23,15 @@ class ManagerReport extends Component
     {
         $user = auth()->user();
 
-        // Check if user is a manager or admin
-        if (! $user->isAdmin() && $user->managedTeams->isEmpty()) {
-            abort(403, 'You do not manage any teams.');
-        }
-
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || ! $user->isManager()) {
             $this->showAllUsers = true;
         }
     }
 
-    public function render()
-    {
-        $payload = $this->buildReportPayload();
-
-        return view('livewire.manager-report', $payload);
-    }
-
     public function exportAll()
     {
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isManager(), 403);
+
         $payload = $this->buildReportPayload();
 
         $start = $payload['days'][0]['date']->format('Ymd');
@@ -52,6 +41,13 @@ class ManagerReport extends Component
             new ManagerReportExport($payload),
             "manager-report-{$start}-{$end}.xlsx",
         );
+    }
+
+    public function render()
+    {
+        $payload = $this->buildReportPayload();
+
+        return view('livewire.manager-report', $payload);
     }
 
     private function buildReportPayload(): array

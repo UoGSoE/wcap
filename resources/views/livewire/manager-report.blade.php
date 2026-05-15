@@ -4,22 +4,24 @@
             <flux:heading size="xl">Team Report</flux:heading>
             <flux:subheading>View your team's plans for the next two weeks</flux:subheading>
         </div>
-        <div class="flex gap-2">
-            <flux:button
-                href="{{ route('manager.entries') }}"
-                wire:navigate
-                variant="primary"
-                icon="pencil-square"
-            >
-                Edit Plans
-            </flux:button>
-            <flux:button
-                wire:click="exportAll"
-                class="cursor-pointer"
-            >
-                Download Excel
-            </flux:button>
-        </div>
+        @adminOrManager
+            <div class="flex gap-2">
+                <flux:button
+                    href="{{ route('manager.entries') }}"
+                    wire:navigate
+                    variant="primary"
+                    icon="pencil-square"
+                >
+                    Edit Plans
+                </flux:button>
+                <flux:button
+                    wire:click="exportAll"
+                    class="cursor-pointer"
+                >
+                    Download Excel
+                </flux:button>
+            </div>
+        @endadminOrManager
     </div>
 
     <flux:spacer class="mt-6"/>
