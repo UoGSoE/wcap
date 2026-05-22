@@ -151,6 +151,36 @@ make test
 make fmt vet
 ```
 
+## Cutting a release
+
+Two GitHub Actions workflows live at the repo root in `.github/workflows/`:
+
+- `cli-ci.yml` runs `vet` + `test -race` + a host-platform build on every
+  push or PR that touches `cli/**`. Quick feedback, no artefacts.
+- `cli-release.yml` builds for `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`
+  and `windows/amd64`, archives each (`.tar.gz` for unix, `.zip` for
+  Windows), generates `sha256sums.txt`, and publishes a GitHub Release with
+  all of it attached.
+
+Two ways to trigger a release:
+
+```sh
+# Normal path: tag and push.
+git tag cli/v0.1.0
+git push origin cli/v0.1.0
+```
+
+…or use the **workflow_dispatch** trigger from the Actions tab on GitHub.
+That accepts a `version` input (e.g. `v0.1.0`) and an optional
+`prerelease` flag, creating tag `cli/<version>` on the commit you triggered
+from. Leave `version` blank to use `git describe --tags --always --dirty`
+as the version string — useful for one-off test builds.
+
+Tags matching `cli/v*` only fire `cli-release.yml`. The version string
+baked into the binary (`wcap version`) comes from the tag — or from the
+dispatch input — so running `wcap version` always tells you which
+release you have.
+
 ## Layout
 
 ```

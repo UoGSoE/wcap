@@ -1,0 +1,184 @@
+name: cli-release
+
+on:
+  push:
+    tags:
+      - 'cli/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. v0.1.0). Leave blank to use `git describe`.'
+        required: false
+        default: ''
+      prerelease:
+        description: 'Mark the GitHub Release as prerelease?'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  # --- Compute the version + tag once, expose to downstream jobs ------------
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.compute.outputs.version }}
+      tag: ${{ steps.compute.outputs.tag }}
+      prerelease: ${{ steps.compute.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for git describe
+
+      - id: compute
+        name: Compute version and tag
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == refs/tags/cli/v* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"        # cli/v0.1.0
+            version="${tag#cli/}"                  # v0.1.0
+            prerelease="false"
+            if [[ "$version" == *"-"* ]]; then
+              prerelease="true"                    # treat v0.1.0-rc.1 as prerelease
+            fi
+          else
+            version="${{ inputs.version }}"
+            if [[ -z "$version" ]]; then
+              version="$(git describe --tags --always --dirty)"
+            fi
+            tag="cli/${version}"
+            prerelease="${{ inputs.prerelease }}"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
+          echo "Building $version (tag: $tag, prerelease: $prerelease)"
+
+  # --- Run tests once before producing artefacts ----------------------------
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: cli/go.sum
+      - run: go vet ./...
+      - run: go test -race -count=1 ./...
+
+  # --- Cross-compile every target platform in parallel ----------------------
+  build:
+    needs: [prepare, test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { goos: linux,   goarch: amd64, ext: '',     archive: tar.gz }
+          - { goos: linux,   goarch: arm64, ext: '',     archive: tar.gz }
+          - { goos: darwin,  goarch: amd64, ext: '',     archive: tar.gz }
+          - { goos: darwin,  goarch: arm64, ext: '',     archive: tar.gz }
+          - { goos: windows, goarch: amd64, ext: .exe,   archive: zip    }
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: cli/go.sum
+
+      - name: Build
+        working-directory: cli
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          set -euo pipefail
+          dir="wcap-${VERSION}-${GOOS}-${GOARCH}"
+          mkdir -p "../dist/${dir}"
+          go build \
+            -trimpath \
+            -ldflags "-s -w -X main.version=${VERSION}" \
+            -o "../dist/${dir}/wcap${{ matrix.ext }}" \
+            .
+          cp README.md "../dist/${dir}/"
+          if [[ -f ../LICENSE ]]; then cp ../LICENSE "../dist/${dir}/"; fi
+
+      - name: Archive
+        working-directory: dist
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          set -euo pipefail
+          dir="wcap-${VERSION}-${GOOS}-${GOARCH}"
+          case "${{ matrix.archive }}" in
+            tar.gz) tar -czf "${dir}.tar.gz" "${dir}" ;;
+            zip)    zip -qr  "${dir}.zip"    "${dir}" ;;
+          esac
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wcap-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/wcap-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.archive }}
+          if-no-files-found: error
+          retention-days: 7
+
+  # --- Gather, checksum, publish --------------------------------------------
+  release:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all build artefacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate sha256sums.txt
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          ls -la
+          sha256sum *.tar.gz *.zip > sha256sums.txt
+          cat sha256sums.txt
+
+      - name: Create or update the GitHub Release
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          notes_flag="--generate-notes"
+          prerelease_flag=""
+          if [[ "$PRERELEASE" == "true" ]]; then
+            prerelease_flag="--prerelease"
+          fi
+          # If the release already exists (rerun of a published tag), upload
+          # over the top with --clobber rather than failing.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists — uploading assets with --clobber."
+            gh release upload "$TAG" *.tar.gz *.zip sha256sums.txt --clobber
+          else
+            echo "Creating release $TAG."
+            gh release create "$TAG" \
+              --title "wcap ${VERSION}" \
+              --target "${GITHUB_SHA}" \
+              ${notes_flag} \
+              ${prerelease_flag} \
+              *.tar.gz *.zip sha256sums.txt
+          fi
