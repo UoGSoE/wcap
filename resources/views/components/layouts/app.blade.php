@@ -16,7 +16,7 @@
             <flux:sidebar sticky collapsible class="bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700 print:hidden">
                 <flux:sidebar.header>
                     <flux:sidebar.brand
-                        href="#"                l
+                        href="#"
                         logo="https://fluxui.dev/img/demo/logo.png"
                         logo:dark="https://fluxui.dev/img/demo/dark-mode-logo.png"
                         name="{{  config('app.name') }}"
@@ -46,33 +46,15 @@
                     <flux:sidebar.item icon="user-circle" href="{{ route('profile') }}" :current="request()->is('profile')" wire:navigate>Profile</flux:sidebar.item>
                 </flux:sidebar.nav>
                 <flux:sidebar.nav>
-                    <flux:sidebar.item tooltip="Logout" icon="arrow-right-start-on-rectangle">
-                        <form method="post" action="{{ route('auth.logout') }}">
-                            @csrf
-                            <flux:button class="w-full" type="submit">
-                                <span class="hidden sm:block">Logout</span>
-                            </flux:button>
-                        </form>
-                    </flux:sidebar.item>
+                    <form method="post" action="{{ route('auth.logout') }}">
+                        @csrf
+                        <flux:sidebar.item icon="arrow-right-start-on-rectangle" type="submit">Logout</flux:sidebar.item>
+                    </form>
                 </flux:sidebar.nav>
             </flux:sidebar>
         @endauth
         <flux:header class="lg:hidden print:hidden">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
-
-            <flux:spacer />
-
-            <flux:dropdown position="top" alignt="start">
-
-                <flux:menu>
-                    <flux:menu.item icon="arrow-right-start-on-rectangle">
-                        <form method="post" action="{{ route('auth.logout') }}">
-                            @csrf
-                            <flux:button type="submit">Logout</flux:button>
-                        </form>
-                    </flux:menu.item>
-                </flux:menu>
-            </flux:dropdown>
         </flux:header>
 
         <flux:main>
