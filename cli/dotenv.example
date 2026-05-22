@@ -1,0 +1,5 @@
+# Rename me to `.env` if you want to override the config file via env vars.
+# The CLI also reads the standard ~/.config/wcap/config.yaml — env vars win.
+
+WCAP_BASE_URL=https://wcap.example.glasgow.ac.uk
+WCAP_TOKEN=your-sanctum-token-here
