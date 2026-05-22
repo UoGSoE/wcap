@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,6 +89,63 @@ func TestSaveHasRestrictivePermissions(t *testing.T) {
 	}
 	if info.Mode().Perm() != 0o600 {
 		t.Errorf("expected 0600, got %v", info.Mode().Perm())
+	}
+}
+
+func TestEncryptedTokenRoundTripThroughConfig(t *testing.T) {
+	withTempHome(t)
+	t.Setenv("WCAP_BASE_URL", "")
+	t.Setenv("WCAP_TOKEN", "")
+
+	blob, err := EncryptToken("real-token", "hunter2hunter2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(Config{BaseURL: "https://x", EncryptedToken: blob}); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out.IsLocked() {
+		t.Fatal("loaded config should be locked")
+	}
+	if !out.IsComplete() {
+		t.Error("locked config should still count as complete")
+	}
+
+	got, err := out.Unlock("hunter2hunter2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "real-token" {
+		t.Errorf("unlock returned %q", got)
+	}
+
+	if _, err := out.Unlock("wrong"); !errors.Is(err, ErrBadPassphrase) {
+		t.Errorf("wrong passphrase should give ErrBadPassphrase, got %v", err)
+	}
+}
+
+func TestEnvTokenBypassesEncrypted(t *testing.T) {
+	withTempHome(t)
+	blob, _ := EncryptToken("file-token", "passphrase")
+	if err := Save(Config{BaseURL: "https://x", EncryptedToken: blob}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("WCAP_TOKEN", "env-token")
+
+	out, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.IsLocked() {
+		t.Error("env token should clear locked state")
+	}
+	if out.Token != "env-token" {
+		t.Errorf("expected env token to win, got %q", out.Token)
 	}
 }
 

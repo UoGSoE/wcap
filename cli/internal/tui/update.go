@@ -214,16 +214,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// In edit mode we also have to feed non-Key messages to the form (e.g.
-	// blink ticks).
+	// blink ticks, and huh's internal nextGroupMsg which flips the form to
+	// StateCompleted after Enter on the last field).
 	if m.mode == modeEdit && m.form != nil {
 		f, cmd := m.form.Update(msg)
 		if ff, ok := f.(*huh.Form); ok {
 			m.form = ff
 		}
 		cmds = append(cmds, cmd)
+
+		if finishCmd := m.maybeFinishEdit(); finishCmd != nil {
+			cmds = append(cmds, finishCmd)
+		}
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+// maybeFinishEdit checks whether the form has just transitioned to a
+// terminal state. If so, it triggers the save (or returns to the list on
+// abort). Returns the command to fire, or nil if the form is still active.
+func (m *Model) maybeFinishEdit() tea.Cmd {
+	if m.form == nil {
+		return nil
+	}
+	switch m.form.State {
+	case huh.StateCompleted:
+		entry := m.entryFromForm()
+		m.entries[m.editingDayIdx] = entry
+		m.form = nil
+		m.mode = modeList
+		m.statusf(statusNormal, "Saving…")
+		return upsertCmd(m.client, m.editingForUser, m.selfID, []api.Entry{entry})
+	case huh.StateAborted:
+		m.form = nil
+		m.mode = modeList
+		return nil
+	}
+	return nil
 }
 
 func (m *Model) maybeFinishLoading() {
@@ -506,17 +534,11 @@ func (m Model) updateEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.form = ff
 	}
 
-	if m.form.State == huh.StateCompleted {
-		entry := m.entryFromForm()
-		m.entries[m.editingDayIdx] = entry
-		m.form = nil
-		m.mode = modeList
-		m.statusf(statusNormal, "Saving…")
-		return m, upsertCmd(m.client, m.editingForUser, m.selfID, []api.Entry{entry})
+	if finishCmd := m.maybeFinishEdit(); finishCmd != nil {
+		return m, finishCmd
 	}
-	if m.form.State == huh.StateAborted {
-		m.form = nil
-		m.mode = modeList
+	// Edit may have been aborted (form is now nil) — fall through.
+	if m.form == nil {
 		return m, nil
 	}
 

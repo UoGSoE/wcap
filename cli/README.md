@@ -40,9 +40,41 @@ wcap config
 ```
 
 Prompts for the base URL and a Sanctum personal access token (mint one from
-your profile page in the web UI). The token is verified against `/api/v1/user`
-before anything gets written. Settings live at `~/.config/wcap/config.yaml`
-with `0600` permissions.
+your profile page in the web UI). The token is verified against `/api/user`
+before anything gets written. Settings live at the platform's native config
+dir with `0600` permissions:
+
+- **macOS:** `~/Library/Application Support/wcap/config.yaml`
+- **Linux:** `~/.config/wcap/config.yaml` (or `$XDG_CONFIG_HOME/wcap/`)
+- **Windows:** `%AppData%\wcap\config.yaml`
+
+`wcap config` prints the exact path it wrote to after a successful save.
+
+### Encrypt the token at rest (optional)
+
+`wcap config` ends with an optional "Passphrase" field. Leave it blank to
+store the token in plaintext (same as before). Type a passphrase (4+
+characters) to encrypt the token on disk; from then on every `wcap`
+launch prompts for it before doing anything network.
+
+Encryption details (for the security team's benefit):
+
+- **KDF:** Argon2id, `time=1, memory=32 MiB, threads=2, keyLen=32`.
+- **AEAD:** ChaCha20-Poly1305.
+- **Salt:** 16 random bytes per encryption, stored alongside the ciphertext.
+- **Nonce:** 12 random bytes per encryption.
+- **On-disk format:** `v1:<base64(salt || nonce || ciphertext+tag)>` stored
+  in `encrypted_token`. The version prefix lets us migrate algorithms later
+  without touching existing files.
+- **Where the key lives:** in your head. Never written to disk, never
+  cached between invocations.
+
+Three wrong passphrase attempts and `wcap` exits. For CI / scripted usage,
+set `WCAP_PASSPHRASE` and the prompt is skipped. (`WCAP_TOKEN` also still
+wins over the file entirely — handy for one-off staging access.)
+
+You can switch a config back to plaintext (or vice versa) by re-running
+`wcap config`.
 
 Environment overrides win over the file:
 
