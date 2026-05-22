@@ -158,9 +158,8 @@ Two GitHub Actions workflows live at the repo root in `.github/workflows/`:
 - `cli-ci.yml` runs `vet` + `test -race` + a host-platform build on every
   push or PR that touches `cli/**`. Quick feedback, no artefacts.
 - `cli-release.yml` builds for `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`
-  and `windows/amd64`, archives each (`.tar.gz` for unix, `.zip` for
-  Windows), generates `sha256sums.txt`, and publishes a GitHub Release with
-  all of it attached.
+  and `windows/amd64`, generates `SHA256SUMS`, and publishes a GitHub
+  Release with each raw binary attached (named e.g. `wcap-linux-amd64`).
 
 Two ways to trigger a release:
 
