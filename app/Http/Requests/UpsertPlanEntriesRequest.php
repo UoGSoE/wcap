@@ -35,7 +35,12 @@ class UpsertPlanEntriesRequest extends FormRequest
                 Rule::exists('plan_entries', 'id')->where('user_id', $user->id),
             ],
             'entries.*.entry_date' => ['required', 'date'],
-            'entries.*.location' => ['required', 'string', Rule::exists('locations', 'slug')],
+            'entries.*.location' => [
+                'required_unless:entries.*.availability_status,0',
+                'nullable',
+                'string',
+                Rule::exists('locations', 'slug'),
+            ],
             'entries.*.note' => ['nullable', 'string'],
             'entries.*.availability_status' => ['nullable', 'integer', Rule::enum(AvailabilityStatus::class)],
             'entries.*.is_holiday' => ['nullable', 'boolean'],

@@ -157,6 +157,34 @@ test('manager can view team member plan entries', function () {
     expect($entries[0]['note'])->toBe('Working on project');
 });
 
+test('manager API accepts not-available entry without a location', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+
+    $teamMember = User::factory()->create();
+    $team->users()->attach($teamMember);
+
+    Sanctum::actingAs($manager);
+
+    $response = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan", [
+        'entries' => [
+            [
+                'entry_date' => '2025-12-10',
+                'availability_status' => AvailabilityStatus::NOT_AVAILABLE->value,
+                'note' => 'Annual leave',
+            ],
+        ],
+    ]);
+
+    $response->assertOk();
+
+    $entry = $teamMember->planEntries()->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->location_id)->toBeNull();
+    expect($entry->availability_status)->toBe(AvailabilityStatus::NOT_AVAILABLE);
+    expect($entry->created_by_manager)->toBeTrue();
+});
+
 test('manager can create entry for team member', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);

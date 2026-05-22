@@ -7,6 +7,7 @@ use App\Exports\TeamPlanEntriesExport;
 use App\Models\Location;
 use App\Models\Team;
 use App\Models\User;
+use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Url;
@@ -20,6 +21,9 @@ class ManageTeamEntries extends Component
 
     #[Url]
     public ?int $selectedUserId = null;
+
+    #[Url]
+    public $weekStart = null;
 
     public ?int $editingDefaultsForUserId = null;
 
@@ -53,6 +57,25 @@ class ManageTeamEntries extends Component
             : Team::find($this->selectedTeamId)?->users()->orderBy('surname')->first()?->id;
     }
 
+    public function updatedWeekStart(): void
+    {
+        $this->weekStart = $this->resolvedWeekStart()->toDateString();
+    }
+
+    public function goToToday(): void
+    {
+        $this->weekStart = null;
+    }
+
+    public function resolvedWeekStart(): Carbon
+    {
+        if (! $this->weekStart) {
+            return now()->startOfWeek();
+        }
+
+        return Carbon::parse($this->weekStart)->startOfWeek();
+    }
+
     public function render()
     {
         $user = auth()->user();
@@ -64,12 +87,16 @@ class ManageTeamEntries extends Component
         $selectedUser = $this->getSelectedUser();
         $this->locations = Location::orderBy('name')->get();
 
+        $resolvedWeekStart = $this->resolvedWeekStart();
+
         return view('livewire.manage-team-entries', [
             'managedTeams' => $managedTeams,
             'teamMembers' => $teamMembers,
             'selectedUser' => $selectedUser,
             'availabilityStatuses' => AvailabilityStatus::cases(),
             'editingUser' => $this->getEditingUser(),
+            'resolvedWeekStart' => $resolvedWeekStart,
+            'isCurrentFortnight' => $resolvedWeekStart->equalTo(now()->startOfWeek()),
         ]);
     }
 
@@ -177,7 +204,7 @@ class ManageTeamEntries extends Component
 
     private function getDays(): array
     {
-        $start = now()->startOfWeek();
+        $start = $this->resolvedWeekStart();
 
         return collect(range(0, 13))->map(fn ($offset) => $start->copy()->addDays($offset))->toArray();
     }

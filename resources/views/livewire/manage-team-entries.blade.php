@@ -39,22 +39,43 @@
         @if ($selectedUser)
             <div class="mt-6">
                 <div class="flex justify-between items-center mb-4">
-                    <flux:heading size="lg">{{ $selectedUser->full_name }}</flux:heading>
-                    <flux:button
-                        wire:click="openEditDefaults({{ $selectedUser->id }})"
-                        variant="ghost"
-                        size="sm"
-                        icon="cog-6-tooth"
-                        class="cursor-pointer"
-                    >
-                        Edit {{ $selectedUser->forenames }}'s Defaults
-                    </flux:button>
+                    <div class="flex items-center gap-3">
+                        <flux:heading size="lg">{{ $selectedUser->full_name }}</flux:heading>
+                        @if (! $isCurrentFortnight)
+                            <flux:badge color="amber" size="sm">
+                                Future fortnight — week of {{ $resolvedWeekStart->format('j M Y') }}
+                            </flux:badge>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <flux:date-picker wire:model.live="weekStart" with-today />
+                        @if (! $isCurrentFortnight)
+                            <flux:button
+                                wire:click="goToToday"
+                                variant="ghost"
+                                size="sm"
+                                icon="calendar-days"
+                            >
+                                Today
+                            </flux:button>
+                        @endif
+                        <flux:button
+                            wire:click="openEditDefaults({{ $selectedUser->id }})"
+                            variant="ghost"
+                            size="sm"
+                            icon="cog-6-tooth"
+                            class="cursor-pointer"
+                        >
+                            Edit {{ $selectedUser->forenames }}'s Defaults
+                        </flux:button>
+                    </div>
                 </div>
                 <livewire:plan-entry-editor
                     :user="$selectedUser"
                     :read-only="false"
                     :created-by-manager="$selectedUser->id !== auth()->id()"
-                    :key="$selectedUserId"
+                    :start-date="$resolvedWeekStart->toDateString()"
+                    :key="$selectedUserId . '-' . $resolvedWeekStart->toDateString()"
                 />
             </div>
         @else

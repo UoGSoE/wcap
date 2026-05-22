@@ -56,10 +56,8 @@ func (m Model) openEditForm() (tea.Model, tea.Cmd) {
 		Options(locOpts...).
 		Value(m.editLocation).
 		Validate(func(s string) error {
-			if strings.TrimSpace(s) == "" {
-				return errLocationRequired
-			}
-			return nil
+			availInt, _ := strconv.Atoi(deref(m.editAvail))
+			return locationRequiredFor(availInt, s)
 		})
 
 	note := huh.NewInput().
@@ -83,6 +81,16 @@ type locationRequiredErr struct{}
 
 func (locationRequiredErr) Error() string {
 	return "Location is required."
+}
+
+// locationRequiredFor returns errLocationRequired when the user has chosen
+// Onsite or Remote without picking a location. Not Available days are
+// allowed to have no location, matching the WCAP web UI and API.
+func locationRequiredFor(avail int, location string) error {
+	if avail > 0 && strings.TrimSpace(location) == "" {
+		return errLocationRequired
+	}
+	return nil
 }
 
 // entryFromForm builds an Entry from the bound form variables. It keeps the

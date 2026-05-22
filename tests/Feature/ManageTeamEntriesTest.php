@@ -9,6 +9,7 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Maatwebsite\Excel\Facades\Excel;
 
 use function Pest\Laravel\actingAs;
 
@@ -548,4 +549,86 @@ test('manager can edit their own defaults via My Plan', function () {
     $manager->refresh();
     expect($manager->default_location_id)->toBe($location->id);
     expect($manager->default_category)->toBe('Management Tasks');
+});
+
+test('goToToday clears weekStart so the editor returns to the current fortnight', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    $futureMonday = now()->startOfWeek()->addWeeks(4);
+
+    actingAs($manager);
+
+    Livewire::test(ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
+        ->set('weekStart', $futureMonday->toDateString())
+        ->assertSet('weekStart', $futureMonday->toDateString())
+        ->call('goToToday')
+        ->assertSet('weekStart', null);
+});
+
+test('export uses the chosen fortnight from weekStart', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id, 'name' => 'Test Team']);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+    $location = Location::factory()->create(['slug' => 'jws']);
+
+    $futureMonday = now()->startOfWeek()->addWeeks(6);
+    $futureEnd = $futureMonday->copy()->addDays(13);
+
+    PlanEntry::factory()->create([
+        'user_id' => $member->id,
+        'entry_date' => $futureMonday,
+        'location_id' => $location->id,
+        'availability_status' => AvailabilityStatus::ONSITE,
+    ]);
+
+    actingAs($manager);
+    Excel::fake();
+
+    Livewire::test(ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
+        ->set('weekStart', $futureMonday->toDateString())
+        ->call('export');
+
+    Excel::assertDownloaded(
+        "team-plan-test-team-{$futureMonday->format('Ymd')}-{$futureEnd->format('Ymd')}.xlsx"
+    );
+});
+
+test('manager can shift to a future fortnight via weekStart and entries save against that date', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    $futureMonday = now()->startOfWeek()->addWeeks(10);
+    // Pick a Wednesday — should snap to the Monday of that week.
+    $futureWednesday = $futureMonday->copy()->addDays(2);
+
+    actingAs($manager);
+
+    Livewire::test(ManageTeamEntries::class)
+        ->set('selectedTeamId', $team->id)
+        ->set('selectedUserId', $member->id)
+        ->set('weekStart', $futureWednesday->toDateString())
+        ->assertSet('weekStart', $futureMonday->toDateString());
+
+    Livewire::test(PlanEntryEditor::class, [
+        'user' => $member,
+        'startDate' => $futureMonday->toDateString(),
+        'createdByManager' => true,
+    ])
+        ->set('entries.0.location_id', $location->id)
+        ->set('entries.0.note', 'Annual leave')
+        ->set('entries.0.availability_status', AvailabilityStatus::NOT_AVAILABLE->value);
+
+    $entry = PlanEntry::where('user_id', $member->id)->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->entry_date->toDateString())->toBe($futureMonday->toDateString());
+    expect($entry->created_by_manager)->toBeTrue();
 });

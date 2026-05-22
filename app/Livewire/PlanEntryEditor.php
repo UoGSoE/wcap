@@ -6,6 +6,7 @@ use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -19,13 +20,16 @@ class PlanEntryEditor extends Component
 
     public bool $createdByManager = false;
 
+    public ?string $startDate = null;
+
     public array $entries = [];
 
-    public function mount(User $user, bool $readOnly = false, bool $createdByManager = false): void
+    public function mount(User $user, bool $readOnly = false, bool $createdByManager = false, ?string $startDate = null): void
     {
         $this->userId = $user->id;
         $this->readOnly = $readOnly;
         $this->createdByManager = $createdByManager;
+        $this->startDate = $startDate;
 
         $this->loadEntries($user);
     }
@@ -177,7 +181,9 @@ class PlanEntryEditor extends Component
 
     private function getDays(): array
     {
-        $start = now()->startOfWeek();
+        $start = $this->startDate
+            ? Carbon::parse($this->startDate)->startOfWeek()
+            : now()->startOfWeek();
 
         return collect(range(0, 13))->map(fn ($offset) => $start->copy()->addDays($offset))->toArray();
     }

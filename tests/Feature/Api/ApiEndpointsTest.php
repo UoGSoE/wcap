@@ -869,6 +869,81 @@ test('API requires location field', function () {
     $response->assertJsonValidationErrors(['entries.0.location']);
 });
 
+test('API preserves location when flipping an existing entry to NOT_AVAILABLE', function () {
+    $user = User::factory()->create();
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);
+
+    $entry = $user->planEntries()->create([
+        'entry_date' => '2025-11-10',
+        'location_id' => $location->id,
+        'availability_status' => AvailabilityStatus::ONSITE,
+        'note' => 'On site',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->postJson('/api/v1/plan', [
+        'entries' => [
+            [
+                'id' => $entry->id,
+                'entry_date' => '2025-11-10',
+                'location' => 'jws',
+                'availability_status' => AvailabilityStatus::NOT_AVAILABLE->value,
+                'note' => 'On site (but called in sick)',
+            ],
+        ],
+    ]);
+
+    $response->assertOk();
+
+    $entry->refresh();
+    expect($entry->availability_status)->toBe(AvailabilityStatus::NOT_AVAILABLE);
+    expect($entry->location_id)->toBe($location->id);
+});
+
+test('API still requires location when availability is REMOTE or ONSITE', function () {
+    $user = User::factory()->create();
+
+    Sanctum::actingAs($user);
+
+    $response = $this->postJson('/api/v1/plan', [
+        'entries' => [
+            [
+                'entry_date' => '2025-11-10',
+                'availability_status' => AvailabilityStatus::REMOTE->value,
+                'note' => 'Working from home',
+            ],
+        ],
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['entries.0.location']);
+});
+
+test('API accepts not-available entry without a location', function () {
+    $user = User::factory()->create();
+
+    Sanctum::actingAs($user);
+
+    $response = $this->postJson('/api/v1/plan', [
+        'entries' => [
+            [
+                'entry_date' => '2025-11-10',
+                'availability_status' => AvailabilityStatus::NOT_AVAILABLE->value,
+                'note' => 'Annual leave',
+            ],
+        ],
+    ]);
+
+    $response->assertOk();
+
+    $entry = $user->planEntries()->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->location_id)->toBeNull();
+    expect($entry->availability_status)->toBe(AvailabilityStatus::NOT_AVAILABLE);
+    expect($entry->note)->toBe('Annual leave');
+});
+
 test('API allows optional note field', function () {
     $user = User::factory()->create();
     $location = Location::factory()->create(['slug' => 'jws', 'name' => 'James Watt South']);

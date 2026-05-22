@@ -633,3 +633,17 @@ test('cannot update another users entry', function () {
     expect($userAEntry->user_id)->toBe($userA->id);
     expect($userAEntry->note)->toBe('User A task');
 });
+
+test('editor renders the fortnight starting from a given startDate', function () {
+    actingAs($this->manager);
+
+    $futureMonday = now()->startOfWeek()->addWeeks(8);
+
+    Livewire::test(PlanEntryEditor::class, [
+        'user' => $this->user,
+        'startDate' => $futureMonday->toDateString(),
+    ])
+        ->assertOk()
+        ->assertSet('entries.0.entry_date', $futureMonday->toDateString())
+        ->assertSet('entries.13.entry_date', $futureMonday->copy()->addDays(13)->toDateString());
+});
