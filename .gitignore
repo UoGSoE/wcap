@@ -49,3 +49,4 @@ heatmap-table.blade.php
 .ait
 .ant/
 cli/wcap
+.dot-agent*
