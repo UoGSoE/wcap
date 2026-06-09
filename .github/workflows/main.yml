@@ -1,129 +1,58 @@
-name: build-images
+name: laravel-ci
+
+# Supplementary quality + supply-chain gate for the GitHub mirror.
+# The real build/test/deploy pipeline lives in .gitlab-ci.yml (GitLab is primary).
+# This runs a fast PHP-only check: Pest, Pint and a Composer security audit.
 
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - "**"
-      - "!cli/**"
-    branches:
-      - "**"
+    branches: [master, main]
   pull_request:
-    branches:
-      - master
+    branches: [master, main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: homestead
-          MYSQL_DATABASE: homestead
-        ports:
-          - 33306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
+concurrency:
+  group: laravel-ci-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
+  test:
+    name: Pest, Pint & audit
+    runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480 # v1
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9 # v1
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          driver-opts: network=host
-      -
-        name: Cache Docker layers
-        uses: actions/cache@8492260343ad570701412c2f464a5877dc76bace # v2
+          persist-credentials: false
+
+      - name: Set up PHP
+        # PHP version tracks .lando.yml (which matches production). Bump both together.
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-      -
-        name: Build and push local test image
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64 #,linux/arm/v7,linux/arm64
-          push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          target: ci
-          build-args: |
-            PHP_VERSION=8.0
-          tags: |
-            localhost:5000/${{ github.event.repository.name }}:qa-${{ github.sha }}
-      -
-        name: Run tests
-        uses: addnab/docker-run-action@4f65fabd2431ebc8d299f8e5a018d79a769ae185 # v3
-        with:
-          # username: ${{ secrets.DOCKERHUB_USERNAME }}
-          # password: ${{ secrets.DOCKERHUB_TOKEN }}
-          options: "--network host"
-          image: localhost:5000/${{ github.event.repository.name }}:qa-${{ github.sha }}
-          run: rm -fv .env && cp -v .env.github .env && php artisan config:clear && CI=1 APP_ENV=testing ./vendor/bin/phpunit -c phpunit.github.xml
-      -
-        name: Get tag
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF##*/}
-      -
-        name: Login to DockerHub
-        if: startsWith(steps.get_version.outputs.VERSION, 'v') || startsWith(steps.get_version.outputs.VERSION, 'qa') || github.ref == 'refs/heads/master'
-        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Retag and publish local QA image
-        if: startsWith(steps.get_version.outputs.VERSION, 'qa')
-        uses: akhilerm/tag-push-action@0b1ac4285d74bfe8c5595a1f916b4b155f09bdb8 # v1.1.0
-        with:
-          src: localhost:5000/${{ github.event.repository.name }}:qa-${{ github.sha }}
-          dst: |
-            docker.io/uogsoe/${{ github.event.repository.name }}:${{ steps.get_version.outputs.VERSION }}
-      -
-        name: Build and push prod
-        if: github.ref == 'refs/heads/master'
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64 #,linux/arm/v7,linux/arm64
-          push: true
-          target: prod
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          build-args: |
-            PHP_VERSION=8.0
-          tags: |
-            uogsoe/${{ github.event.repository.name }}:prod-${{ github.sha }}
-      -
-        name: Build and push versioned tag
-        if: startsWith(steps.get_version.outputs.VERSION, 'v')
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64 #,linux/arm/v7,linux/arm64
-          push: true
-          target: prod
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          build-args: |
-            PHP_VERSION=8.0
-          tags: |
-            docker.io/uogsoe/${{ github.event.repository.name }}:${{ steps.get_version.outputs.VERSION }}
+          php-version: '8.4'
+          coverage: none
+
+      - name: Authenticate Flux Pro
+        run: composer config --global --auth http-basic.composer.fluxui.dev "${{ secrets.FLUX_USERNAME }}" "${{ secrets.FLUX_LICENSE_KEY }}"
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare application environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run tests (Pest)
+        run: php artisan test --parallel
+
+      - name: Check code style (Pint)
+        if: ${{ !cancelled() }}
+        run: vendor/bin/pint --test
+
+      - name: Security audit (Composer)
+        if: ${{ !cancelled() }}
+        run: composer audit
