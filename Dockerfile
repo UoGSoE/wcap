@@ -66,7 +66,9 @@ RUN composer install \
     --prefer-dist
 
 ### Build JS/css assets
-FROM node:22 as frontend
+# node:22 — pinned 2026-06-09
+# refresh: docker buildx imagetools inspect node:22 --format '{{.Manifest.Digest}}'
+FROM node:22@sha256:1031993481795705055273f2eef0c24597abdcb277d6e058c82f78cbbdef92a6 as frontend
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
@@ -90,7 +92,7 @@ COPY --chown=node:node resources/css* /home/node/resources/css
 COPY --chown=node:node resources/views* /home/node/resources/views
 COPY --chown=node:node --from=qa-composer /var/www/html/vendor /home/node/vendor
 
-RUN npm install && \
+RUN npm ci && \
     npm run build && \
     npm cache clean --force
 
