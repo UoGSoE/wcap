@@ -46,7 +46,7 @@ jobs:
           driver-opts: network=host
       -
         name: Cache Docker layers
-        uses: actions/cache@8492260343ad570701412c2f464a5877dc76bace # v2
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
