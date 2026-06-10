@@ -3,23 +3,17 @@
 namespace App\Models;
 
 use Database\Factories\LocationFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[Fillable('name', 'short_label', 'slug', 'is_physical', 'base_capacity')]
 class Location extends Model
 {
     /** @use HasFactory<LocationFactory> */
     use HasFactory;
-
-    protected $fillable = [
-        'name',
-        'short_label',
-        'slug',
-        'is_physical',
-        'base_capacity',
-    ];
 
     protected function casts(): array
     {
