@@ -18,12 +18,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/', HomeRedirectController::class)->name('home');
     Route::get('/profile', Profile::class)->name('profile');
     Route::get('/manager/report', ManagerReport::class)->name('manager.report');
-    Route::group(['middleware' => 'manager'], function () {
+    Route::middleware('manager')->group(function () {
         Route::get('/manager/occupancy', OccupancyReport::class)->name('manager.occupancy');
         Route::get('/manager/entries', ManageTeamEntries::class)->name('manager.entries');
         Route::get('/manager/import', ImportPlanEntries::class)->name('manager.import');
     });
-    Route::group(['middleware' => 'admin'], function () {
+    Route::middleware('admin')->group(function () {
         Route::get('/admin/teams', AdminTeams::class)->name('admin.teams');
         Route::get('/admin/services', AdminServices::class)->name('admin.services');
         Route::get('/admin/locations', AdminLocations::class)->name('admin.locations');
