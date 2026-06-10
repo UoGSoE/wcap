@@ -5,25 +5,16 @@ namespace App\Models;
 use App\Enums\AvailabilityStatus;
 use App\Enums\Category;
 use Database\Factories\PlanEntryFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[Fillable('user_id', 'entry_date', 'note', 'category', 'location_id', 'availability_status', 'is_holiday', 'created_by_manager')]
 class PlanEntry extends Model
 {
     /** @use HasFactory<PlanEntryFactory> */
     use HasFactory;
-
-    protected $fillable = [
-        'user_id',
-        'entry_date',
-        'note',
-        'category',
-        'location_id',
-        'availability_status',
-        'is_holiday',
-        'created_by_manager',
-    ];
 
     protected function casts(): array
     {

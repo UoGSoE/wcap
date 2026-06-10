@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use Illuminate\Console\Attributes\Description;
+use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -10,12 +12,10 @@ use Illuminate\Support\Str;
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\text;
 
+#[Signature('app:create-user')]
+#[Description('Create a new user account')]
 class CreateUser extends Command
 {
-    protected $signature = 'app:create-user';
-
-    protected $description = 'Create a new user account';
-
     public function handle(): int
     {
         $username = text(
