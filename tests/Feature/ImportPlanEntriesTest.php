@@ -260,7 +260,7 @@ test('openCreateUserModal sets email and pre-selects team', function () {
 test('saveNewUser creates user and attaches to team', function () {
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
-    Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+    $location = Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
 
     // Create a real Excel file with unknown email
     $data = [['john.smith@example.com', '15/12/2025', 'jws', 'Note', 'O']];
@@ -277,6 +277,7 @@ test('saveNewUser creates user and attaches to team', function () {
         ->set('newUserEmail', 'john.smith@example.com')
         ->set('newUserUsername', 'jsmith')
         ->set('newUserTeamId', $team->id)
+        ->set('newUserDefaultLocationId', $location->id)
         ->call('saveNewUser')
         ->assertHasNoErrors();
 
@@ -288,6 +289,7 @@ test('saveNewUser creates user and attaches to team', function () {
     expect($newUser->username)->toBe('jsmith');
     expect($newUser->is_staff)->toBeTrue();
     expect($newUser->is_admin)->toBeFalse();
+    expect($newUser->default_location_id)->toBe($location->id);
     expect($team->fresh()->users->pluck('id'))->toContain($newUser->id);
 });
 
@@ -314,6 +316,16 @@ test('saveNewUser lowercases the email', function () {
         ->call('saveNewUser');
 
     expect(User::where('email', 'jane.doe@example.com')->exists())->toBeTrue();
+});
+
+test('the default location select binds to the component property', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(ImportPlanEntries::class)
+        ->assertSeeHtml('wire:model="newUserDefaultLocationId"');
 });
 
 test('saveNewUser validates required fields', function () {

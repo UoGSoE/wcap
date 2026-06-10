@@ -99,10 +99,10 @@
                     @endforeach
                 </flux:select>
 
-                <flux:select wire:model="newUserDefaultLocation" label="Default Location (optional)" placeholder="None">
+                <flux:select wire:model="newUserDefaultLocationId" label="Default Location (optional)" placeholder="None">
                     <flux:select.option value="">None</flux:select.option>
                     @foreach ($locations as $location)
-                        <flux:select.option value="{{ $location->value }}">{{ $location->label() }}</flux:select.option>
+                        <flux:select.option value="{{ $location->id }}">{{ $location->label() }}</flux:select.option>
                     @endforeach
                 </flux:select>
 
