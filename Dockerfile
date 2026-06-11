@@ -131,10 +131,11 @@ RUN if grep -q horizon composer.json; then php /var/www/html/artisan horizon:pub
 #- Symlink the docker secret to the local .env so Laravel can see it
 RUN ln -sf /run/secrets/.env /var/www/html/.env
 
-#- Clean up and production-cache our apps settings/views/routing
+#- Clean up and production-cache our apps settings/views
+#- (route:cache moved to app-start: livewire v4 route paths derive from APP_KEY,
+#-  which only exists at runtime via the docker secret, not at image build)
 RUN php /var/www/html/artisan storage:link && \
     php /var/www/html/artisan view:cache && \
-    php /var/www/html/artisan route:cache && \
     chown -R www-data:www-data storage bootstrap/cache
 
 #- Set up the default healthcheck
