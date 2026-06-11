@@ -68,7 +68,7 @@ RUN composer install \
 ### Build JS/css assets
 # node:22 — pinned 2026-06-09
 # refresh: docker buildx imagetools inspect node:22 --format '{{.Manifest.Digest}}'
-FROM node:22@sha256:1031993481795705055273f2eef0c24597abdcb277d6e058c82f78cbbdef92a6 as frontend
+FROM node:26@sha256:c4bbb5e46650427e169612556fe594770fc86bfc4284da513cfe8e7f166a8f59 as frontend
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
