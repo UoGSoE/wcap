@@ -17,6 +17,8 @@ class ManagerReportService
     public function __construct(
         private bool $showLocation = true,
         private array $selectedTeams = [],
+        private ?string $from = null,
+        private ?string $to = null,
     ) {
         //
     }
@@ -27,16 +29,20 @@ class ManagerReportService
     public function configure(
         bool $showLocation = true,
         array $selectedTeams = [],
+        ?string $from = null,
+        ?string $to = null,
     ): self {
         $this->showLocation = $showLocation;
         $this->selectedTeams = $selectedTeams;
+        $this->from = $from;
+        $this->to = $to;
 
         return $this;
     }
 
     public function buildReportPayload(): array
     {
-        $days = $this->buildDays();
+        $days = $this->buildDays($this->from, $this->to);
         $teamMembers = $this->getTeamMembersArray();
         $availableTeams = $this->getAvailableTeams();
         $locations = Location::orderBy('name')->get();

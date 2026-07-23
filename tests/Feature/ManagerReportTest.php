@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\ManagerReportExport;
 use App\Livewire\ManagerReport;
 use App\Models\Location;
 use App\Models\PlanEntry;
@@ -8,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Date;
 use Livewire\Livewire;
+use Maatwebsite\Excel\Facades\Excel;
 
 use function Pest\Laravel\actingAs;
 
@@ -515,6 +517,115 @@ test('unavailable users do not appear in coverage counts', function () {
 
     // Coverage should only count member1, not member2 (Monday is index 0)
     expect($otherRow['entries'][0]['count'])->toBe(1);
+});
+
+test('picking a date snaps the report to the monday of that week', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(ManagerReport::class)
+        ->set('weekStart', '2026-08-14'); // a Friday
+
+    $component->assertSet('weekStart', '2026-08-10');
+
+    $days = $component->viewData('days');
+    expect($days[0]['key'])->toBe('2026-08-10');
+    expect(count($days))->toBe(10);
+});
+
+test('month view shows four weeks of weekdays from the snapped monday', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(ManagerReport::class)
+        ->set('weekStart', '2026-08-14')
+        ->set('range', 'month');
+
+    $days = $component->viewData('days');
+    expect(count($days))->toBe(20);
+    expect($days[0]['key'])->toBe('2026-08-10');
+    expect(end($days)['key'])->toBe('2026-09-04');
+});
+
+test('go to today resets the report to the current week', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    $component = Livewire::test(ManagerReport::class)
+        ->set('weekStart', '2026-08-14')
+        ->call('goToToday')
+        ->assertSet('weekStart', null);
+
+    expect($component->viewData('days')[0]['key'])->toBe(now()->startOfWeek()->toDateString());
+});
+
+test('excel export follows the selected window', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(ManagerReport::class)
+        ->set('weekStart', '2026-08-14')
+        ->set('range', 'month')
+        ->call('exportAll')
+        ->assertFileDownloaded('manager-report-20260810-20260904.xlsx');
+});
+
+test('the report header reflects the selected window', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(ManagerReport::class)
+        ->assertSee('Two weeks')
+        ->assertSee('Month')
+        ->assertDontSee('Week of')
+        ->set('weekStart', '2026-08-14')
+        ->assertSee('Week of 10 Aug 2026')
+        ->set('range', 'month')
+        ->assertSee('four weeks');
+});
+
+test('month view headings are single letters with full date tooltips', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(ManagerReport::class)
+        ->set('weekStart', '2026-08-14')
+        ->set('range', 'month')
+        ->assertSee('Monday 10 August')
+        ->assertSee('Tuesday 1 September')
+        ->assertDontSee('Mon 10 Aug');
+});
+
+test('excel export headers include the month', function () {
+    Excel::fake();
+
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    actingAs($manager);
+
+    Livewire::test(ManagerReport::class)
+        ->set('weekStart', '2026-08-14')
+        ->set('range', 'month')
+        ->call('exportAll');
+
+    Excel::assertDownloaded('manager-report-20260810-20260904.xlsx', function (ManagerReportExport $export) {
+        $headers = $export->sheets()[0]->array()[0];
+
+        return in_array('Mon 10 Aug', $headers) && in_array('Tue 1 Sep', $headers);
+    });
 });
 
 test('coverage matrix only shows physical locations', function () {

@@ -50,3 +50,4 @@ heatmap-table.blade.php
 .ant/
 cli/wcap
 .dot-agent*
+.playwright-cli

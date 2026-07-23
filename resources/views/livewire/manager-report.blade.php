@@ -1,8 +1,13 @@
 <div>
     <div class="mb-6 flex justify-between items-center gap-4">
         <div>
-            <flux:heading size="xl">Team Report</flux:heading>
-            <flux:subheading>Where everyone is over the next two weeks. Filter by team to narrow it down.</flux:subheading>
+            <div class="flex items-center gap-3">
+                <flux:heading size="xl">Team Report</flux:heading>
+                @if (! $isCurrentWeek)
+                    <flux:badge color="amber" size="sm">Week of {{ $resolvedWeekStart->format('j M Y') }}</flux:badge>
+                @endif
+            </div>
+            <flux:subheading>Where everyone is over the {{ $range === 'month' ? 'four' : 'two' }} weeks starting {{ $resolvedWeekStart->format('jS F') }}. Filter by team to narrow it down.</flux:subheading>
         </div>
         @adminOrManager
             <div class="flex gap-2">
@@ -38,6 +43,21 @@
                 <flux:pillbox.option :value="$team->id">{{ $team->name }}</flux:pillbox.option>
             @endforeach
         </flux:pillbox>
+        <flux:date-picker wire:model.live="weekStart" with-today />
+        @if (! $isCurrentWeek)
+            <flux:button
+                wire:click="goToToday"
+                variant="ghost"
+                size="sm"
+                icon="calendar-days"
+            >
+                Today
+            </flux:button>
+        @endif
+        <flux:radio.group wire:model.live="range" variant="segmented" size="sm">
+            <flux:radio value="fortnight" label="Two weeks" />
+            <flux:radio value="month" label="Month" />
+        </flux:radio.group>
     </div>
 
     <flux:tab.group>
@@ -66,8 +86,8 @@
                     <flux:table.columns>
                         <flux:table.column class="sticky left-0">Team Member</flux:table.column>
                         @foreach ($days as $day)
-                            <flux:table.column align="center">
-                                <flux:text variant="strong">{{ $day['date']->format('D') }} {{ $day['date']->format('jS') }}</flux:text>
+                            <flux:table.column align="center" class="{{ $range === 'month' && $day['date']->isMonday() ? 'border-l border-zinc-200 dark:border-zinc-700' : '' }}">
+                                <x-report-day-heading :day="$day" :compact="$range === 'month'" />
                             </flux:table.column>
                         @endforeach
                     </flux:table.columns>
@@ -79,7 +99,7 @@
                                     {{ $row['name'] }}
                                 </flux:table.cell>
                                 @foreach ($row['days'] as $dayData)
-                                    <flux:table.cell class="text-center">
+                                    <flux:table.cell class="text-center {{ $range === 'month' && $dayData['date']->isMonday() ? 'border-l border-zinc-200 dark:border-zinc-700' : '' }}">
                                         @if ($dayData['state'] === 'planned')
                                             @if ($showLocation)
                                                 <flux:tooltip :content="$dayData['note']">
@@ -154,14 +174,15 @@
                 Gray cells indicate at least one person at that location. Gaps mean no coverage.
             </flux:text>
 
-            <div class="grid gap-2 p-0.5 rounded-lg" style="grid-template-columns: 150px repeat(10, 1fr);">
+            <div class="overflow-x-auto">
+            <div class="grid gap-2 p-0.5 rounded-lg" style="grid-template-columns: 150px repeat({{ count($days) }}, 1fr);">
                 {{-- Header row --}}
                 <div>
                     <flux:text variant="strong"></flux:text>
                 </div>
                 @foreach ($days as $day)
                     <div class="text-center">
-                        <flux:text variant="strong">{{ $day['date']->format('D') }} {{ $day['date']->format('jS') }}</flux:text>
+                        <x-report-day-heading :day="$day" :compact="$range === 'month'" />
                     </div>
                 @endforeach
 
@@ -179,6 +200,7 @@
                     @endforeach
                 @endforeach
             </div>
+            </div>
         </flux:tab.panel>
 
         @servicesEnabled
@@ -188,14 +210,15 @@
                     Shows how many people on each service are available each day. Gray cells indicate at least one person available.
                 </flux:text>
 
-                <div class="grid gap-2 p-0.5 rounded-lg" style="grid-template-columns: 200px repeat(10, 1fr);">
+                <div class="overflow-x-auto">
+                <div class="grid gap-2 p-0.5 rounded-lg" style="grid-template-columns: 200px repeat({{ count($days) }}, 1fr);">
                     {{-- Header row --}}
                     <div>
                         <flux:text variant="strong"></flux:text>
                     </div>
                     @foreach ($days as $day)
                         <div class="text-center">
-                            <flux:text variant="strong">{{ $day['date']->format('D') }} {{ $day['date']->format('jS') }}</flux:text>
+                            <x-report-day-heading :day="$day" :compact="$range === 'month'" />
                         </div>
                     @endforeach
 
@@ -216,6 +239,7 @@
                             </div>
                         @endforeach
                     @endforeach
+                </div>
                 </div>
             </flux:tab.panel>
         @endservicesEnabled

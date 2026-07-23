@@ -45,7 +45,7 @@ class TeamReportSheet implements FromArray, WithTitle
         $headers = array_merge(
             ['Team Member'],
             array_map(
-                fn ($day) => $day['date']->format('D jS'),
+                fn ($day) => $day['date']->format('D j M'),
                 $this->days,
             ),
         );
@@ -152,7 +152,7 @@ class CoverageReportSheet implements FromArray, WithTitle
         $headers = array_merge(
             ['Location'],
             array_map(
-                fn ($day) => $day['date']->format('D jS'),
+                fn ($day) => $day['date']->format('D j M'),
                 $this->days,
             ),
         );
@@ -190,7 +190,7 @@ class ServiceAvailabilitySheet implements FromArray, WithTitle
         $headers = array_merge(
             ['Service'],
             array_map(
-                fn ($day) => $day['date']->format('D jS'),
+                fn ($day) => $day['date']->format('D j M'),
                 $this->days,
             ),
         );
