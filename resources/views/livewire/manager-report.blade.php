@@ -84,7 +84,7 @@
             <div class="overflow-x-auto">
                 <flux:table>
                     <flux:table.columns>
-                        <flux:table.column class="sticky left-0">Team Member</flux:table.column>
+                        <flux:table.column class="sticky left-0 bg-white dark:bg-zinc-800">Team Member</flux:table.column>
                         @foreach ($days as $day)
                             <flux:table.column align="center" class="{{ $range === 'month' && $day['date']->isMonday() ? 'border-l border-zinc-200 dark:border-zinc-700' : '' }}">
                                 <x-report-day-heading :day="$day" :compact="$range === 'month'" />
@@ -95,7 +95,7 @@
                     <flux:table.rows>
                         @forelse ($teamRows as $row)
                             <flux:table.row :key="$row['member_id']">
-                                <flux:table.cell class="sticky left-0 font-medium">
+                                <flux:table.cell class="sticky left-0 font-medium bg-white dark:bg-zinc-800">
                                     {{ $row['name'] }}
                                 </flux:table.cell>
                                 @foreach ($row['days'] as $dayData)
