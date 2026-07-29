@@ -25,7 +25,7 @@ test('manager can view team report page', function () {
         ->assertOk()
         ->assertSee('Team Report')
         ->assertSee('My Reports')
-        ->assertSee('By Location');
+        ->assertSee('Area Supported');
 });
 
 test('regular user can view team report but cannot edit or export', function () {
