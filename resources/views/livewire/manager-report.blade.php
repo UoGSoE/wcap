@@ -171,7 +171,7 @@
         <flux:tab.panel name="coverage">
             <flux:subheading>Location coverage at a glance</flux:subheading>
             <flux:text class="text-sm text-zinc-600 dark:text-zinc-400 mt-2 mb-6">
-                Gray cells indicate at least one person supporting that location. Gaps mean no coverage.
+                Gray cells indicate at least one person supporting that area. Gaps mean no coverage.
             </flux:text>
 
             <div class="overflow-x-auto">
