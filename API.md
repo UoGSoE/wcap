@@ -36,6 +36,7 @@ Everything lives under `/api/v1`.
 | `GET /manager/team-members` — list manageable users | manager, admin |
 | `GET /manager/team-members/{id}/plan` — view their plan | manager, admin |
 | `POST /manager/team-members/{id}/plan` — upsert their plan | manager, admin |
+| `POST /manager/team-members/{id}/plan/fill-defaults` - fill their empty weekdays from their defaults | manager, admin |
 | `DELETE /manager/team-members/{id}/plan/{entryId}` | manager, admin |
 
 For exact request/response shapes, parameters, and a Try-It console, go to
@@ -168,6 +169,26 @@ Accept: application/json
   ]
 }
 ```
+
+A manager filling someone's empty fortnight from that person's own defaults
+(send `week_start` for the fortnight; add `"only_date": "2026-04-22"` to fill
+just that one day instead):
+
+```
+POST /api/v1/manager/team-members/42/plan/fill-defaults
+Content-Type: application/json
+Accept: application/json
+{
+  "week_start": "2026-04-20"
+}
+```
+
+Days already planned are left untouched, so a valid request with nothing to do
+is still a `200`: you get `"filled_days": 0`, plus
+`"skipped_reason": "no_defaults"` when the person has no usable defaults. The
+`window` in the response is the weekday span that was considered
+(`week_start`'s Monday to the second Friday, or just `only_date`). Managers
+can fill their own plan through this endpoint too, using their own user id.
 
 ## Where the docs live
 

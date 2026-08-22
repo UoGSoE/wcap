@@ -526,3 +526,201 @@ test('returns 404 for non-existent user', function () {
 
     $response->assertNotFound();
 });
+
+// Fill From Defaults Tests
+
+test('manager can fill a team members plan from their defaults', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create(['default_location_id' => $location->id]);
+    $team->users()->attach($teamMember);
+
+    Sanctum::actingAs($manager);
+
+    $weekStart = CarbonImmutable::now()->startOfWeek();
+
+    $response = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan/fill-defaults", [
+        'week_start' => $weekStart->toDateString(),
+    ]);
+
+    $response->assertOk();
+    $response->assertJson([
+        'filled_days' => 10,
+        'window' => [
+            'from' => $weekStart->toDateString(),
+            'to' => $weekStart->addDays(11)->toDateString(),
+        ],
+        'user' => ['email' => $teamMember->email],
+    ]);
+
+    expect($teamMember->planEntries()->count())->toBe(10);
+    expect($teamMember->planEntries()->first()->created_by_manager)->toBeTrue();
+    expect($teamMember->planEntries()->first()->location_id)->toBe($location->id);
+});
+
+test('manager can fill their own plan and entries are not marked as manager-created', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $manager = User::factory()->create(['default_location_id' => $location->id]);
+    Team::factory()->create(['manager_id' => $manager->id]);
+
+    Sanctum::actingAs($manager);
+
+    $response = $this->postJson("/api/v1/manager/team-members/{$manager->id}/plan/fill-defaults", [
+        'week_start' => CarbonImmutable::now()->startOfWeek()->toDateString(),
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['filled_days' => 10]);
+
+    expect($manager->planEntries()->count())->toBe(10);
+    expect($manager->planEntries()->first()->created_by_manager)->toBeFalse();
+});
+
+test('fill leaves existing entries untouched and a second call fills nothing', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create(['default_location_id' => $location->id]);
+    $team->users()->attach($teamMember);
+
+    $weekStart = CarbonImmutable::now()->startOfWeek();
+    $existing = PlanEntry::factory()->create([
+        'user_id' => $teamMember->id,
+        'entry_date' => $weekStart,
+        'note' => 'Hand-written plan',
+        'location_id' => $location->id,
+        'availability_status' => AvailabilityStatus::REMOTE,
+    ]);
+
+    Sanctum::actingAs($manager);
+
+    $firstResponse = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan/fill-defaults", [
+        'week_start' => $weekStart->toDateString(),
+    ]);
+
+    $firstResponse->assertOk();
+    $firstResponse->assertJson(['filled_days' => 9]);
+
+    expect($teamMember->planEntries()->count())->toBe(10);
+    expect($existing->fresh()->note)->toBe('Hand-written plan');
+    expect($existing->fresh()->availability_status)->toBe(AvailabilityStatus::REMOTE);
+
+    $secondResponse = $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan/fill-defaults", [
+        'week_start' => $weekStart->toDateString(),
+    ]);
+
+    $secondResponse->assertOk();
+    $secondResponse->assertJson(['filled_days' => 0]);
+    expect($teamMember->planEntries()->count())->toBe(10);
+});
+
+test('filling a user with no usable defaults returns 200 with a skipped reason', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $memberWithoutDefaults = User::factory()->create(['default_location_id' => null]);
+    $team->users()->attach($memberWithoutDefaults);
+
+    Sanctum::actingAs($manager);
+
+    $response = $this->postJson("/api/v1/manager/team-members/{$memberWithoutDefaults->id}/plan/fill-defaults", [
+        'week_start' => CarbonImmutable::now()->startOfWeek()->toDateString(),
+    ]);
+
+    $response->assertOk();
+    $response->assertJson([
+        'filled_days' => 0,
+        'skipped_reason' => 'no_defaults',
+    ]);
+
+    expect($memberWithoutDefaults->planEntries()->count())->toBe(0);
+});
+
+test('fill-defaults is blocked for non-team members and non-managers', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+    $nonTeamMember = User::factory()->create(['default_location_id' => $location->id]);
+
+    Sanctum::actingAs($manager);
+
+    $this->postJson("/api/v1/manager/team-members/{$nonTeamMember->id}/plan/fill-defaults", [
+        'week_start' => CarbonImmutable::now()->startOfWeek()->toDateString(),
+    ])->assertForbidden();
+
+    $staff = User::factory()->create(['is_admin' => false]);
+    Sanctum::actingAs($staff);
+
+    $this->postJson("/api/v1/manager/team-members/{$nonTeamMember->id}/plan/fill-defaults", [
+        'week_start' => CarbonImmutable::now()->startOfWeek()->toDateString(),
+    ])->assertForbidden();
+
+    expect($nonTeamMember->planEntries()->count())->toBe(0);
+});
+
+test('only_date fills exactly that day and reports 0 for planned days or weekends', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create(['default_location_id' => $location->id]);
+    $team->users()->attach($teamMember);
+
+    Sanctum::actingAs($manager);
+
+    $weekStart = CarbonImmutable::now()->startOfWeek();
+
+    $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan/fill-defaults", [
+        'week_start' => $weekStart->toDateString(),
+        'only_date' => $weekStart->addDays(1)->toDateString(),
+    ])
+        ->assertOk()
+        ->assertJson([
+            'filled_days' => 1,
+            'window' => [
+                'from' => $weekStart->addDays(1)->toDateString(),
+                'to' => $weekStart->addDays(1)->toDateString(),
+            ],
+        ]);
+
+    expect($teamMember->planEntries()->count())->toBe(1);
+    expect($teamMember->planEntries()->first()->entry_date->format('Y-m-d'))->toBe($weekStart->addDays(1)->toDateString());
+
+    // Same day again: already planned, nothing filled.
+    $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan/fill-defaults", [
+        'week_start' => $weekStart->toDateString(),
+        'only_date' => $weekStart->addDays(1)->toDateString(),
+    ])
+        ->assertOk()
+        ->assertJson(['filled_days' => 0]);
+
+    // A weekend day: nothing filled.
+    $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan/fill-defaults", [
+        'week_start' => $weekStart->toDateString(),
+        'only_date' => $weekStart->addDays(5)->toDateString(),
+    ])
+        ->assertOk()
+        ->assertJson(['filled_days' => 0]);
+
+    expect($teamMember->planEntries()->count())->toBe(1);
+});
+
+test('fill-defaults rejects a missing or invalid week_start with a 422', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create();
+    $team->users()->attach($teamMember);
+
+    Sanctum::actingAs($manager);
+
+    $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan/fill-defaults", [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['week_start']);
+
+    $this->postJson("/api/v1/manager/team-members/{$teamMember->id}/plan/fill-defaults", [
+        'week_start' => 'not-a-date',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['week_start']);
+
+    expect($teamMember->planEntries()->count())->toBe(0);
+});

@@ -10,6 +10,7 @@ use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\ManagerReportService;
+use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -135,6 +136,56 @@ class ManagerPlanController
         return response()->json([
             'message' => 'Plan entries saved successfully',
         ]);
+    }
+
+    /**
+     * Fill a team member's plan from their defaults.
+     *
+     * Creates entries for the fortnight's empty weekdays starting from week_start
+     * (snapped back to Monday), using the target user's own default location,
+     * availability and category. Days already planned are left untouched.
+     */
+    public function fillDefaults(Request $request, int $userId): JsonResponse
+    {
+        $user = $request->user();
+        $targetUser = User::findOrFail($userId);
+
+        if (! $user->canManagePlanFor($targetUser)) {
+            abort(403, 'You cannot manage this user\'s plan.');
+        }
+
+        $validated = $request->validate([
+            'week_start' => 'required|date',
+            'only_date' => 'nullable|date',
+        ]);
+
+        $createdByManager = $targetUser->isNot($user);
+
+        if (isset($validated['only_date'])) {
+            $onlyDate = Carbon::parse($validated['only_date']);
+            $filledDays = $targetUser->fillPlanDayFromDefaults($onlyDate, $createdByManager) ? 1 : 0;
+            $windowFrom = $windowTo = $onlyDate->toDateString();
+        } else {
+            $weekStart = Carbon::parse($validated['week_start'])->startOfWeek();
+            $filledDays = $targetUser->fillPlanFromDefaults($weekStart, createdByManager: $createdByManager);
+            $windowFrom = $weekStart->toDateString();
+            $windowTo = $weekStart->copy()->addDays(11)->toDateString();
+        }
+
+        $response = [
+            'filled_days' => $filledDays,
+            'window' => [
+                'from' => $windowFrom,
+                'to' => $windowTo,
+            ],
+            'user' => ['email' => $targetUser->email],
+        ];
+
+        if (! $targetUser->hasUsableDefaults()) {
+            $response['skipped_reason'] = 'no_defaults';
+        }
+
+        return response()->json($response);
     }
 
     /**
