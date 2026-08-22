@@ -101,6 +101,21 @@ func (c *Client) UpsertMemberPlan(ctx context.Context, userID int, entries []Ent
 	return c.do(ctx, http.MethodPost, path, nil, body, nil)
 }
 
+// FillDefaults fills the empty weekdays in a user's fortnight from their own
+// profile defaults. weekStart is the YYYY-MM-DD Monday of the fortnight; pass
+// onlyDate (empty string to omit) to fill just that one day. The endpoint is
+// manager-gated but accepts the caller's own userID, so one method serves both
+// own-plan and member-plan fills.
+func (c *Client) FillDefaults(ctx context.Context, userID int, weekStart, onlyDate string) (*FillDefaultsResult, error) {
+	body := fillDefaultsPayload{WeekStart: weekStart, OnlyDate: onlyDate}
+	path := "/api/v1/manager/team-members/" + strconv.Itoa(userID) + "/plan/fill-defaults"
+	var out FillDefaultsResult
+	if err := c.do(ctx, http.MethodPost, path, nil, body, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // Locations returns the locations list, fetching once and caching it on the
 // client. The reference data doesn't change often enough to justify TTLs.
 func (c *Client) Locations(ctx context.Context) ([]Location, error) {

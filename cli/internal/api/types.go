@@ -124,6 +124,20 @@ type Location struct {
 	ShortLabel string `json:"short_label"`
 }
 
+// FillDefaultsResult is the response from the fill-defaults endpoint.
+// skipped_reason is "no_defaults" when the target has no usable defaults;
+// absent otherwise (filled_days 0 with no reason just means nothing was empty).
+type FillDefaultsResult struct {
+	FilledDays    int    `json:"filled_days"`
+	SkippedReason string `json:"skipped_reason,omitempty"`
+}
+
+// fillDefaultsPayload is the request body for the fill-defaults endpoint.
+type fillDefaultsPayload struct {
+	WeekStart string `json:"week_start"`
+	OnlyDate  string `json:"only_date,omitempty"`
+}
+
 // upsertPayload is the request body for both upsert endpoints.
 type upsertPayload struct {
 	Entries []upsertEntry `json:"entries"`

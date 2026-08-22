@@ -102,6 +102,8 @@ wcap
 | `Enter` / `e` (right) | Edit selected day |
 | `c` | Copy this day onto the next |
 | `C` | Copy this day onto every following day |
+| `d` | Fill this day from the plan owner's defaults |
+| `D` | Fill every empty weekday in the fortnight from their defaults |
 | `]` / `[` | Next / previous two-week window |
 | `r` | Reload from server |
 | `?` | Help screen |
