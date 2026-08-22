@@ -3,7 +3,14 @@
         <div class="flex justify-between items-center gap-2 mb-4">
             <flux:button size="sm" wire:click="fillFromDefaults" wire:loading.attr="disabled">Fill unsaved days from defaults</flux:button>
             <flux:text size="sm" class="text-zinc-500">
-                <span wire:loading wire:target="fillFromDefaults,copyNext,copyRest,entries">Saving…</span>
+                <span
+                    x-data="{ shown: false, timer: null }"
+                    x-on:plan-entry-saved.window="shown = true; clearTimeout(timer); timer = setTimeout(() => shown = false, 2000)"
+                >
+                    <span x-show="shown" x-transition.opacity.duration.500ms aria-hidden="true" style="display: none">Saved</span>
+                    {{-- Persistent live region: only its text changes, so the announcement fires once per burst of saves --}}
+                    <span role="status" class="sr-only" x-text="shown ? 'Saved' : ''"></span>
+                </span>
             </flux:text>
         </div>
     @endif

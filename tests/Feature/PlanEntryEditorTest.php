@@ -760,6 +760,28 @@ test('fill from defaults button shows on the editor but not in read-only mode wh
     expect($user->planEntries()->count())->toBe(0);
 });
 
+test('a real save dispatches the plan-entry-saved event for the saved indicator', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $user])
+        ->set('entries.0.availability_status', AvailabilityStatus::ONSITE->value)
+        ->set('entries.0.location_id', $location->id)
+        ->assertDispatched('plan-entry-saved');
+});
+
+test('a change that writes nothing does not dispatch the saved event', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $user])
+        ->set('entries.0.note', 'Half-entered day')
+        ->assertNotDispatched('plan-entry-saved');
+});
+
 test('editor renders the fortnight starting from a given startDate', function () {
     actingAs($this->manager);
 

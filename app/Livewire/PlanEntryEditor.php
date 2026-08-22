@@ -184,6 +184,8 @@ class PlanEntryEditor extends Component
         );
 
         $this->entries[$index]['id'] = $savedEntry->id;
+
+        $this->dispatch('plan-entry-saved');
     }
 
     public function render()
