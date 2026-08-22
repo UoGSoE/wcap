@@ -1,18 +1,10 @@
 <div>
     @if (! $readOnly)
-        <div class="flex justify-end items-center gap-2 mb-4">
+        <div class="flex justify-between items-center gap-2 mb-4">
+            <flux:button size="sm" wire:click="fillFromDefaults" wire:loading.attr="disabled">Fill unsaved days from defaults</flux:button>
             <flux:text size="sm" class="text-zinc-500">
-                <span wire:loading.remove wire:target="save,copyNext,copyRest,entries">Changes save automatically</span>
-                <span wire:loading wire:target="save,copyNext,copyRest,entries">Saving…</span>
+                <span wire:loading wire:target="fillFromDefaults,copyNext,copyRest,entries">Saving…</span>
             </flux:text>
-            <flux:button
-                icon="bookmark-square"
-                size="sm"
-                variant="ghost"
-                wire:click="save"
-                wire:loading.attr="disabled"
-                wire:loading.class="animate-pulse"
-            />
         </div>
     @endif
 
@@ -20,11 +12,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         @foreach ($days as $index => $day)
             @if ($day->isWeekday())
-                <flux:card size="sm" class="mt-2" wire:key="day-{{ $index }}">
+                <flux:card size="sm" class="mt-2" :variant="$entries[$index]['id'] ? null : 'soft'" wire:key="day-{{ $index }}">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-2">
                             <flux:heading size="sm">{{ $day->format('l') }} {{ $day->format('jS') }}</flux:heading>
-                            <flux:select size="sm" wire:model.live="entries.{{ $index }}.availability_status">
+                            <flux:select size="sm" placeholder="Availability" wire:model.live="entries.{{ $index }}.availability_status">
                                 @foreach ($availabilityStatuses as $status)
                                     <flux:select.option value="{{ $status->value }}">{{ $status->label() }}</flux:select.option>
                                 @endforeach
@@ -32,8 +24,8 @@
                         </div>
                         @if (! $readOnly)
                             <div class="flex gap-2">
-                                <flux:button size="xs" wire:click="copyNext({{ $index }})">Copy next</flux:button>
-                                <flux:button size="xs" wire:click="copyRest({{ $index }})">Copy rest</flux:button>
+                                <flux:button size="xs" :disabled="! $this->isRowSavable($index)" wire:click="copyNext({{ $index }})">Copy next</flux:button>
+                                <flux:button size="xs" :disabled="! $this->isRowSavable($index)" wire:click="copyRest({{ $index }})">Copy rest</flux:button>
                             </div>
                         @endif
                     </div>

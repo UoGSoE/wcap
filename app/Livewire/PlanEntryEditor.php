@@ -7,6 +7,7 @@ use App\Models\Location;
 use App\Models\PlanEntry;
 use App\Models\User;
 use Carbon\Carbon;
+use Flux\Flux;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -47,20 +48,13 @@ class PlanEntryEditor extends Component
         $this->saveRow((int) $matches[1]);
     }
 
-    public function save(): void
+    public function copyNext(int $dayIndex): void
     {
         if ($this->readOnly) {
             return;
         }
 
-        foreach (array_keys($this->entries) as $index) {
-            $this->saveRow($index);
-        }
-    }
-
-    public function copyNext(int $dayIndex): void
-    {
-        if ($this->readOnly) {
+        if (! $this->isRowSavable($dayIndex)) {
             return;
         }
 
@@ -79,6 +73,10 @@ class PlanEntryEditor extends Component
             return;
         }
 
+        if (! $this->isRowSavable($dayIndex)) {
+            return;
+        }
+
         $sourceNote = $this->entries[$dayIndex]['note'];
         $sourceLocationId = $this->entries[$dayIndex]['location_id'];
         $sourceAvailabilityStatus = $this->entries[$dayIndex]['availability_status'];
@@ -94,9 +92,57 @@ class PlanEntryEditor extends Component
         }
     }
 
+    public function fillFromDefaults(): void
+    {
+        if ($this->readOnly) {
+            return;
+        }
+
+        $user = User::findOrFail($this->userId);
+
+        $filledCount = $user->fillPlanFromDefaults(
+            Carbon::parse($this->entries[0]['entry_date']),
+            createdByManager: $this->createdByManager,
+        );
+
+        $this->loadEntries($user);
+
+        Flux::toast(
+            heading: 'Fill from defaults',
+            text: $this->fillFromDefaultsMessage($user, $filledCount),
+            variant: $filledCount > 0 ? 'success' : 'warning',
+        );
+    }
+
+    private function fillFromDefaultsMessage(User $user, int $filledCount): string
+    {
+        if ($filledCount > 0) {
+            return "Filled {$filledCount} days from defaults";
+        }
+
+        if ($user->hasUsableDefaults()) {
+            return 'Nothing to fill - all days already planned';
+        }
+
+        return 'No defaults set - nothing to fill';
+    }
+
+    public function isRowSavable(int $index): bool
+    {
+        $row = $this->entries[$index] ?? null;
+
+        if (! $row || blank($row['availability_status'])) {
+            return false;
+        }
+
+        $status = AvailabilityStatus::from((int) $row['availability_status']);
+
+        return ! $status->isAvailable() || $row['location_id'];
+    }
+
     private function saveRow(int $index): void
     {
-        if (! isset($this->entries[$index])) {
+        if (! $this->isRowSavable($index)) {
             return;
         }
 
@@ -153,10 +199,6 @@ class PlanEntryEditor extends Component
     {
         $days = $this->getDays();
 
-        $defaultNote = $user->default_category;
-        $defaultLocationId = $user->default_location_id;
-        $defaultAvailabilityStatus = $user->default_availability_status ?? AvailabilityStatus::ONSITE;
-
         $existingEntries = $user->planEntries()
             ->whereBetween('entry_date', [
                 $days[0]->format('Y-m-d'),
@@ -169,12 +211,14 @@ class PlanEntryEditor extends Component
             $dateKey = $day->format('Y-m-d');
             $existing = $existingEntries->get($dateKey);
 
+            // Selects bind '' rather than null so the placeholder option
+            // survives Livewire's client-side value sync.
             $this->entries[$index] = [
                 'id' => $existing?->id,
                 'entry_date' => $dateKey,
-                'note' => $existing?->note ?? $defaultNote,
-                'location_id' => $existing?->location_id ?? $defaultLocationId,
-                'availability_status' => $existing?->availability_status->value ?? $defaultAvailabilityStatus->value,
+                'note' => $existing?->note,
+                'location_id' => $existing?->location_id ?? '',
+                'availability_status' => $existing?->availability_status->value ?? '',
             ];
         }
     }
