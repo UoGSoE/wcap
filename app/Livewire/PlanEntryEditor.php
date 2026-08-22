@@ -63,13 +63,28 @@ class PlanEntryEditor extends Component
             return;
         }
 
-        if ($dayIndex < 13) {
-            $this->entries[$dayIndex + 1]['note'] = $this->entries[$dayIndex]['note'];
-            $this->entries[$dayIndex + 1]['location_id'] = $this->entries[$dayIndex]['location_id'];
-            $this->entries[$dayIndex + 1]['availability_status'] = $this->entries[$dayIndex]['availability_status'];
+        $nextIndex = $this->nextWeekdayIndex($dayIndex);
 
-            $this->saveRow($dayIndex + 1);
+        if ($nextIndex === null) {
+            return;
         }
+
+        $this->entries[$nextIndex]['note'] = $this->entries[$dayIndex]['note'];
+        $this->entries[$nextIndex]['location_id'] = $this->entries[$dayIndex]['location_id'];
+        $this->entries[$nextIndex]['availability_status'] = $this->entries[$dayIndex]['availability_status'];
+
+        $this->saveRow($nextIndex);
+    }
+
+    private function nextWeekdayIndex(int $dayIndex): ?int
+    {
+        for ($i = $dayIndex + 1; $i < 14; $i++) {
+            if ($this->isWeekdayRow($i)) {
+                return $i;
+            }
+        }
+
+        return null;
     }
 
     public function copyRest(int $dayIndex): void
@@ -87,14 +102,27 @@ class PlanEntryEditor extends Component
         $sourceAvailabilityStatus = $this->entries[$dayIndex]['availability_status'];
 
         for ($i = $dayIndex + 1; $i < 14; $i++) {
+            if (! $this->isWeekdayRow($i)) {
+                continue;
+            }
+
             $this->entries[$i]['note'] = $sourceNote;
             $this->entries[$i]['location_id'] = $sourceLocationId;
             $this->entries[$i]['availability_status'] = $sourceAvailabilityStatus;
         }
 
         for ($i = $dayIndex + 1; $i < 14; $i++) {
+            if (! $this->isWeekdayRow($i)) {
+                continue;
+            }
+
             $this->saveRow($i);
         }
+    }
+
+    private function isWeekdayRow(int $index): bool
+    {
+        return Carbon::parse($this->entries[$index]['entry_date'])->isWeekday();
     }
 
     public function fillFromDefaults(): void
@@ -207,6 +235,11 @@ class PlanEntryEditor extends Component
         }
 
         return 'No defaults set - nothing to fill';
+    }
+
+    public function canCopyFrom(int $index): bool
+    {
+        return $this->isRowSavable($index) && $this->nextWeekdayIndex($index) !== null;
     }
 
     public function isRowSavable(int $index): bool

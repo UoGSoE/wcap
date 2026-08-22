@@ -276,3 +276,12 @@ test('team list shows correct member counts', function () {
     expect($teams->firstWhere('name', 'Team One')->users)->toHaveCount(3);
     expect($teams->firstWhere('name', 'Team Two')->users)->toHaveCount(1);
 });
+
+test('row action buttons carry accessible names', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $team = Team::factory()->create(['name' => 'Infrastructure']);
+
+    $this->actingAs($admin)->get(route('admin.teams'))
+        ->assertSee('aria-label="Edit Infrastructure"', false)
+        ->assertSee('aria-label="Delete Infrastructure"', false);
+});

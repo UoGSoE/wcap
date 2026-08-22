@@ -3,8 +3,38 @@ package tui
 import (
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/wcap/cli/internal/api"
 )
+
+func TestMembersArrivingAfterLoadingFinishesStillPopulateLeftPane(t *testing.T) {
+	m := New(nil)
+	step := func(msg tea.Msg) {
+		model, _ := m.Update(msg)
+		m = model.(Model)
+	}
+
+	// The race: /user and the plan respond before the team-members request.
+	step(meLoadedMsg{user: api.AuthUser{ID: 1, FullName: "Frodo Baggins"}})
+	step(planLoadedMsg{forUserID: 1, plan: &api.PlanResponse{User: api.User{ID: 1, Name: "Frodo Baggins"}}})
+	if m.mode != modeList {
+		t.Fatalf("expected list mode once me+plan have loaded, got %d", m.mode)
+	}
+
+	step(membersLoadedMsg{members: []api.TeamMember{
+		{ID: 2, Name: "Merry Brandybuck"},
+		{ID: 3, Name: "Sam Gamgee"},
+		{ID: 1, Name: "Frodo Baggins"},
+	}})
+
+	if len(m.filteredIdx) != 3 {
+		t.Fatalf("expected 3 visible members, got %d", len(m.filteredIdx))
+	}
+	if got := m.members[m.filteredIdx[0]]; got.ID != 1 {
+		t.Errorf("self should be pinned first, got %q", got.Name)
+	}
+}
 
 func TestFillStatusWording(t *testing.T) {
 	cases := []struct {

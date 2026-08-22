@@ -47,8 +47,8 @@
                             @endif
                         </flux:table.cell>
                         <flux:table.cell class="flex gap-2 justify-end">
-                            <flux:button size="sm" icon="pencil" wire:click="editLocation({{ $location->id }})" />
-                            <flux:button size="sm" variant="danger" icon="trash" wire:click="confirmDelete({{ $location->id }})" />
+                            <flux:button size="sm" icon="pencil" aria-label="Edit {{ $location->name }}" wire:click="editLocation({{ $location->id }})" />
+                            <flux:button size="sm" variant="danger" icon="trash" aria-label="Delete {{ $location->name }}" wire:click="confirmDelete({{ $location->id }})" />
                         </flux:table.cell>
                     </flux:table.row>
                 @empty

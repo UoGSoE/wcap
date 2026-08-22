@@ -39,9 +39,9 @@
                             <flux:text>{{ $team->users->count() }}</flux:text>
                         </flux:table.cell>
                         <flux:table.cell class="flex gap-2 justify-end">
-                            <flux:button size="sm" icon="pencil" wire:click="editTeam({{ $team->id }})">
+                            <flux:button size="sm" icon="pencil" aria-label="Edit {{ $team->name }}" wire:click="editTeam({{ $team->id }})">
                             </flux:button>
-                            <flux:button size="sm" variant="danger" icon="trash" wire:click="confirmDelete({{ $team->id }})">
+                            <flux:button size="sm" variant="danger" icon="trash" aria-label="Delete {{ $team->name }}" wire:click="confirmDelete({{ $team->id }})">
                             </flux:button>
                         </flux:table.cell>
                     </flux:table.row>

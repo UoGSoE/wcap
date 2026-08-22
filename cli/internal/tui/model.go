@@ -164,6 +164,38 @@ func (m *Model) rebuildEntries(fetched []api.Entry) {
 	m.entries = out
 }
 
+// refreshMembers normalises the left-pane list: seed a self-only list when
+// we can't manage anyone, ensure self is present and pinned first otherwise,
+// then rebuild the filter index. Safe to call on every members update, since
+// the members response can land after loading has already finished.
+func (m *Model) refreshMembers() {
+	if !m.loadedMe {
+		return
+	}
+
+	// Populate the members slice so selfID can be selected even without
+	// manage permission.
+	if !m.canManage && len(m.members) == 0 {
+		m.members = []api.TeamMember{{ID: m.selfID, Name: m.selfName}}
+	} else if m.canManage {
+		// Ensure self is in the list (it usually is, but staff/admin lookups
+		// vary).
+		hasSelf := false
+		for _, x := range m.members {
+			if x.ID == m.selfID {
+				hasSelf = true
+				break
+			}
+		}
+		if !hasSelf {
+			m.members = append(m.members, api.TeamMember{ID: m.selfID, Name: m.selfName})
+		}
+		sortMembersBySurname(m.members, m.selfID)
+	}
+
+	m.applyFilter()
+}
+
 // applyFilter recomputes filteredIdx based on the current filter string.
 func (m *Model) applyFilter() {
 	m.filteredIdx = m.filteredIdx[:0]

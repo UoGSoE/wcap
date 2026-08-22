@@ -168,6 +168,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.canManage = true
 		m.members = msg.members
 		m.loadedMembers = true
+		// The list may arrive after loading has finished (maybeFinishLoading
+		// no-ops then), so normalise it here too.
+		m.refreshMembers()
 		m.maybeFinishLoading()
 		return m, nil
 
@@ -294,27 +297,7 @@ func (m *Model) maybeFinishLoading() {
 		return
 	}
 
-	// Populate the members slice so selfID can be selected even without
-	// manage permission.
-	if !m.canManage && len(m.members) == 0 {
-		m.members = []api.TeamMember{{ID: m.selfID, Name: m.selfName}}
-	} else if m.canManage {
-		// Ensure self is in the list (it usually is, but staff/admin lookups
-		// vary).
-		hasSelf := false
-		for _, x := range m.members {
-			if x.ID == m.selfID {
-				hasSelf = true
-				break
-			}
-		}
-		if !hasSelf {
-			m.members = append(m.members, api.TeamMember{ID: m.selfID, Name: m.selfName})
-		}
-		sortMembersBySurname(m.members, m.selfID)
-	}
-
-	m.applyFilter()
+	m.refreshMembers()
 
 	// If the plan response landed before /user, planUserID may be 0; tag it
 	// as self so the right pane title is sensible.

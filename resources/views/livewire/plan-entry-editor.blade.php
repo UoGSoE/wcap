@@ -28,7 +28,7 @@
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-2">
                             <flux:heading size="sm">{{ $day->format('l') }} {{ $day->format('jS') }}</flux:heading>
-                            <flux:select size="sm" placeholder="Availability" wire:model.live="entries.{{ $index }}.availability_status">
+                            <flux:select size="sm" placeholder="Availability" aria-label="{{ $day->format('l jS') }} availability" wire:model.live="entries.{{ $index }}.availability_status">
                                 @foreach ($availabilityStatuses as $status)
                                     <flux:select.option value="{{ $status->value }}">{{ $status->label() }}</flux:select.option>
                                 @endforeach
@@ -36,15 +36,15 @@
                         </div>
                         @if (! $readOnly)
                             <div class="flex gap-2">
-                                <flux:button size="xs" :disabled="! $this->isRowSavable($index)" wire:click="copyNext({{ $index }})">Copy next</flux:button>
-                                <flux:button size="xs" :disabled="! $this->isRowSavable($index)" wire:click="copyRest({{ $index }})">Copy rest</flux:button>
+                                <flux:button size="xs" :disabled="! $this->canCopyFrom($index)" wire:click="copyNext({{ $index }})">Copy next</flux:button>
+                                <flux:button size="xs" :disabled="! $this->canCopyFrom($index)" wire:click="copyRest({{ $index }})">Copy rest</flux:button>
                             </div>
                         @endif
                     </div>
                     <flux:spacer class="mt-2"/>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <flux:input placeholder="What..." wire:model.live="entries.{{ $index }}.note" />
-                        <flux:select placeholder="Area being supported" wire:model.live="entries.{{ $index }}.location_id">
+                        <flux:input placeholder="What..." aria-label="{{ $day->format('l jS') }} note" wire:model.live="entries.{{ $index }}.note" />
+                        <flux:select placeholder="Area being supported" aria-label="{{ $day->format('l jS') }} location" wire:model.live="entries.{{ $index }}.location_id">
                             @foreach ($locations as $location)
                                 <flux:select.option value="{{ $location->id }}">{{ $location->label() }}</flux:select.option>
                             @endforeach

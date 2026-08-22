@@ -27,7 +27,10 @@
 
         <flux:tab.panel name="today">
             <div class="flex items-center gap-4 mb-6">
-                <flux:date-picker wire:model.live="date" with-today />
+                <flux:field>
+                    <flux:label class="sr-only">Date</flux:label>
+                    <flux:date-picker wire:model.live="date" with-today />
+                </flux:field>
                 <flux:heading size="lg">{{ $snapshotDate->format('l, F jS Y') }}</flux:heading>
             </div>
             <flux:text size="sm" variant="subtle" class="mb-4">
@@ -77,7 +80,10 @@
 
         <flux:tab.panel name="period">
             <div class="flex items-center gap-4 mb-6">
-                <flux:date-picker mode="range" wire:model.live="range" with-today />
+                <flux:field>
+                    <flux:label class="sr-only">Date range</flux:label>
+                    <flux:date-picker mode="range" wire:model.live="range" with-today />
+                </flux:field>
                 @if ($aggregation === 'weekly')
                     <flux:badge color="sky">Showing weekly averages</flux:badge>
                 @endif
@@ -152,7 +158,10 @@
 
         <flux:tab.panel name="summary">
             <div class="flex items-center gap-4 mb-6">
-                <flux:date-picker mode="range" wire:model.live="range" with-today />
+                <flux:field>
+                    <flux:label class="sr-only">Date range</flux:label>
+                    <flux:date-picker mode="range" wire:model.live="range" with-today />
+                </flux:field>
             </div>
             <flux:text size="sm" variant="subtle" class="mb-4">
                 Summary statistics across the selected period. Use these figures to demonstrate space utilization.
@@ -221,7 +230,10 @@
 
         <flux:tab.panel name="trends">
             <div class="flex items-center gap-4 mb-6">
-                <flux:date-picker mode="range" wire:model.live="range" with-today />
+                <flux:field>
+                    <flux:label class="sr-only">Date range</flux:label>
+                    <flux:date-picker mode="range" wire:model.live="range" with-today />
+                </flux:field>
                 @if ($aggregation === 'weekly')
                     <flux:badge color="sky">Showing weekly averages</flux:badge>
                 @endif

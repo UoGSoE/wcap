@@ -132,8 +132,14 @@ test('copy rest copies entry to all remaining days', function () {
         ->set('entries', $entries)
         ->call('copyRest', 0);
 
-    // Check all remaining days were copied
+    // Check all remaining weekdays were copied and the weekend rows were left alone
     for ($i = 1; $i < 14; $i++) {
+        if (in_array($i, [5, 6, 12, 13])) {
+            $component->assertSet("entries.{$i}.note", '');
+
+            continue;
+        }
+
         $component->assertSet("entries.{$i}.note", 'Same task all week')
             ->assertSet("entries.{$i}.location_id", $location->id);
     }
@@ -333,6 +339,12 @@ test('copy rest includes availability_status', function () {
         ->call('copyRest', 0);
 
     for ($i = 1; $i < 14; $i++) {
+        if (in_array($i, [5, 6, 12, 13])) {
+            $component->assertSet("entries.{$i}.note", '');
+
+            continue;
+        }
+
         $component->assertSet("entries.{$i}.note", 'Same task all week')
             ->assertSet("entries.{$i}.location_id", $location->id)
             ->assertSet("entries.{$i}.availability_status", AvailabilityStatus::NOT_AVAILABLE->value);
@@ -418,6 +430,12 @@ test('copy rest works for remote availability with non-physical location', funct
         ->call('copyRest', 0);
 
     for ($i = 1; $i < 14; $i++) {
+        if (in_array($i, [5, 6, 12, 13])) {
+            $component->assertSet("entries.{$i}.note", '');
+
+            continue;
+        }
+
         $component->assertSet("entries.{$i}.note", 'Working from home')
             ->assertSet("entries.{$i}.location_id", $remoteLocation->id)
             ->assertSet("entries.{$i}.availability_status", AvailabilityStatus::REMOTE->value);
@@ -948,4 +966,82 @@ test('editor renders the fortnight starting from a given startDate', function ()
         ->assertOk()
         ->assertSet('entries.0.entry_date', $futureMonday->toDateString())
         ->assertSet('entries.13.entry_date', $futureMonday->copy()->addDays(13)->toDateString());
+});
+
+test('day card fields carry day-specific accessible names', function () {
+    actingAs($this->manager);
+
+    $monday = now()->startOfWeek()->format('l jS');
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $this->manager])
+        ->assertSeeHtml('aria-label="'.$monday.' availability"')
+        ->assertSeeHtml('aria-label="'.$monday.' location"')
+        ->assertSeeHtml('aria-label="'.$monday.' note"');
+});
+
+test('copy rest fills the remaining weekdays and never writes weekend records', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $user])
+        ->set('entries.0.availability_status', AvailabilityStatus::ONSITE->value)
+        ->set('entries.0.location_id', $location->id)
+        ->set('entries.0.note', 'All week')
+        ->call('copyRest', 0);
+
+    expect($user->planEntries()->count())->toBe(10);
+
+    $weekendEntries = $user->planEntries()->get()->filter(fn ($entry) => $entry->entry_date->isWeekend());
+    expect($weekendEntries)->toHaveCount(0);
+});
+
+test('copy next from a friday copies onto the following monday', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    // Index 4 is the first Friday; 5 and 6 are the weekend; 7 is Monday.
+    Livewire::test(PlanEntryEditor::class, ['user' => $user])
+        ->set('entries.4.availability_status', AvailabilityStatus::ONSITE->value)
+        ->set('entries.4.location_id', $location->id)
+        ->set('entries.4.note', 'Friday task')
+        ->call('copyNext', 4)
+        ->assertSet('entries.7.note', 'Friday task')
+        ->assertSet('entries.5.note', null);
+
+    $mondayEntry = $user->planEntries()->whereDate('entry_date', now()->startOfWeek()->addDays(7))->first();
+    expect($mondayEntry)->not->toBeNull();
+    expect($mondayEntry->note)->toBe('Friday task');
+
+    $weekendEntries = $user->planEntries()->get()->filter(fn ($entry) => $entry->entry_date->isWeekend());
+    expect($weekendEntries)->toHaveCount(0);
+});
+
+test('copy buttons render disabled on the final weekday of the fortnight', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $user = User::factory()->create();
+    foreach ([4, 11] as $fridayOffset) {
+        PlanEntry::factory()->create([
+            'user_id' => $user->id,
+            'entry_date' => now()->startOfWeek()->addDays($fridayOffset),
+            'location_id' => $location->id,
+            'availability_status' => AvailabilityStatus::ONSITE,
+        ]);
+    }
+
+    actingAs($user);
+
+    $html = Livewire::test(PlanEntryEditor::class, ['user' => $user])->html();
+
+    preg_match('/<button[^>]*copyNext\(4\)[^>]*>/', $html, $firstFridayNext);
+    preg_match('/<button[^>]*copyNext\(11\)[^>]*>/', $html, $lastFridayNext);
+    preg_match('/<button[^>]*copyRest\(11\)[^>]*>/', $html, $lastFridayRest);
+
+    // A disabled attribute, not the disabled: tailwind classes flux buttons carry.
+    expect(preg_match('/\sdisabled[\s>=]/', $firstFridayNext[0]))->toBe(0);
+    expect(preg_match('/\sdisabled[\s>=]/', $lastFridayNext[0]))->toBe(1);
+    expect(preg_match('/\sdisabled[\s>=]/', $lastFridayRest[0]))->toBe(1);
 });

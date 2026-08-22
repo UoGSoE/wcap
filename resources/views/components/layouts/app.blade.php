@@ -12,6 +12,7 @@
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600&display=swap" rel="stylesheet" />
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
+        <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:dark:bg-zinc-900 focus:text-zinc-800 focus:dark:text-white focus:rounded-lg focus:shadow-lg">Skip to main content</a>
         @auth
             <flux:sidebar sticky collapsible class="bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700 print:hidden">
                 <flux:sidebar.header>
@@ -57,7 +58,7 @@
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
         </flux:header>
 
-        <flux:main>
+        <flux:main id="main-content">
             {{ $slot }}
         </flux:main>
 

@@ -39,6 +39,43 @@
             </div>
         </flux:card>
 
+        <flux:card>
+            <div class="space-y-4">
+                <flux:heading size="lg">Your Plan</flux:heading>
+                @unlessadminOrManager
+                    <flux:callout icon="information-circle">
+                        <flux:text>Your manager updates your plan. This view is read-only.</flux:text>
+                    </flux:callout>
+                @endadminOrManager
+                <flux:table>
+                    <flux:table.columns>
+                        <flux:table.column>Day</flux:table.column>
+                        <flux:table.column>Location</flux:table.column>
+                        <flux:table.column>Availability</flux:table.column>
+                        <flux:table.column>Note</flux:table.column>
+                    </flux:table.columns>
+                    <flux:table.rows>
+                        @foreach ($planDays as $day)
+                            <flux:table.row :key="'plan-day-' . $day['date']->format('Y-m-d')">
+                                <flux:table.cell>{{ $day['date']->format('l jS M') }}</flux:table.cell>
+                                <flux:table.cell>{{ $day['entry']?->location?->name ?? '-' }}</flux:table.cell>
+                                <flux:table.cell>
+                                    @if ($day['entry'])
+                                        <flux:badge size="sm" :color="$day['entry']->availability_status->colour()">
+                                            {{ $day['entry']->availability_status->label() }}
+                                        </flux:badge>
+                                    @else
+                                        -
+                                    @endif
+                                </flux:table.cell>
+                                <flux:table.cell>{{ $day['entry']?->note ?? '-' }}</flux:table.cell>
+                            </flux:table.row>
+                        @endforeach
+                    </flux:table.rows>
+                </flux:table>
+            </div>
+        </flux:card>
+
         @adminOrManager
         <flux:card>
             <div class="space-y-6">
@@ -85,6 +122,7 @@
                                             size="sm"
                                             icon="trash"
                                             variant="danger"
+                                            aria-label="Revoke token {{ $token->name }}"
                                             wire:click="revokeToken({{ $token->id }})"
                                             wire:confirm="Are you sure you want to revoke this token? Any applications using it will lose access."
                                         >

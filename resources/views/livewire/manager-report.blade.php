@@ -32,18 +32,23 @@
     <flux:spacer class="mt-6"/>
 
     <div class="mb-4 flex justify-between items-center gap-4">
-        <flux:pillbox
-            wire:model.live="selectedTeams"
-            multiple
-            placeholder="Filter by team(s)..."
-            searchable
-            class="flex-1"
-        >
+        <flux:field class="flex-1">
+            <flux:label class="sr-only">Filter by teams</flux:label>
+            <flux:pillbox
+                wire:model.live="selectedTeams"
+                multiple
+                placeholder="Filter by team(s)..."
+                searchable
+            >
             @foreach ($availableTeams as $team)
                 <flux:pillbox.option :value="$team->id">{{ $team->name }}</flux:pillbox.option>
             @endforeach
-        </flux:pillbox>
-        <flux:date-picker wire:model.live="weekStart" with-today />
+            </flux:pillbox>
+        </flux:field>
+        <flux:field>
+            <flux:label class="sr-only">Week starting</flux:label>
+            <flux:date-picker wire:model.live="weekStart" with-today />
+        </flux:field>
         @if (! $isCurrentWeek)
             <flux:button
                 wire:click="goToToday"
