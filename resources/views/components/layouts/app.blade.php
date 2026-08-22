@@ -46,6 +46,14 @@
                 <flux:sidebar.nav>
                     <flux:sidebar.item icon="user-circle" href="{{ route('profile') }}" :current="request()->is('profile')" wire:navigate>Profile</flux:sidebar.item>
                 </flux:sidebar.nav>
+                @if (session()->has('impersonator_id'))
+                    <flux:sidebar.nav>
+                        <form method="post" action="{{ route('impersonate.stop') }}">
+                            @csrf
+                            <flux:sidebar.item icon="users" type="submit">Stop impersonating</flux:sidebar.item>
+                        </form>
+                    </flux:sidebar.nav>
+                @endif
                 <flux:sidebar.nav>
                     <form method="post" action="{{ route('auth.logout') }}">
                         @csrf
