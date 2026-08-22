@@ -50,7 +50,7 @@
                     <flux:sidebar.nav>
                         <form method="post" action="{{ route('impersonate.stop') }}">
                             @csrf
-                            <flux:sidebar.item icon="users" type="submit">Stop impersonating</flux:sidebar.item>
+                            <flux:sidebar.item icon="users" type="submit"><flux:text color="amber">Stop impersonating</flux:text></flux:sidebar.item>
                         </form>
                     </flux:sidebar.nav>
                 @endif
