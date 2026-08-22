@@ -1,7 +1,12 @@
 <div>
     @if (! $readOnly)
         <div class="flex justify-between items-center gap-2 mb-4">
-            <flux:button size="sm" wire:click="fillFromDefaults" wire:loading.attr="disabled">Fill unsaved days from defaults</flux:button>
+            <div class="flex items-center gap-3">
+                <flux:button size="sm" wire:click="fillFromDefaults" wire:loading.attr="disabled">Fill unsaved days from defaults</flux:button>
+                @manager
+                    <flux:checkbox wire:model="fillAllReports" label="And all my reports" />
+                @endmanager
+            </div>
             <flux:text size="sm" class="text-zinc-500">
                 <span
                     x-data="{ shown: false, timer: null }"
@@ -56,4 +61,31 @@
         @endforeach
         </div>
     </flux:fieldset>
+
+    @manager
+        <flux:modal name="confirm-bulk-fill" variant="flyout">
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">Fill plans from defaults?</flux:heading>
+                    @if ($bulkPreview['days'] > 0)
+                        <flux:text class="mt-2">This will fill {{ $bulkPreview['days'] }} empty days across {{ $bulkPreview['people'] }} people, using each person's own defaults.</flux:text>
+                    @else
+                        <flux:text class="mt-2">You and all your reports are already filled in for this fortnight.</flux:text>
+                    @endif
+                    @if ($bulkPreview['skipped'])
+                        <flux:text class="mt-2">Skipping (no defaults set): {{ implode(', ', $bulkPreview['skipped']) }}</flux:text>
+                    @endif
+                </div>
+
+                <div class="flex gap-2 justify-end">
+                    @if ($bulkPreview['days'] > 0)
+                        <flux:button variant="ghost" x-on:click="$flux.modal('confirm-bulk-fill').close()">Cancel</flux:button>
+                        <flux:button variant="primary" wire:click="confirmBulkFill">Confirm</flux:button>
+                    @else
+                        <flux:button variant="ghost" x-on:click="$flux.modal('confirm-bulk-fill').close()">Close</flux:button>
+                    @endif
+                </div>
+            </div>
+        </flux:modal>
+    @endmanager
 </div>

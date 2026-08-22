@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Enums\AvailabilityStatus;
 use App\Models\Location;
 use App\Models\PlanEntry;
+use App\Models\Team;
 use App\Models\User;
 use Carbon\Carbon;
 use Flux\Flux;
@@ -23,7 +24,11 @@ class PlanEntryEditor extends Component
 
     public ?string $startDate = null;
 
+    public bool $fillAllReports = false;
+
     public array $entries = [];
+
+    public array $bulkPreview = ['days' => 0, 'people' => 0, 'skipped' => []];
 
     public function mount(User $user, bool $readOnly = false, bool $createdByManager = false, ?string $startDate = null): void
     {
@@ -98,6 +103,12 @@ class PlanEntryEditor extends Component
             return;
         }
 
+        if ($this->fillAllReports) {
+            $this->previewBulkFill();
+
+            return;
+        }
+
         $user = User::findOrFail($this->userId);
 
         $filledCount = $user->fillPlanFromDefaults(
@@ -112,6 +123,77 @@ class PlanEntryEditor extends Component
             text: $this->fillFromDefaultsMessage($user, $filledCount),
             variant: $filledCount > 0 ? 'success' : 'warning',
         );
+    }
+
+    public function confirmBulkFill(): void
+    {
+        abort_unless(auth()->user()->isManager(), 403);
+
+        $result = $this->runBulkFill(dryRun: false);
+
+        Flux::modal('confirm-bulk-fill')->close();
+
+        $this->fillAllReports = false;
+
+        $this->loadEntries(User::findOrFail($this->userId));
+
+        $message = "Filled {$result['days']} days across {$result['people']} people";
+
+        if ($result['skipped']) {
+            $message .= ', skipped '.count($result['skipped']).' with no defaults';
+        }
+
+        Flux::toast(
+            heading: 'Fill from defaults',
+            text: $message,
+            variant: 'success',
+        );
+    }
+
+    private function previewBulkFill(): void
+    {
+        abort_unless(auth()->user()->isManager(), 403);
+
+        $this->bulkPreview = $this->runBulkFill(dryRun: true);
+
+        Flux::modal('confirm-bulk-fill')->show();
+    }
+
+    /** @return array{days: int, people: int, skipped: array<string>} */
+    private function runBulkFill(bool $dryRun): array
+    {
+        $manager = auth()->user();
+        $weekStart = Carbon::parse($this->entries[0]['entry_date']);
+
+        $people = Team::whereIn('id', $manager->allManagedTeamIds())
+            ->with('users')
+            ->get()
+            ->flatMap(fn ($team) => $team->users)
+            ->push($manager)
+            ->unique('id');
+
+        $result = ['days' => 0, 'people' => 0, 'skipped' => []];
+
+        foreach ($people as $person) {
+            if (! $person->hasUsableDefaults()) {
+                $result['skipped'][] = $person->full_name;
+
+                continue;
+            }
+
+            $filledDays = $person->fillPlanFromDefaults(
+                $weekStart,
+                dryRun: $dryRun,
+                createdByManager: $person->id !== $manager->id,
+            );
+
+            if ($filledDays > 0) {
+                $result['days'] += $filledDays;
+                $result['people']++;
+            }
+        }
+
+        return $result;
     }
 
     private function fillFromDefaultsMessage(User $user, int $filledCount): string
