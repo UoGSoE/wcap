@@ -18,13 +18,6 @@ class ReportController
 {
     use ParsesDateWindowFilter;
 
-    /**
-     * Determine the report scope from the authenticated user's role.
-     *
-     * Admins see everyone; managers see only users in teams they manage.
-     * The `can:accessManagerApi` route middleware already blocks regular staff,
-     * so the 'own' case is a safe fallback that should never trigger in practice.
-     */
     private function getScope(Request $request): string
     {
         $user = $request->user();
@@ -40,11 +33,6 @@ class ReportController
         return 'own';
     }
 
-    /**
-     * Get team report (person × day grid).
-     *
-     * Requires: admin or manager role (enforced by the accessManagerApi gate).
-     */
     #[QueryParameter('filter[location_slug]', description: 'Only return team rows for users with at least one entry at this location (e.g. "rankine").', type: 'string', example: 'rankine')]
     #[QueryParameter('filter[state]', description: 'Only return rows for users with at least one matching entry. "planned" = has a location, "away" = no location.', type: 'string', example: 'planned')]
     #[QueryParameter('filter[from]', description: 'Start of a custom date window (YYYY-MM-DD). Must be paired with filter[to]. Default: Monday of the current week.', type: 'string', example: '2026-04-20')]
@@ -99,11 +87,6 @@ class ReportController
         ]);
     }
 
-    /**
-     * Get location report (day × location grouping).
-     *
-     * Requires: admin or manager role (enforced by the accessManagerApi gate).
-     */
     #[QueryParameter('filter[location_slug]', description: 'Narrow each day to a single location (e.g. "rankine").', type: 'string', example: 'rankine')]
     #[QueryParameter('filter[is_physical]', description: 'Exclude non-physical locations like Remote/Other when true.', type: 'boolean', example: true)]
     #[QueryParameter('filter[from]', description: 'Start of a custom date window (YYYY-MM-DD). Must be paired with filter[to].', type: 'string', example: '2026-04-20')]
@@ -152,11 +135,6 @@ class ReportController
         ]);
     }
 
-    /**
-     * Get coverage matrix (location × day with counts).
-     *
-     * Requires: admin or manager role (enforced by the accessManagerApi gate).
-     */
     #[QueryParameter('filter[location_slug]', description: 'Narrow the coverage matrix to a single location.', type: 'string', example: 'rankine')]
     #[QueryParameter('filter[is_physical]', description: 'Exclude non-physical locations like Remote/Other when true.', type: 'boolean', example: true)]
     #[QueryParameter('filter[from]', description: 'Start of a custom date window (YYYY-MM-DD). Must be paired with filter[to].', type: 'string', example: '2026-04-20')]
@@ -208,14 +186,6 @@ class ReportController
         ]);
     }
 
-    /**
-     * Get service availability matrix (service × day with availability counts).
-     *
-     * Requires: admin or manager role (enforced by the accessManagerApi gate).
-     *
-     * Note: the service list is global (not scoped by team) — availability
-     * counts reflect all users assigned to each service.
-     */
     #[QueryParameter('filter[service_slug]', description: 'Narrow to a single service. Slug is a kebab-case derivation of the service name (e.g. "VPN Service" → "vpn-service").', type: 'string', example: 'vpn-service')]
     #[QueryParameter('filter[manager_only]', description: 'When true, return only services whose coverage relies on the manager on at least one day in the window — the "at risk" view.', type: 'boolean', example: true)]
     #[QueryParameter('filter[from]', description: 'Start of a custom date window (YYYY-MM-DD). Must be paired with filter[to].', type: 'string', example: '2026-04-20')]

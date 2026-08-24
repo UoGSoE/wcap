@@ -19,9 +19,6 @@ class ManagerPlanController
 {
     use ParsesDateWindowFilter;
 
-    /**
-     * List team members the authenticated user can manage.
-     */
     public function teamMembers(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -38,12 +35,6 @@ class ManagerPlanController
         ]);
     }
 
-    /**
-     * Get a team member's plan entries.
-     *
-     * Defaults to the next 10 weekdays starting Monday of the current week.
-     * Supply filter[from]/filter[to] to widen or shift the window.
-     */
     #[QueryParameter('filter[from]', description: 'Start of a custom date window (YYYY-MM-DD). Must be paired with filter[to].', type: 'string', example: '2026-04-20')]
     #[QueryParameter('filter[to]', description: 'End of a custom date window (YYYY-MM-DD). Must be paired with filter[from].', type: 'string', example: '2026-04-24')]
     public function show(Request $request, int $userId, ManagerReportService $service): JsonResponse
@@ -82,9 +73,6 @@ class ManagerPlanController
         ]);
     }
 
-    /**
-     * Upsert plan entries for a team member.
-     */
     public function upsert(ManagerUpsertPlanEntriesRequest $request, int $userId): JsonResponse
     {
         $user = $request->user();
@@ -138,13 +126,6 @@ class ManagerPlanController
         ]);
     }
 
-    /**
-     * Fill a team member's plan from their defaults.
-     *
-     * Creates entries for the fortnight's empty weekdays starting from week_start
-     * (snapped back to Monday), using the target user's own default location,
-     * availability and category. Days already planned are left untouched.
-     */
     public function fillDefaults(Request $request, int $userId): JsonResponse
     {
         $user = $request->user();
@@ -188,9 +169,6 @@ class ManagerPlanController
         return response()->json($response);
     }
 
-    /**
-     * Delete a plan entry for a team member.
-     */
     public function destroy(Request $request, int $userId, int $entryId): JsonResponse
     {
         $user = $request->user();
@@ -208,9 +186,6 @@ class ManagerPlanController
         ]);
     }
 
-    /**
-     * Get users that the authenticated user can manage.
-     */
     private function getManageableUsers(User $user)
     {
         if ($user->isAdmin()) {
@@ -226,9 +201,6 @@ class ManagerPlanController
             ->values();
     }
 
-    /**
-     * Transform a plan entry for JSON response.
-     */
     private function transformEntry(PlanEntry $entry): array
     {
         return [
