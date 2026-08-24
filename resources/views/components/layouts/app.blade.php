@@ -35,9 +35,9 @@
                     @admin
                         <flux:separator class="my-2" />
                         <flux:sidebar.item icon="cog-6-tooth" href="{{ route('admin.teams') }}" :current="request()->is('admin/teams')" wire:navigate>Manage Teams</flux:sidebar.item>
-                        @servicesEnabled
+                        @can('viewServiceAvailability')
                             <flux:sidebar.item icon="wrench-screwdriver" href="{{ route('admin.services') }}" :current="request()->is('admin/services')" wire:navigate>Manage Services</flux:sidebar.item>
-                        @endservicesEnabled
+                        @endcan
                         <flux:sidebar.item icon="map-pin" href="{{ route('admin.locations') }}" :current="request()->is('admin/locations')" wire:navigate>Manage Locations</flux:sidebar.item>
                         <flux:sidebar.item icon="users" href="{{ route('admin.users') }}" :current="request()->is('admin/users')" wire:navigate>Manage Users</flux:sidebar.item>
                     @endadmin
