@@ -70,12 +70,12 @@
             <flux:tab name="team">My Reports</flux:tab>
             <flux:tab name="location">Area Supported</flux:tab>
             <flux:tab name="coverage">Coverage</flux:tab>
-            {{-- Hidden at the request of the stakeholder (24/08/2026). Remove this guard and the matching one on the panel below to restore it. --}}
-            @admin
+            {{-- Restricted to an email allowlist at the request of the stakeholder (24/08/2026) - see WCAP_SERVICE_REPORT_VIEWERS. Matching guard on the panel below. --}}
+            @can('viewServiceAvailability')
                 @servicesEnabled
                     <flux:tab name="service-availability">Service Availability</flux:tab>
                 @endservicesEnabled
-            @endadmin
+            @endcan
         </flux:tabs>
 
         <flux:tab.panel name="team">
@@ -211,8 +211,8 @@
             </div>
         </flux:tab.panel>
 
-        {{-- Hidden at the request of the stakeholder (24/08/2026) - see the matching guard on the tab above. --}}
-        @admin
+        {{-- Restricted to an email allowlist at the request of the stakeholder (24/08/2026) - see the matching guard on the tab above. --}}
+        @can('viewServiceAvailability')
         @servicesEnabled
             <flux:tab.panel name="service-availability">
                 <flux:subheading>Service availability at a glance</flux:subheading>
@@ -253,6 +253,6 @@
                 </div>
             </flux:tab.panel>
         @endservicesEnabled
-        @endadmin
+        @endcan
     </flux:tab.group>
 </div>

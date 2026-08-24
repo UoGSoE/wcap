@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\ManagerReportExport;
 use App\Livewire\ManagerReport;
 use App\Models\Location;
 use App\Models\PlanEntry;
@@ -8,14 +9,15 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Maatwebsite\Excel\Facades\Excel;
 
 use function Pest\Laravel\actingAs;
 
 uses(RefreshDatabase::class);
 
 test('service availability tab is hidden at the request of the stakeholder (24/08/2026)', function () {
-    // The tab and panel are guarded with @if (false) in manager-report.blade.php.
-    // Flip this back to assertSee when the feature is restored.
+    // The tab and panel are guarded by the 'viewServiceAvailability' gate in manager-report.blade.php,
+    // driven by the WCAP_SERVICE_REPORT_VIEWERS email allowlist. This manager is not on it.
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
@@ -25,6 +27,76 @@ test('service availability tab is hidden at the request of the stakeholder (24/0
         ->assertOk()
         ->assertDontSee('Service Availability');
 })->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+
+test('an allowlisted viewer sees the service availability tab', function () {
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'boss@example.com, Viewer@Example.com']);
+
+    $viewer = User::factory()->create(['email' => 'viewer@example.com']);
+    Team::factory()->create(['manager_id' => $viewer->id]);
+
+    actingAs($viewer);
+
+    Livewire::test(ManagerReport::class)
+        ->assertOk()
+        ->assertSee('Service Availability');
+});
+
+test('an admin who is not on the allowlist does not see the service availability tab', function () {
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'boss@example.com']);
+
+    $adminNotOnAllowlist = User::factory()->create(['is_admin' => true, 'email' => 'ordinary.admin@example.com']);
+    Team::factory()->create(['manager_id' => $adminNotOnAllowlist->id]);
+
+    actingAs($adminNotOnAllowlist);
+
+    Livewire::test(ManagerReport::class)
+        ->assertOk()
+        ->assertDontSee('Service Availability');
+});
+
+test('the excel export omits the service availability sheet for users not on the allowlist', function () {
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'boss@example.com']);
+
+    $adminNotOnAllowlist = User::factory()->create(['is_admin' => true, 'email' => 'ordinary.admin@example.com']);
+    Team::factory()->create(['manager_id' => $adminNotOnAllowlist->id]);
+    Service::factory()->create(['name' => 'Email Service']);
+
+    Excel::fake();
+
+    actingAs($adminNotOnAllowlist);
+
+    Livewire::test(ManagerReport::class)
+        ->set('weekStart', '2026-08-14')
+        ->call('exportAll');
+
+    Excel::assertDownloaded('manager-report-20260810-20260821.xlsx', function (ManagerReportExport $export) {
+        $sheetTitles = array_map(fn ($sheet) => $sheet->title(), $export->sheets());
+
+        return $sheetTitles === ['Team', 'Locations', 'Coverage'];
+    });
+});
+
+test('the excel export includes the service availability sheet for allowlisted viewers', function () {
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'boss@example.com, viewer@example.com']);
+
+    $viewer = User::factory()->create(['email' => 'viewer@example.com']);
+    Team::factory()->create(['manager_id' => $viewer->id]);
+    Service::factory()->create(['name' => 'Email Service']);
+
+    Excel::fake();
+
+    actingAs($viewer);
+
+    Livewire::test(ManagerReport::class)
+        ->set('weekStart', '2026-08-14')
+        ->call('exportAll');
+
+    Excel::assertDownloaded('manager-report-20260810-20260821.xlsx', function (ManagerReportExport $export) {
+        $sheetTitles = array_map(fn ($sheet) => $sheet->title(), $export->sheets());
+
+        return $sheetTitles === ['Team', 'Locations', 'Coverage', 'Service Availability'];
+    });
+});
 
 test('service availability tab displays all services', function () {
     $manager = User::factory()->create();

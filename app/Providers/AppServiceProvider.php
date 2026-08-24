@@ -30,5 +30,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewApiDocs', fn (?User $user = null) => $user !== null && ($user->isAdmin() || $user->isManager()));
 
         Gate::define('accessManagerApi', fn (User $user) => $user->isAdmin() || $user->isManager());
+
+        Gate::define('viewServiceAvailability', fn (User $user) => $user->isServiceReportViewer());
     }
 }

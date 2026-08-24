@@ -107,6 +107,13 @@ class User extends Authenticatable
             ->exists();
     }
 
+    public function isServiceReportViewer(): bool
+    {
+        $viewerEmails = array_map('trim', explode(',', strtolower(config('wcap.service_report_viewers'))));
+
+        return in_array(strtolower($this->email), $viewerEmails);
+    }
+
     public function getFullNameAttribute(): string
     {
         return $this->surname.', '.$this->forenames;

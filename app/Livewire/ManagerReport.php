@@ -63,7 +63,7 @@ class ManagerReport extends Component
         $end = end($payload['days'])['date']->format('Ymd');
 
         return Excel::download(
-            new ManagerReportExport($payload),
+            new ManagerReportExport($payload, includeServices: auth()->user()->can('viewServiceAvailability')),
             "manager-report-{$start}-{$end}.xlsx",
         );
     }
