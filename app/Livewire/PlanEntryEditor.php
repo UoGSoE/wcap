@@ -9,6 +9,8 @@ use App\Models\Team;
 use App\Models\User;
 use Carbon\Carbon;
 use Flux\Flux;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -17,6 +19,9 @@ class PlanEntryEditor extends Component
 {
     #[Locked]
     public int $userId;
+
+    #[Locked]
+    public ?int $teamId = null;
 
     public bool $readOnly = false;
 
@@ -30,9 +35,10 @@ class PlanEntryEditor extends Component
 
     public array $bulkPreview = ['days' => 0, 'people' => 0, 'skipped' => []];
 
-    public function mount(User $user, bool $readOnly = false, bool $createdByManager = false, ?string $startDate = null): void
+    public function mount(User $user, bool $readOnly = false, bool $createdByManager = false, ?string $startDate = null, ?int $teamId = null): void
     {
         $this->userId = $user->id;
+        $this->teamId = $teamId;
         $this->readOnly = $readOnly;
         $this->createdByManager = $createdByManager;
         $this->startDate = $startDate;
@@ -165,7 +171,7 @@ class PlanEntryEditor extends Component
 
         $this->loadEntries(User::findOrFail($this->userId));
 
-        $message = "Filled {$result['days']} days across {$result['people']} people";
+        $message = "Filled {$result['days']} ".Str::plural('day', $result['days'])." across {$result['people']} ".Str::plural('person', $result['people']);
 
         if ($result['skipped']) {
             $message .= ', skipped '.count($result['skipped']).' with no defaults';
@@ -193,12 +199,7 @@ class PlanEntryEditor extends Component
         $manager = auth()->user();
         $weekStart = Carbon::parse($this->entries[0]['entry_date']);
 
-        $people = Team::whereIn('id', $manager->allManagedTeamIds())
-            ->with('users')
-            ->get()
-            ->flatMap(fn ($team) => $team->users)
-            ->push($manager)
-            ->unique('id');
+        $people = $this->bulkFillPeople($manager);
 
         $result = ['days' => 0, 'people' => 0, 'skipped' => []];
 
@@ -222,6 +223,22 @@ class PlanEntryEditor extends Component
         }
 
         return $result;
+    }
+
+    private function bulkFillPeople(User $manager): Collection
+    {
+        if ($this->teamId) {
+            abort_unless(in_array($this->teamId, $manager->allManagedTeamIds()), 403);
+
+            return Team::findOrFail($this->teamId)->users;
+        }
+
+        return Team::whereIn('id', $manager->allManagedTeamIds())
+            ->with('users')
+            ->get()
+            ->flatMap(fn ($team) => $team->users)
+            ->push($manager)
+            ->unique('id');
     }
 
     private function fillFromDefaultsMessage(User $user, int $filledCount): string
@@ -306,6 +323,7 @@ class PlanEntryEditor extends Component
     public function render()
     {
         return view('livewire.plan-entry-editor', [
+            'planUser' => User::findOrFail($this->userId),
             'days' => $this->getDays(),
             'locations' => Location::orderBy('name')->get(),
             'availabilityStatuses' => AvailabilityStatus::cases(),

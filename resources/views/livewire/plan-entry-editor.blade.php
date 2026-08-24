@@ -2,9 +2,11 @@
     @if (! $readOnly)
         <div class="flex justify-between items-center gap-2 mb-4">
             <div class="flex items-center gap-3">
-                <flux:button size="sm" wire:click="fillFromDefaults" wire:loading.attr="disabled">Fill unsaved days from defaults</flux:button>
+                <flux:button size="sm" wire:click="fillFromDefaults" wire:loading.attr="disabled">
+                    Fill {{ $planUser->id === auth()->id() ? 'my' : $planUser->forenames."'s" }} unsaved days from defaults
+                </flux:button>
                 @manager
-                    <flux:checkbox wire:model="fillAllReports" label="And all my reports" />
+                    <flux:checkbox wire:model="fillAllReports" :label="$teamId ? 'And all members of this team' : 'And all my reports'" />
                 @endmanager
             </div>
             <flux:text size="sm" class="text-zinc-500">
@@ -68,9 +70,9 @@
                 <div>
                     <flux:heading size="lg">Fill plans from defaults?</flux:heading>
                     @if ($bulkPreview['days'] > 0)
-                        <flux:text class="mt-2">This will fill {{ $bulkPreview['days'] }} empty days across {{ $bulkPreview['people'] }} people, using each person's own defaults.</flux:text>
+                        <flux:text class="mt-2">This will fill {{ $bulkPreview['days'] }} empty {{ Str::plural('day', $bulkPreview['days']) }} across {{ $bulkPreview['people'] }} {{ Str::plural('person', $bulkPreview['people']) }}, using each person's own defaults.</flux:text>
                     @else
-                        <flux:text class="mt-2">You and all your reports are already filled in for this fortnight.</flux:text>
+                        <flux:text class="mt-2">{{ $teamId ? 'Everyone in this team is' : 'You and all your reports are' }} already filled in for this fortnight.</flux:text>
                     @endif
                     @if ($bulkPreview['skipped'])
                         <flux:text class="mt-2">Skipping (no defaults set): {{ implode(', ', $bulkPreview['skipped']) }}</flux:text>

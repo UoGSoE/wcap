@@ -769,13 +769,23 @@ test('fill from defaults button shows on the editor but not in read-only mode wh
     actingAs($user);
 
     Livewire::test(PlanEntryEditor::class, ['user' => $user])
-        ->assertSee('Fill unsaved days from defaults');
+        ->assertSee('Fill my unsaved days from defaults');
 
     Livewire::test(PlanEntryEditor::class, ['user' => $user, 'readOnly' => true])
-        ->assertDontSee('Fill unsaved days from defaults')
+        ->assertDontSee('Fill my unsaved days from defaults')
         ->call('fillFromDefaults');
 
     expect($user->planEntries()->count())->toBe(0);
+});
+
+test('the fill button names whose plan it will fill', function () {
+    actingAs($this->manager);
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $this->manager])
+        ->assertSee('Fill my unsaved days from defaults');
+
+    Livewire::test(PlanEntryEditor::class, ['user' => $this->user])
+        ->assertSee("Fill {$this->user->forenames}'s unsaved days from defaults");
 });
 
 test('a real save dispatches the plan-entry-saved event for the saved indicator', function () {
@@ -819,6 +829,18 @@ test('a non-manager never sees the bulk fill checkbox and read-only mode hides i
         ->assertDontSee('And all my reports');
 });
 
+test('the bulk fill checkbox names the team when the editor is scoped to one', function () {
+    actingAs($this->manager);
+
+    Livewire::test(PlanEntryEditor::class, [
+        'user' => $this->user,
+        'createdByManager' => true,
+        'teamId' => $this->team->id,
+    ])
+        ->assertSee('And all members of this team')
+        ->assertDontSee('And all my reports');
+});
+
 test('ticked bulk fill previews the correct counts and skipped names without writing anything', function () {
     $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
     $this->manager->update(['default_location_id' => $location->id]);
@@ -853,6 +875,50 @@ test('ticked bulk fill previews the correct counts and skipped names without wri
     expect(PlanEntry::count())->toBe(2);
 });
 
+test('a scoped bulk preview counts only that teams members', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $this->manager->update(['default_location_id' => $location->id]);
+    $this->user->update(['default_location_id' => $location->id]);
+
+    $secondTeamMember = User::factory()->create(['default_location_id' => $location->id]);
+    $this->team->users()->attach($secondTeamMember->id);
+
+    $otherTeam = Team::factory()->create(['manager_id' => $this->manager->id]);
+    $memberOfOtherTeam = User::factory()->create(['default_location_id' => $location->id]);
+    $otherTeam->users()->attach($memberOfOtherTeam->id);
+
+    actingAs($this->manager);
+
+    // Two team members with 10 empty weekdays each - the manager and the other team stay out of it
+    Livewire::test(PlanEntryEditor::class, [
+        'user' => $this->user,
+        'createdByManager' => true,
+        'teamId' => $this->team->id,
+    ])
+        ->set('fillAllReports', true)
+        ->call('fillFromDefaults')
+        ->assertSee('This will fill 20 empty days across 2 people');
+
+    expect(PlanEntry::count())->toBe(0);
+});
+
+test('the bulk preview says person not people for a single person', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $this->user->update(['default_location_id' => $location->id]);
+
+    actingAs($this->manager);
+
+    Livewire::test(PlanEntryEditor::class, [
+        'user' => $this->user,
+        'createdByManager' => true,
+        'teamId' => $this->team->id,
+    ])
+        ->set('fillAllReports', true)
+        ->call('fillFromDefaults')
+        ->assertSee('This will fill 10 empty days across 1 person')
+        ->assertDontSee('1 people');
+});
+
 test('confirming the bulk fill fills each persons empty weekdays from their own defaults', function () {
     $managerLocation = Location::factory()->create(['slug' => 'hq', 'name' => 'HQ']);
     $memberLocation = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
@@ -878,6 +944,50 @@ test('confirming the bulk fill fills each persons empty weekdays from their own 
     expect($this->user->planEntries()->first()->created_by_manager)->toBeTrue();
 
     expect($memberWithoutDefaults->planEntries()->count())->toBe(0);
+});
+
+test('a bulk fill scoped to a team fills only that teams members and not the manager', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $this->manager->update(['default_location_id' => $location->id]);
+    $this->user->update(['default_location_id' => $location->id]);
+
+    $otherTeam = Team::factory()->create(['manager_id' => $this->manager->id]);
+    $memberOfOtherTeam = User::factory()->create(['default_location_id' => $location->id]);
+    $otherTeam->users()->attach($memberOfOtherTeam->id);
+
+    actingAs($this->manager);
+
+    Livewire::test(PlanEntryEditor::class, [
+        'user' => $this->user,
+        'createdByManager' => true,
+        'teamId' => $this->team->id,
+    ])
+        ->set('fillAllReports', true)
+        ->call('confirmBulkFill');
+
+    expect($this->user->planEntries()->count())->toBe(10);
+    expect($memberOfOtherTeam->planEntries()->count())->toBe(0);
+    expect($this->manager->planEntries()->count())->toBe(0);
+});
+
+test('a bulk fill scoped to a team the manager does not manage aborts', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $this->user->update(['default_location_id' => $location->id]);
+
+    $someoneElsesTeam = Team::factory()->create(['manager_id' => User::factory()->create()->id]);
+
+    actingAs($this->manager);
+
+    Livewire::test(PlanEntryEditor::class, [
+        'user' => $this->user,
+        'createdByManager' => true,
+        'teamId' => $someoneElsesTeam->id,
+    ])
+        ->set('fillAllReports', true)
+        ->call('confirmBulkFill')
+        ->assertStatus(403);
+
+    expect(PlanEntry::count())->toBe(0);
 });
 
 test('the bulk fill targets the fortnight shown when mounted with a startDate', function () {
@@ -920,6 +1030,28 @@ test('the bulk preview shows a nothing-to-do message with no confirm button when
         ->assertSee('You and all your reports are already filled in for this fortnight')
         ->assertDontSee('This will fill')
         ->assertDontSee('Confirm');
+});
+
+test('a scoped bulk preview shows a team-worded nothing-to-do message when the team is filled in', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $this->user->update(['default_location_id' => $location->id]);
+
+    actingAs($this->manager);
+
+    $component = Livewire::test(PlanEntryEditor::class, [
+        'user' => $this->user,
+        'createdByManager' => true,
+        'teamId' => $this->team->id,
+    ])
+        ->set('fillAllReports', true)
+        ->call('confirmBulkFill');
+
+    expect($this->user->planEntries()->count())->toBe(10);
+
+    $component
+        ->call('fillFromDefaults')
+        ->assertSee('Everyone in this team is already filled in for this fortnight')
+        ->assertDontSee('You and all your reports');
 });
 
 test('an unticked fill click writes straight through with no confirm modal', function () {

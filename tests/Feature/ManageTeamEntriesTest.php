@@ -113,6 +113,20 @@ test('selecting real team defaults to first user ordered by surname', function (
         ->assertSet('selectedUserId', $memberA->id);
 });
 
+test('the editor is scoped to the selected team so the bulk fill wording follows', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(ManageTeamEntries::class)
+        ->assertSee('And all my reports')
+        ->set('selectedTeamId', $team->id)
+        ->assertSee('And all members of this team');
+});
+
 test('changing team resets to first user of new team', function () {
     $manager = User::factory()->create();
     $teamA = Team::factory()->create(['manager_id' => $manager->id, 'name' => 'Alpha']);

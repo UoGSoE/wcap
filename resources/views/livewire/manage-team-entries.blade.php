@@ -81,7 +81,8 @@
                     :read-only="false"
                     :created-by-manager="$selectedUser->id !== auth()->id()"
                     :start-date="$resolvedWeekStart->toDateString()"
-                    :key="$selectedUserId . '-' . $resolvedWeekStart->toDateString()"
+                    :team-id="$selectedTeamId ?: null"
+                    :key="$selectedTeamId . '-' . $selectedUserId . '-' . $resolvedWeekStart->toDateString()"
                 />
             </div>
         @else
