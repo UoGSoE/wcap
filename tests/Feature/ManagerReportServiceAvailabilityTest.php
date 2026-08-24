@@ -13,7 +13,9 @@ use function Pest\Laravel\actingAs;
 
 uses(RefreshDatabase::class);
 
-test('service availability tab is visible', function () {
+test('service availability tab is hidden at the request of the stakeholder (24/08/2026)', function () {
+    // The tab and panel are guarded with @if (false) in manager-report.blade.php.
+    // Flip this back to assertSee when the feature is restored.
     $manager = User::factory()->create();
     $team = Team::factory()->create(['manager_id' => $manager->id]);
 
@@ -21,7 +23,7 @@ test('service availability tab is visible', function () {
 
     Livewire::test(ManagerReport::class)
         ->assertOk()
-        ->assertSee('Service Availability');
+        ->assertDontSee('Service Availability');
 })->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('service availability tab displays all services', function () {
@@ -292,7 +294,8 @@ test('manager only coverage shows manager_only flag', function () {
     expect($testServiceRow['entries'][0]['count'])->toBe(0);
     expect($testServiceRow['entries'][0]['manager_only'])->toBe(true);
 
-    $component->assertSee('Manager');
+    // Badge assertion parked while the tab is hidden at the request of the stakeholder (24/08/2026):
+    // $component->assertSee('Manager');
 })->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
 test('manager available but members also available shows count not manager_only', function () {

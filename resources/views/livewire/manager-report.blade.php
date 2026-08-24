@@ -70,9 +70,12 @@
             <flux:tab name="team">My Reports</flux:tab>
             <flux:tab name="location">Area Supported</flux:tab>
             <flux:tab name="coverage">Coverage</flux:tab>
-            @servicesEnabled
-                <flux:tab name="service-availability">Service Availability</flux:tab>
-            @endservicesEnabled
+            {{-- Hidden at the request of the stakeholder (24/08/2026). Remove this guard and the matching one on the panel below to restore it. --}}
+            @if (false)
+                @servicesEnabled
+                    <flux:tab name="service-availability">Service Availability</flux:tab>
+                @endservicesEnabled
+            @endif
         </flux:tabs>
 
         <flux:tab.panel name="team">
@@ -208,6 +211,8 @@
             </div>
         </flux:tab.panel>
 
+        {{-- Hidden at the request of the stakeholder (24/08/2026) - see the matching guard on the tab above. --}}
+        @if (false)
         @servicesEnabled
             <flux:tab.panel name="service-availability">
                 <flux:subheading>Service availability at a glance</flux:subheading>
@@ -248,5 +253,6 @@
                 </div>
             </flux:tab.panel>
         @endservicesEnabled
+        @endif
     </flux:tab.group>
 </div>
