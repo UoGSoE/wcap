@@ -6,7 +6,7 @@
                     Fill {{ $planUser->id === auth()->id() ? 'my' : $planUser->forenames."'s" }} unsaved days from defaults
                 </flux:button>
                 @manager
-                    <flux:checkbox wire:model="fillAllReports" :label="$teamId ? 'And all members of this team' : 'And all my reports'" />
+                    {{-- <flux:checkbox wire:model="fillAllReports" :label="$teamId ? 'And all members of this team' : 'And all my reports'" /> --}}
                 @endmanager
             </div>
             <flux:text size="sm" class="text-zinc-500">
