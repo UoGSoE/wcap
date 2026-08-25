@@ -125,7 +125,7 @@ test('the editor is scoped to the selected team so the bulk fill wording follows
         ->assertSee('And all my reports')
         ->set('selectedTeamId', $team->id)
         ->assertSee('And all members of this team');
-});
+})->skip('Bulk fill button hidden for now');
 
 test('changing team resets to first user of new team', function () {
     $manager = User::factory()->create();

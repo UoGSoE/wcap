@@ -815,7 +815,7 @@ test('a manager sees the bulk fill checkbox', function () {
 
     Livewire::test(PlanEntryEditor::class, ['user' => $this->manager])
         ->assertSee('And all my reports');
-});
+})->skip('Bulk fill button hidden for now');
 
 test('a non-manager never sees the bulk fill checkbox and read-only mode hides it too', function () {
     actingAs($this->user);
@@ -839,7 +839,7 @@ test('the bulk fill checkbox names the team when the editor is scoped to one', f
     ])
         ->assertSee('And all members of this team')
         ->assertDontSee('And all my reports');
-});
+})->skip('Bulk fill button hidden for now');
 
 test('ticked bulk fill previews the correct counts and skipped names without writing anything', function () {
     $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
