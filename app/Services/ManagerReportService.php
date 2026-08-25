@@ -16,8 +16,7 @@ class ManagerReportService
         private array $selectedTeams = [],
         private ?string $from = null,
         private ?string $to = null,
-    ) {
-    }
+    ) {}
 
     public function configure(
         bool $showLocation = true,
