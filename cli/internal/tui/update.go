@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -38,6 +39,12 @@ type planLoadedMsg struct {
 
 type savedMsg struct {
 	err error
+}
+
+type filledMsg struct {
+	result    *api.FillDefaultsResult
+	singleDay bool
+	err       error
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +122,15 @@ func upsertCmd(c *api.Client, targetUserID, selfID int, entries []api.Entry) tea
 	}
 }
 
+func fillDefaultsCmd(c *api.Client, userID int, weekStart, onlyDate string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := ctxBackground()
+		defer cancel()
+		result, err := c.FillDefaults(ctx, userID, weekStart, onlyDate)
+		return filledMsg{result: result, singleDay: onlyDate != "", err: err}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Update
 
@@ -152,6 +168,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.canManage = true
 		m.members = msg.members
 		m.loadedMembers = true
+		// The list may arrive after loading has finished (maybeFinishLoading
+		// no-ops then), so normalise it here too.
+		m.refreshMembers()
 		m.maybeFinishLoading()
 		return m, nil
 
@@ -184,6 +203,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.statusf(statusGood, "Saved.")
 		}
 		m.mode = modeList
+		// Refetch so we have authoritative state.
+		return m, loadPlanCmd(m.client, m.planUserID, m.selfID, m.weekOffset, time.Now())
+
+	case filledMsg:
+		if msg.err != nil {
+			m.statusf(statusBad, "fill failed: %s", friendlyErr(msg.err))
+			return m, nil
+		}
+		kind := statusGood
+		if msg.result.FilledDays == 0 {
+			kind = statusNormal
+		}
+		m.statusf(kind, "%s", fillStatus(msg.result, msg.singleDay))
 		// Refetch so we have authoritative state.
 		return m, loadPlanCmd(m.client, m.planUserID, m.selfID, m.weekOffset, time.Now())
 
@@ -265,27 +297,7 @@ func (m *Model) maybeFinishLoading() {
 		return
 	}
 
-	// Populate the members slice so selfID can be selected even without
-	// manage permission.
-	if !m.canManage && len(m.members) == 0 {
-		m.members = []api.TeamMember{{ID: m.selfID, Name: m.selfName}}
-	} else if m.canManage {
-		// Ensure self is in the list (it usually is, but staff/admin lookups
-		// vary).
-		hasSelf := false
-		for _, x := range m.members {
-			if x.ID == m.selfID {
-				hasSelf = true
-				break
-			}
-		}
-		if !hasSelf {
-			m.members = append(m.members, api.TeamMember{ID: m.selfID, Name: m.selfName})
-		}
-		sortMembersBySurname(m.members, m.selfID)
-	}
-
-	m.applyFilter()
+	m.refreshMembers()
 
 	// If the plan response landed before /user, planUserID may be 0; tag it
 	// as self so the right pane title is sensible.
@@ -405,6 +417,18 @@ func (m Model) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "C":
 		if m.pane == paneRight {
 			return m.copyRest()
+		}
+		return m, nil
+
+	case "d":
+		if m.pane == paneRight {
+			return m.fillFromDefaults(m.currentDayEntry().EntryDate)
+		}
+		return m, nil
+
+	case "D":
+		if m.pane == paneRight {
+			return m.fillFromDefaults("")
 		}
 		return m, nil
 
@@ -584,6 +608,41 @@ func (m Model) copyRest() (tea.Model, tea.Cmd) {
 	}
 	m.statusf(statusNormal, "Saving %d days…", len(changed))
 	return m, upsertCmd(m.client, m.planUserID, m.selfID, changed)
+}
+
+// ---------------------------------------------------------------------------
+// Fill from defaults, mirroring the web UI's fill button
+
+// fillFromDefaults fills empty weekdays from the plan owner's profile
+// defaults via the manager endpoint. onlyDate limits the fill to that one
+// day; empty means the whole visible fortnight. The server only ever writes
+// to empty days, so no confirm is needed.
+func (m Model) fillFromDefaults(onlyDate string) (tea.Model, tea.Cmd) {
+	userID := m.planUserID
+	if userID == 0 {
+		userID = m.selfID
+	}
+	if userID == 0 {
+		return m, nil
+	}
+	weekStart, _ := windowBounds(time.Now(), m.weekOffset)
+	m.statusf(statusNormal, "Filling from defaults…")
+	return m, fillDefaultsCmd(m.client, userID, weekStart, onlyDate)
+}
+
+// fillStatus renders a fill result for the status line. Zero filled days is
+// a normal outcome, not an error.
+func fillStatus(result *api.FillDefaultsResult, singleDay bool) string {
+	if result.SkippedReason == "no_defaults" {
+		return "No defaults set for this user"
+	}
+	if result.FilledDays == 0 {
+		if singleDay {
+			return "Day already planned"
+		}
+		return "Nothing to fill - all days already planned"
+	}
+	return fmt.Sprintf("Filled %d days from defaults", result.FilledDays)
 }
 
 // ---------------------------------------------------------------------------

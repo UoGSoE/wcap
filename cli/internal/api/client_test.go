@@ -193,6 +193,81 @@ func TestMemberPlanHitsManagerEndpoint(t *testing.T) {
 	}
 }
 
+func TestFillDefaultsSendsFortnightBody(t *testing.T) {
+	var gotBody map[string]any
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if r.URL.Path != "/api/v1/manager/team-members/9/plan/fill-defaults" {
+			t.Errorf("wrong path: %q", r.URL.Path)
+		}
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		_, _ = io.WriteString(w, `{"filled_days": 6, "window": {"from": "2026-08-17", "to": "2026-08-28"}, "user": {"email": "sam@example.com"}}`)
+	})
+
+	result, err := c.FillDefaults(context.Background(), 9, "2026-08-17", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotBody["week_start"] != "2026-08-17" {
+		t.Errorf("week_start: got %v", gotBody["week_start"])
+	}
+	if _, present := gotBody["only_date"]; present {
+		t.Errorf("only_date should be omitted, got %v", gotBody["only_date"])
+	}
+	if result.FilledDays != 6 {
+		t.Errorf("filled_days: got %d", result.FilledDays)
+	}
+	if result.SkippedReason != "" {
+		t.Errorf("skipped_reason: got %q", result.SkippedReason)
+	}
+}
+
+func TestFillDefaultsSendsOnlyDateAndDecodesSkippedReason(t *testing.T) {
+	var gotBody map[string]any
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		_, _ = io.WriteString(w, `{"filled_days": 0, "skipped_reason": "no_defaults", "window": {"from": "2026-08-19", "to": "2026-08-19"}, "user": {"email": "sam@example.com"}}`)
+	})
+
+	result, err := c.FillDefaults(context.Background(), 9, "2026-08-17", "2026-08-19")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotBody["only_date"] != "2026-08-19" {
+		t.Errorf("only_date: got %v", gotBody["only_date"])
+	}
+	if result.FilledDays != 0 {
+		t.Errorf("filled_days: got %d", result.FilledDays)
+	}
+	if result.SkippedReason != "no_defaults" {
+		t.Errorf("skipped_reason: got %q", result.SkippedReason)
+	}
+}
+
+func TestFillDefaultsMapsTypedErrors(t *testing.T) {
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	})
+	if _, err := c.FillDefaults(context.Background(), 9, "2026-08-17", ""); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+
+	c, _ = newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_, _ = io.WriteString(w, `{"message":"The given data was invalid.","errors":{"week_start":["The week start field is required."]}}`)
+	})
+	_, err := c.FillDefaults(context.Background(), 9, "", "")
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected *ValidationError, got %T %v", err, err)
+	}
+	if !strings.Contains(ve.Error(), "week_start") {
+		t.Errorf("error should mention week_start: %q", ve.Error())
+	}
+}
+
 func TestMissingBaseURLOrToken(t *testing.T) {
 	c := New("", "")
 	if _, err := c.MyPlan(context.Background(), "", ""); err == nil {

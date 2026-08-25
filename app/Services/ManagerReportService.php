@@ -11,21 +11,13 @@ use Carbon\Carbon;
 
 class ManagerReportService
 {
-    /**
-     * Create a new class instance.
-     */
     public function __construct(
         private bool $showLocation = true,
         private array $selectedTeams = [],
         private ?string $from = null,
         private ?string $to = null,
-    ) {
-        //
-    }
+    ) {}
 
-    /**
-     * Configure the service with specific options.
-     */
     public function configure(
         bool $showLocation = true,
         array $selectedTeams = [],
@@ -147,9 +139,6 @@ class ManagerReportService
         return $this->indexEntriesByUser($entries, $userIds);
     }
 
-    /**
-     * Index a collection of entries by user ID and date.
-     */
     private function indexEntriesByUser($entries, array $userIds): array
     {
         $indexed = [];
@@ -342,9 +331,6 @@ class ManagerReportService
         return $matrix;
     }
 
-    /**
-     * Build service availability matrix using pre-loaded entries.
-     */
     public function buildServiceAvailabilityMatrixFromEntries(array $days, $services, $allEntries): array
     {
         $matrix = [];
@@ -420,8 +406,6 @@ class ManagerReportService
     }
 
     /**
-     * Get user IDs in scope for the given scope label.
-     *
      * @param  string  $scope  'all', 'team', or 'own'
      * @return array<int>
      */

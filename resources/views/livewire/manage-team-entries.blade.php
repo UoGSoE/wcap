@@ -13,15 +13,18 @@
         </div>
         @if ($managedTeams->count() > 1)
         <div class="w-full md:w-1/4">
-            <flux:select
-                wire:model.live="selectedTeamId"
-                placeholder="Select a team..."
-                variant="listbox"
-            >
+            <flux:field>
+                <flux:label class="sr-only">Team</flux:label>
+                <flux:select
+                    wire:model.live="selectedTeamId"
+                    placeholder="Select a team..."
+                    variant="listbox"
+                >
                 @foreach ($managedTeams as $team)
                     <flux:select.option value="{{ $team->id }}">{{ $team->name }}</flux:select.option>
                 @endforeach
-            </flux:select>
+                </flux:select>
+            </flux:field>
         </div>
         @endif
     </div>
@@ -48,7 +51,10 @@
                         @endif
                     </div>
                     <div class="flex items-center gap-2">
-                        <flux:date-picker wire:model.live="weekStart" with-today />
+                        <flux:field>
+                            <flux:label class="sr-only">Week starting</flux:label>
+                            <flux:date-picker wire:model.live="weekStart" with-today />
+                        </flux:field>
                         @if (! $isCurrentFortnight)
                             <flux:button
                                 wire:click="goToToday"
@@ -75,7 +81,8 @@
                     :read-only="false"
                     :created-by-manager="$selectedUser->id !== auth()->id()"
                     :start-date="$resolvedWeekStart->toDateString()"
-                    :key="$selectedUserId . '-' . $resolvedWeekStart->toDateString()"
+                    :team-id="$selectedTeamId ?: null"
+                    :key="$selectedTeamId . '-' . $selectedUserId . '-' . $resolvedWeekStart->toDateString()"
                 />
             </div>
         @else

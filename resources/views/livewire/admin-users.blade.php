@@ -45,10 +45,17 @@
                             </div>
                         </flux:table.cell>
                         <flux:table.cell class="flex gap-2 justify-end">
-                            <flux:button size="sm" icon="pencil" wire:click="editUser({{ $user->id }})">
+                            @if (! app()->isProduction() && $user->id !== auth()->id())
+                                <form method="post" action="{{ route('impersonate.start', $user) }}">
+                                    @csrf
+                                    <flux:button size="sm" icon="identification" type="submit" title="Impersonate {{ $user->full_name }}" aria-label="Impersonate {{ $user->full_name }}">
+                                    </flux:button>
+                                </form>
+                            @endif
+                            <flux:button size="sm" icon="pencil" aria-label="Edit {{ $user->full_name }}" wire:click="editUser({{ $user->id }})">
                             </flux:button>
                             @if ($user->id !== auth()->id())
-                                <flux:button size="sm" variant="danger" icon="trash" wire:click="confirmDelete({{ $user->id }})">
+                                <flux:button size="sm" variant="danger" icon="trash" aria-label="Delete {{ $user->full_name }}" wire:click="confirmDelete({{ $user->id }})">
                                 </flux:button>
                             @endif
                         </flux:table.cell>

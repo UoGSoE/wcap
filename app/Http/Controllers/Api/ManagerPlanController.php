@@ -10,6 +10,7 @@ use App\Models\PlanEntry;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\ManagerReportService;
+use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,9 +19,6 @@ class ManagerPlanController
 {
     use ParsesDateWindowFilter;
 
-    /**
-     * List team members the authenticated user can manage.
-     */
     public function teamMembers(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -37,12 +35,6 @@ class ManagerPlanController
         ]);
     }
 
-    /**
-     * Get a team member's plan entries.
-     *
-     * Defaults to the next 10 weekdays starting Monday of the current week.
-     * Supply filter[from]/filter[to] to widen or shift the window.
-     */
     #[QueryParameter('filter[from]', description: 'Start of a custom date window (YYYY-MM-DD). Must be paired with filter[to].', type: 'string', example: '2026-04-20')]
     #[QueryParameter('filter[to]', description: 'End of a custom date window (YYYY-MM-DD). Must be paired with filter[from].', type: 'string', example: '2026-04-24')]
     public function show(Request $request, int $userId, ManagerReportService $service): JsonResponse
@@ -81,9 +73,6 @@ class ManagerPlanController
         ]);
     }
 
-    /**
-     * Upsert plan entries for a team member.
-     */
     public function upsert(ManagerUpsertPlanEntriesRequest $request, int $userId): JsonResponse
     {
         $user = $request->user();
@@ -137,9 +126,49 @@ class ManagerPlanController
         ]);
     }
 
-    /**
-     * Delete a plan entry for a team member.
-     */
+    public function fillDefaults(Request $request, int $userId): JsonResponse
+    {
+        $user = $request->user();
+        $targetUser = User::findOrFail($userId);
+
+        if (! $user->canManagePlanFor($targetUser)) {
+            abort(403, 'You cannot manage this user\'s plan.');
+        }
+
+        $validated = $request->validate([
+            'week_start' => 'required|date',
+            'only_date' => 'nullable|date',
+        ]);
+
+        $createdByManager = $targetUser->isNot($user);
+
+        if (isset($validated['only_date'])) {
+            $onlyDate = Carbon::parse($validated['only_date']);
+            $filledDays = $targetUser->fillPlanDayFromDefaults($onlyDate, $createdByManager) ? 1 : 0;
+            $windowFrom = $windowTo = $onlyDate->toDateString();
+        } else {
+            $weekStart = Carbon::parse($validated['week_start'])->startOfWeek();
+            $filledDays = $targetUser->fillPlanFromDefaults($weekStart, createdByManager: $createdByManager);
+            $windowFrom = $weekStart->toDateString();
+            $windowTo = $weekStart->copy()->addDays(11)->toDateString();
+        }
+
+        $response = [
+            'filled_days' => $filledDays,
+            'window' => [
+                'from' => $windowFrom,
+                'to' => $windowTo,
+            ],
+            'user' => ['email' => $targetUser->email],
+        ];
+
+        if (! $targetUser->hasUsableDefaults()) {
+            $response['skipped_reason'] = 'no_defaults';
+        }
+
+        return response()->json($response);
+    }
+
     public function destroy(Request $request, int $userId, int $entryId): JsonResponse
     {
         $user = $request->user();
@@ -157,9 +186,6 @@ class ManagerPlanController
         ]);
     }
 
-    /**
-     * Get users that the authenticated user can manage.
-     */
     private function getManageableUsers(User $user)
     {
         if ($user->isAdmin()) {
@@ -175,9 +201,6 @@ class ManagerPlanController
             ->values();
     }
 
-    /**
-     * Transform a plan entry for JSON response.
-     */
     private function transformEntry(PlanEntry $entry): array
     {
         return [

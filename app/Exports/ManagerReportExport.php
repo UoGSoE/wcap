@@ -10,6 +10,7 @@ class ManagerReportExport implements WithMultipleSheets
 {
     public function __construct(
         private array $payload,
+        private bool $includeServices = false,
     ) {}
 
     public function sheets(): array
@@ -20,7 +21,7 @@ class ManagerReportExport implements WithMultipleSheets
             new CoverageReportSheet($this->payload['days'], $this->payload['coverageMatrix']),
         ];
 
-        if (config('wcap.services_enabled') && isset($this->payload['serviceAvailabilityMatrix'])) {
+        if ($this->includeServices && isset($this->payload['serviceAvailabilityMatrix'])) {
             $sheets[] = new ServiceAvailabilitySheet($this->payload['days'], $this->payload['serviceAvailabilityMatrix']);
         }
 

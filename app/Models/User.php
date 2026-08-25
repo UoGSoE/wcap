@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AvailabilityStatus;
+use Carbon\Carbon;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -106,8 +107,76 @@ class User extends Authenticatable
             ->exists();
     }
 
+    public function isServiceReportViewer(): bool
+    {
+        $viewerEmails = array_map('trim', explode(',', strtolower(config('wcap.service_report_viewers'))));
+
+        return in_array(strtolower($this->email), $viewerEmails);
+    }
+
     public function getFullNameAttribute(): string
     {
         return $this->surname.', '.$this->forenames;
+    }
+
+    public function hasUsableDefaults(): bool
+    {
+        if ($this->default_location_id) {
+            return true;
+        }
+
+        return ($this->default_availability_status ?? AvailabilityStatus::ONSITE) === AvailabilityStatus::NOT_AVAILABLE;
+    }
+
+    public function fillPlanDayFromDefaults(Carbon $date, bool $createdByManager = false): bool
+    {
+        if (! $this->couldFillPlanDayFromDefaults($date)) {
+            return false;
+        }
+
+        $this->planEntries()->create([
+            'entry_date' => $date->format('Y-m-d'),
+            'location_id' => $this->default_location_id,
+            'availability_status' => $this->default_availability_status ?? AvailabilityStatus::ONSITE,
+            'note' => $this->default_category,
+            'created_by_manager' => $createdByManager,
+        ]);
+
+        return true;
+    }
+
+    public function fillPlanFromDefaults(Carbon $weekStart, bool $dryRun = false, bool $createdByManager = false): int
+    {
+        $start = $weekStart->copy()->startOfWeek();
+        $filled = 0;
+
+        foreach (range(0, 13) as $offset) {
+            $date = $start->copy()->addDays($offset);
+
+            if ($dryRun) {
+                $filled += $this->couldFillPlanDayFromDefaults($date) ? 1 : 0;
+
+                continue;
+            }
+
+            if ($this->fillPlanDayFromDefaults($date, $createdByManager)) {
+                $filled++;
+            }
+        }
+
+        return $filled;
+    }
+
+    private function couldFillPlanDayFromDefaults(Carbon $date): bool
+    {
+        if (! $this->hasUsableDefaults()) {
+            return false;
+        }
+
+        if (! $date->isWeekday()) {
+            return false;
+        }
+
+        return ! $this->planEntries()->whereDate('entry_date', $date->format('Y-m-d'))->exists();
     }
 }

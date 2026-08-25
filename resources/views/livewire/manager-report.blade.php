@@ -32,18 +32,23 @@
     <flux:spacer class="mt-6"/>
 
     <div class="mb-4 flex justify-between items-center gap-4">
-        <flux:pillbox
-            wire:model.live="selectedTeams"
-            multiple
-            placeholder="Filter by team(s)..."
-            searchable
-            class="flex-1"
-        >
+        <flux:field class="flex-1">
+            <flux:label class="sr-only">Filter by teams</flux:label>
+            <flux:pillbox
+                wire:model.live="selectedTeams"
+                multiple
+                placeholder="Filter by team(s)..."
+                searchable
+            >
             @foreach ($availableTeams as $team)
                 <flux:pillbox.option :value="$team->id">{{ $team->name }}</flux:pillbox.option>
             @endforeach
-        </flux:pillbox>
-        <flux:date-picker wire:model.live="weekStart" with-today />
+            </flux:pillbox>
+        </flux:field>
+        <flux:field>
+            <flux:label class="sr-only">Week starting</flux:label>
+            <flux:date-picker wire:model.live="weekStart" with-today />
+        </flux:field>
         @if (! $isCurrentWeek)
             <flux:button
                 wire:click="goToToday"
@@ -65,9 +70,12 @@
             <flux:tab name="team">My Reports</flux:tab>
             <flux:tab name="location">Area Supported</flux:tab>
             <flux:tab name="coverage">Coverage</flux:tab>
-            @servicesEnabled
-                <flux:tab name="service-availability">Service Availability</flux:tab>
-            @endservicesEnabled
+            {{-- Restricted to an email allowlist at the request of the stakeholder (24/08/2026) - see WCAP_SERVICE_REPORT_VIEWERS. Matching guard on the panel below. --}}
+            @can('viewServiceAvailability')
+                @servicesEnabled
+                    <flux:tab name="service-availability">Service Availability</flux:tab>
+                @endservicesEnabled
+            @endcan
         </flux:tabs>
 
         <flux:tab.panel name="team">
@@ -203,6 +211,8 @@
             </div>
         </flux:tab.panel>
 
+        {{-- Restricted to an email allowlist at the request of the stakeholder (24/08/2026) - see the matching guard on the tab above. --}}
+        @can('viewServiceAvailability')
         @servicesEnabled
             <flux:tab.panel name="service-availability">
                 <flux:subheading>Service availability at a glance</flux:subheading>
@@ -243,5 +253,6 @@
                 </div>
             </flux:tab.panel>
         @endservicesEnabled
+        @endcan
     </flux:tab.group>
 </div>

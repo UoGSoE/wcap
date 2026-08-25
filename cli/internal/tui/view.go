@@ -83,6 +83,8 @@ func (m Model) viewHelp() string {
     Enter / e         Edit selected day
     c                 Copy this day onto the next
     C                 Copy this day onto all following days
+    d                 Fill this day from defaults
+    D                 Fill all empty days from defaults
     ] / [             Next / previous week
     r                 Reload from server
 
@@ -288,6 +290,11 @@ func (m Model) renderDayRow(day time.Time, idx, width int) string {
 	}
 
 	statusGlyph, statusLabel, statusStyle := statusBadge(entry.AvailabilityStatus)
+	if entry.ID == nil {
+		// Unsaved stub: the Onsite default is for the edit form, not the
+		// display. Render a dash so the grid tells DB truth.
+		statusGlyph, statusLabel, statusStyle = "-", "", theme.Faint
+	}
 	locLabel := entry.LocationLabel
 	if locLabel == "" && entry.Location != "" {
 		locLabel = entry.Location

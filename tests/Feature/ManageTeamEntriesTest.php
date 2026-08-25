@@ -113,6 +113,20 @@ test('selecting real team defaults to first user ordered by surname', function (
         ->assertSet('selectedUserId', $memberA->id);
 });
 
+test('the editor is scoped to the selected team so the bulk fill wording follows', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $member = User::factory()->create();
+    $team->users()->attach($member->id);
+
+    actingAs($manager);
+
+    Livewire::test(ManageTeamEntries::class)
+        ->assertSee('And all my reports')
+        ->set('selectedTeamId', $team->id)
+        ->assertSee('And all members of this team');
+})->skip('Bulk fill button hidden for now');
+
 test('changing team resets to first user of new team', function () {
     $manager = User::factory()->create();
     $teamA = Team::factory()->create(['manager_id' => $manager->id, 'name' => 'Alpha']);
@@ -192,26 +206,15 @@ test('saving via editor sets created_by_manager flag', function () {
 
     actingAs($manager);
 
-    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
-        $date = now()->startOfWeek()->addDays($offset);
-
-        return [
-            'id' => null,
-            'entry_date' => $date->format('Y-m-d'),
-            'note' => 'Manager entered',
-            'location_id' => $location->id,
-            'availability_status' => AvailabilityStatus::ONSITE->value,
-        ];
-    })->toArray();
-
     Livewire::test(PlanEntryEditor::class, [
         'user' => $member,
         'readOnly' => false,
         'createdByManager' => true,
     ])
-        ->set('entries', $entries)
-        ->call('save')
-        ->assertOk();
+        ->set('entries.0.availability_status', AvailabilityStatus::ONSITE->value)
+        ->set('entries.0.location_id', $location->id)
+        ->set('entries.0.note', 'Manager entered')
+        ->assertHasNoErrors();
 
     $entry = PlanEntry::where('user_id', $member->id)->first();
     expect($entry->created_by_manager)->toBeTrue();
@@ -254,28 +257,17 @@ test('manager can save their own entries via My Plan', function () {
 
     actingAs($manager);
 
-    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
-        $date = now()->startOfWeek()->addDays($offset);
-
-        return [
-            'id' => null,
-            'entry_date' => $date->format('Y-m-d'),
-            'note' => 'My own task',
-            'location_id' => $location->id,
-            'availability_status' => AvailabilityStatus::ONSITE->value,
-        ];
-    })->toArray();
-
     Livewire::test(PlanEntryEditor::class, [
         'user' => $manager,
         'readOnly' => false,
         'createdByManager' => false,
     ])
-        ->set('entries', $entries)
-        ->call('save')
-        ->assertOk();
+        ->set('entries.0.availability_status', AvailabilityStatus::ONSITE->value)
+        ->set('entries.0.location_id', $location->id)
+        ->set('entries.0.note', 'My own task')
+        ->assertHasNoErrors();
 
-    expect(PlanEntry::where('user_id', $manager->id)->count())->toBe(14);
+    expect(PlanEntry::where('user_id', $manager->id)->count())->toBe(1);
 });
 
 test('own entries have created_by_manager false', function () {
@@ -287,26 +279,15 @@ test('own entries have created_by_manager false', function () {
 
     actingAs($manager);
 
-    $entries = collect(range(0, 13))->map(function ($offset) use ($location) {
-        $date = now()->startOfWeek()->addDays($offset);
-
-        return [
-            'id' => null,
-            'entry_date' => $date->format('Y-m-d'),
-            'note' => 'My own task',
-            'location_id' => $location->id,
-            'availability_status' => AvailabilityStatus::ONSITE->value,
-        ];
-    })->toArray();
-
     Livewire::test(PlanEntryEditor::class, [
         'user' => $manager,
         'readOnly' => false,
         'createdByManager' => false,
     ])
-        ->set('entries', $entries)
-        ->call('save')
-        ->assertOk();
+        ->set('entries.0.availability_status', AvailabilityStatus::ONSITE->value)
+        ->set('entries.0.location_id', $location->id)
+        ->set('entries.0.note', 'My own task')
+        ->assertHasNoErrors();
 
     $entry = PlanEntry::where('user_id', $manager->id)->first();
     expect($entry->created_by_manager)->toBeFalse();

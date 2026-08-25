@@ -4,6 +4,8 @@ namespace App\Livewire;
 
 use App\Enums\AvailabilityStatus;
 use App\Models\Location;
+use App\Models\PlanEntry;
+use Carbon\Carbon;
 use Flux\Flux;
 use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Attributes\Computed;
@@ -239,6 +241,31 @@ class Profile extends Component
         return view('livewire.profile', [
             'locations' => Location::orderBy('name')->get(),
             'availabilityStatuses' => AvailabilityStatus::cases(),
+            'planDays' => $this->getPlanDays(),
         ]);
+    }
+
+    /** @return array<int, array{date: Carbon, entry: ?PlanEntry}> */
+    private function getPlanDays(): array
+    {
+        $start = now()->startOfWeek();
+
+        $entries = auth()->user()->planEntries()
+            ->whereBetween('entry_date', [
+                $start->format('Y-m-d'),
+                $start->copy()->addDays(13)->format('Y-m-d'),
+            ])
+            ->get()
+            ->keyBy(fn ($entry) => $entry->entry_date->format('Y-m-d'));
+
+        return collect(range(0, 13))
+            ->map(fn ($offset) => $start->copy()->addDays($offset))
+            ->filter(fn ($date) => $date->isWeekday())
+            ->map(fn ($date) => [
+                'date' => $date,
+                'entry' => $entries->get($date->format('Y-m-d')),
+            ])
+            ->values()
+            ->toArray();
     }
 }

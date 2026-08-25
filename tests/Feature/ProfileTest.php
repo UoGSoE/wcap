@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\AvailabilityStatus;
 use App\Livewire\Profile;
 use App\Models\Location;
+use App\Models\PlanEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -357,4 +359,62 @@ test('managers also see the /docs/api pointer (they have access to the spec)', f
     Livewire::test(Profile::class)
         ->call('selectToken', $token->accessToken->id)
         ->assertSee('/docs/api');
+});
+
+test('profile shows a read-only fortnight of saved entries', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $user = User::factory()->create();
+    $monday = now()->startOfWeek();
+
+    PlanEntry::factory()->create([
+        'user_id' => $user->id,
+        'entry_date' => $monday,
+        'note' => 'Server patching',
+        'location_id' => $location->id,
+        'availability_status' => AvailabilityStatus::ONSITE,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(Profile::class)
+        ->assertSee('Your manager updates your plan. This view is read-only.')
+        ->assertSee($monday->format('l jS M'))
+        ->assertSee('Other')
+        ->assertSee('Onsite')
+        ->assertSee('Server patching');
+});
+
+test('empty plan days render without defaults and weekends are not listed', function () {
+    $location = Location::factory()->create(['slug' => 'other', 'name' => 'Other']);
+    $userWithDefaults = User::factory()->create([
+        'default_location_id' => $location->id,
+        'default_category' => 'Support Tickets',
+    ]);
+
+    actingAs($userWithDefaults);
+
+    Livewire::test(Profile::class)
+        ->assertDontSee('Saturday')
+        ->assertDontSee('Sunday')
+        ->assertViewHas('planDays', function ($planDays) {
+            return count($planDays) === 10
+                && collect($planDays)->every(fn ($day) => $day['entry'] === null);
+        });
+});
+
+test('managers and admins do not see the read-only plan callout', function () {
+    $manager = User::factory()->create(['is_admin' => false]);
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+
+    actingAs($manager);
+
+    Livewire::test(Profile::class)
+        ->assertDontSee('Your manager updates your plan');
+
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    actingAs($admin);
+
+    Livewire::test(Profile::class)
+        ->assertDontSee('Your manager updates your plan');
 });

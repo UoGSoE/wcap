@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
             Route::get('/team-members', [ManagerPlanController::class, 'teamMembers']);
             Route::get('/team-members/{userId}/plan', [ManagerPlanController::class, 'show']);
             Route::post('/team-members/{userId}/plan', [ManagerPlanController::class, 'upsert']);
+            Route::post('/team-members/{userId}/plan/fill-defaults', [ManagerPlanController::class, 'fillDefaults']);
             Route::delete('/team-members/{userId}/plan/{entryId}', [ManagerPlanController::class, 'destroy']);
         });
 });

@@ -12,6 +12,7 @@
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600&display=swap" rel="stylesheet" />
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
+        <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:dark:bg-zinc-900 focus:text-zinc-800 focus:dark:text-white focus:rounded-lg focus:shadow-lg">Skip to main content</a>
         @auth
             <flux:sidebar sticky collapsible class="bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700 print:hidden">
                 <flux:sidebar.header>
@@ -34,9 +35,9 @@
                     @admin
                         <flux:separator class="my-2" />
                         <flux:sidebar.item icon="cog-6-tooth" href="{{ route('admin.teams') }}" :current="request()->is('admin/teams')" wire:navigate>Manage Teams</flux:sidebar.item>
-                        @servicesEnabled
+                        @can('viewServiceAvailability')
                             <flux:sidebar.item icon="wrench-screwdriver" href="{{ route('admin.services') }}" :current="request()->is('admin/services')" wire:navigate>Manage Services</flux:sidebar.item>
-                        @endservicesEnabled
+                        @endcan
                         <flux:sidebar.item icon="map-pin" href="{{ route('admin.locations') }}" :current="request()->is('admin/locations')" wire:navigate>Manage Locations</flux:sidebar.item>
                         <flux:sidebar.item icon="users" href="{{ route('admin.users') }}" :current="request()->is('admin/users')" wire:navigate>Manage Users</flux:sidebar.item>
                     @endadmin
@@ -45,6 +46,14 @@
                 <flux:sidebar.nav>
                     <flux:sidebar.item icon="user-circle" href="{{ route('profile') }}" :current="request()->is('profile')" wire:navigate>Profile</flux:sidebar.item>
                 </flux:sidebar.nav>
+                @if (session()->has('impersonator_id'))
+                    <flux:sidebar.nav>
+                        <form method="post" action="{{ route('impersonate.stop') }}">
+                            @csrf
+                            <flux:sidebar.item icon="users" type="submit"><flux:text color="amber">Stop impersonating</flux:text></flux:sidebar.item>
+                        </form>
+                    </flux:sidebar.nav>
+                @endif
                 <flux:sidebar.nav>
                     <form method="post" action="{{ route('auth.logout') }}">
                         @csrf
@@ -57,7 +66,7 @@
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
         </flux:header>
 
-        <flux:main>
+        <flux:main id="main-content">
             {{ $slot }}
         </flux:main>
 

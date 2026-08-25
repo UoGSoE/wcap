@@ -23,9 +23,6 @@ class PlanController
         'is_holiday', 'category', 'category_label',
     ];
 
-    /**
-     * Get the authenticated user's plan entries for the next 10 weekdays.
-     */
     #[QueryParameter('filter[location_slug]', description: 'Only return entries at this location (e.g. "rankine").', type: 'string', example: 'rankine')]
     #[QueryParameter('filter[is_holiday]', description: 'Only return entries flagged as holiday when true.', type: 'boolean', example: true)]
     #[QueryParameter('filter[availability_status]', description: 'Filter by availability: "onsite", "remote", or "not_available".', type: 'string', example: 'onsite')]
@@ -116,10 +113,6 @@ class PlanController
         ]);
     }
 
-    /**
-     * Create or update plan entries for the authenticated user.
-     * Always expects an entries array. Matches by id (if provided) or entry_date.
-     */
     public function upsert(UpsertPlanEntriesRequest $request): JsonResponse
     {
         $user = $request->user();
@@ -168,10 +161,6 @@ class PlanController
         ]);
     }
 
-    /**
-     * Delete a plan entry.
-     * Users can only delete their own entries.
-     */
     public function destroy(Request $request, int $id): JsonResponse
     {
         $entry = $request->user()->planEntries()->findOrFail($id);
@@ -182,15 +171,7 @@ class PlanController
         ]);
     }
 
-    /**
-     * Parse and validate ?fields[entries]= into an array of allowed field names.
-     *
-     * Returns null when no fields filter is set (caller keeps the full shape).
-     * Throws a 400 when an unknown field is requested, matching Spatie's
-     * loud-failure behaviour on allowedFilters.
-     *
-     * @return array<int, string>|null
-     */
+    /** @return array<int, string>|null */
     private function requestedEntryFields(Request $request): ?array
     {
         $raw = $request->input('fields.entries');
@@ -211,10 +192,6 @@ class PlanController
         return $requested;
     }
 
-    /**
-     * Get all available locations.
-     * Useful for building forms or validation in external applications.
-     */
     public function locations(Request $request): JsonResponse
     {
         $locations = Location::orderBy('name')->get()->map(fn ($location) => [

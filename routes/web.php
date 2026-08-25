@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\HomeRedirectController;
+use App\Http\Controllers\ImpersonationController;
 use App\Livewire\AdminLocations;
 use App\Livewire\AdminServices;
 use App\Livewire\AdminTeams;
@@ -17,6 +18,8 @@ require __DIR__.'/sso-auth.php';
 Route::middleware('auth')->group(function () {
     Route::get('/', HomeRedirectController::class)->name('home');
     Route::get('/profile', Profile::class)->name('profile');
+    Route::post('/impersonate/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
+    Route::post('/impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
     Route::get('/manager/report', ManagerReport::class)->name('manager.report');
     Route::middleware('manager')->group(function () {
         Route::get('/manager/occupancy', OccupancyReport::class)->name('manager.occupancy');

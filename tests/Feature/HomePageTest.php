@@ -22,3 +22,11 @@ test('home page redirects to manager edit entries page for managers', function (
 
     $this->actingAs($manager)->get(route('home'))->assertRedirect(route('manager.entries'));
 });
+
+test('the layout renders a skip link to the main content', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get(route('profile'))
+        ->assertSee('Skip to main content')
+        ->assertSee('href="#main-content"', false);
+});

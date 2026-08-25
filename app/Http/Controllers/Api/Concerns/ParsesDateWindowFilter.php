@@ -10,11 +10,6 @@ trait ParsesDateWindowFilter
     private int $maxWindowDays = 62;
 
     /**
-     * Parse and validate filter[from]/filter[to] from the request.
-     *
-     * Returns [from, to] (both strings, inclusive bounds) or [null, null]
-     * when neither is set (caller uses its default window).
-     *
      * @return array{0: ?string, 1: ?string}
      */
     private function parseDateWindow(Request $request): array
