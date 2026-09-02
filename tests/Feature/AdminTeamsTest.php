@@ -56,6 +56,20 @@ test('admin can see all teams in the list', function () {
         ->assertSee('Two, Manager');
 });
 
+test('team list still renders when a team has no manager', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $teamWithoutManager = Team::factory()->create([
+        'name' => 'Orphaned Team',
+        'manager_id' => null,
+    ]);
+
+    actingAs($admin);
+
+    Livewire::test(AdminTeams::class)
+        ->assertOk()
+        ->assertSee('Orphaned Team');
+});
+
 test('admin can create a new team', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $manager = User::factory()->create();

@@ -33,7 +33,7 @@
                             <flux:text>{{ $team->parentTeam?->name ?? '—' }}</flux:text>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:text>{{ $team->manager->full_name }}</flux:text>
+                            <flux:text>{{ $team->manager?->full_name ?? '—' }}</flux:text>
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:text>{{ $team->users->count() }}</flux:text>
