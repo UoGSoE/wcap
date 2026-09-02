@@ -29,7 +29,7 @@
                             <flux:text class="font-medium">{{ $service->name }}</flux:text>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:text>{{ $service->manager->full_name }}</flux:text>
+                            <flux:text>{{ $service->manager?->full_name ?? '—' }}</flux:text>
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:text>{{ $service->users->count() }}</flux:text>

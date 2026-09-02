@@ -26,12 +26,19 @@ class AdminUsers extends Component
 
     public ?int $deletingUserId = null;
 
+    public ?int $newManagerId = null;
+
+    protected array $validationAttributes = [
+        'newManagerId' => 'new manager',
+    ];
+
     public function render()
     {
         $users = User::with('managedTeams')->orderBy('surname')->orderBy('forenames')->get();
 
         return view('livewire.admin-users', [
             'users' => $users,
+            'deletingUser' => $users->firstWhere('id', $this->deletingUserId),
         ]);
     }
 
@@ -127,6 +134,7 @@ class AdminUsers extends Component
     public function confirmDelete(int $userId): void
     {
         $this->deletingUserId = $userId;
+        $this->newManagerId = null;
         Flux::modal('user-delete')->show();
     }
 
@@ -138,9 +146,17 @@ class AdminUsers extends Component
             return;
         }
 
+        if ($user->managesTeamsOrServices()) {
+            $this->validate([
+                'newManagerId' => 'required|integer|exists:users,id|not_in:'.$user->id,
+            ]);
+
+            $user->managedTeams()->update(['manager_id' => $this->newManagerId]);
+            $user->managedServices()->update(['manager_id' => $this->newManagerId]);
+        }
+
         $user->teams()->detach();
         $user->planEntries()->delete();
-        $user->managedTeams()->update(['manager_id' => null]);
         $user->delete();
 
         Flux::toast(
@@ -151,5 +167,6 @@ class AdminUsers extends Component
 
         Flux::modal('user-delete')->close();
         $this->deletingUserId = null;
+        $this->newManagerId = null;
     }
 }

@@ -3,6 +3,7 @@
 use App\Livewire\AdminUsers;
 use App\Models\Location;
 use App\Models\PlanEntry;
+use App\Models\Service;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -300,20 +301,61 @@ test('deleting user removes their plan entries', function () {
     expect(PlanEntry::find($planEntry->id))->toBeNull();
 });
 
-test('deleting user unassigns them as manager from teams', function () {
+test('deleting a manager transfers their teams and services to the chosen new manager', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $leavingManager = User::factory()->create();
+    $newManager = User::factory()->create();
+    $unrelatedManager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $leavingManager->id]);
+    $service = Service::factory()->create(['manager_id' => $leavingManager->id]);
+    $unrelatedTeam = Team::factory()->create(['manager_id' => $unrelatedManager->id]);
+    $unrelatedService = Service::factory()->create(['manager_id' => $unrelatedManager->id]);
+
+    actingAs($admin);
+
+    Livewire::test(AdminUsers::class)
+        ->call('confirmDelete', $leavingManager->id)
+        ->set('newManagerId', $newManager->id)
+        ->call('deleteUser')
+        ->assertHasNoErrors();
+
+    expect(User::find($leavingManager->id))->toBeNull();
+    expect($team->fresh()->manager->id)->toBe($newManager->id);
+    expect($service->fresh()->manager->id)->toBe($newManager->id);
+    expect($unrelatedTeam->fresh()->manager->id)->toBe($unrelatedManager->id);
+    expect($unrelatedService->fresh()->manager->id)->toBe($unrelatedManager->id);
+});
+
+test('a manager cannot be deleted without choosing a new manager for their teams', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $leavingManager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $leavingManager->id]);
+
+    actingAs($admin);
+
+    Livewire::test(AdminUsers::class)
+        ->call('confirmDelete', $leavingManager->id)
+        ->call('deleteUser')
+        ->assertHasErrors(['newManagerId']);
+
+    expect(User::find($leavingManager->id))->not->toBeNull();
+    expect($team->fresh()->manager->id)->toBe($leavingManager->id);
+});
+
+test('delete flyout only asks for a new manager when the user manages teams or services', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $manager = User::factory()->create();
-    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $plainUser = User::factory()->create();
+    Team::factory()->create(['name' => 'Infrastructure', 'manager_id' => $manager->id]);
 
     actingAs($admin);
 
     Livewire::test(AdminUsers::class)
         ->call('confirmDelete', $manager->id)
-        ->call('deleteUser');
-
-    $team->refresh();
-
-    expect($team->manager_id)->toBeNull();
+        ->assertSee('Transfer Teams and Services To')
+        ->assertSee('Infrastructure')
+        ->call('confirmDelete', $plainUser->id)
+        ->assertDontSee('Transfer Teams and Services To');
 });
 
 test('admin cannot delete themselves', function () {

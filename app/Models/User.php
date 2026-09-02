@@ -79,6 +79,18 @@ class User extends Authenticatable
         return $this->is_admin;
     }
 
+    public function managesTeamsOrServices(): bool
+    {
+        return $this->managedTeams()->exists() || $this->managedServices()->exists();
+    }
+
+    public function managedTeamAndServiceNames(): string
+    {
+        return $this->managedTeams->pluck('name')
+            ->merge($this->managedServices->pluck('name'))
+            ->join(', ');
+    }
+
     /** @return array<int> */
     public function allManagedTeamIds(): array
     {

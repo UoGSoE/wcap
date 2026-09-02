@@ -130,12 +130,26 @@
             <div>
                 <flux:heading size="lg">Delete User</flux:heading>
                 <flux:text class="mt-2">
-                    Are you sure you want to delete this user? This will also remove them from all teams, delete their plan entries, and unassign them as manager from any teams they manage.
+                    Are you sure you want to delete this user? This will also remove them from all teams and delete their plan entries.
                 </flux:text>
                 <flux:text class="mt-2 font-medium">
                     This action cannot be undone.
                 </flux:text>
             </div>
+
+            @if ($deletingUser?->managesTeamsOrServices())
+                <flux:select
+                    variant="combobox"
+                    label="Transfer Teams and Services To"
+                    description="This user manages {{ $deletingUser->managedTeamAndServiceNames() }}. Choose who takes over, or cancel and reassign them by hand first."
+                    placeholder="Choose a new manager..."
+                    wire:model="newManagerId"
+                >
+                    @foreach ($users->where('id', '!=', $deletingUserId) as $user)
+                        <flux:select.option value="{{ $user->id }}">{{ $user->full_name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
 
             <div class="flex gap-2">
                 <flux:button variant="danger" wire:click="deleteUser">

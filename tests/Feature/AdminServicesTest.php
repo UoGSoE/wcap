@@ -59,6 +59,20 @@ test('admin can see all services in the list', function () {
         ->assertSee('Two, Manager');
 })->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
 
+test('service list still renders when a service has no manager', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $serviceWithoutManager = Service::factory()->create([
+        'name' => 'Orphaned Service',
+        'manager_id' => null,
+    ]);
+
+    actingAs($admin);
+
+    Livewire::test(AdminServices::class)
+        ->assertOk()
+        ->assertSee('Orphaned Service');
+})->skip(fn () => ! config('wcap.services_enabled'), 'Services feature is disabled (WCAP_SERVICES_ENABLED=false)');
+
 test('admin can create a new service', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $manager = User::factory()->create();
