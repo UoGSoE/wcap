@@ -10,6 +10,9 @@ return [
     // @see https://docs.sentry.io/concepts/key-terms/dsn-explainer/
     'dsn' => env('SENTRY_LARAVEL_DSN', env('SENTRY_DSN')),
 
+    // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#http_proxy
+    'http_proxy' => env('SENTRY_HTTP_PROXY'),
+
     // @see https://spotlightjs.com/
     // 'spotlight' => env('SENTRY_SPOTLIGHT', false),
 
