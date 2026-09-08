@@ -25,6 +25,9 @@ const (
 	modeFatal
 )
 
+// annualLeaveLocation is the slug of the location used for holiday days.
+const annualLeaveLocation = "not-applicable"
+
 type pane int
 
 const (

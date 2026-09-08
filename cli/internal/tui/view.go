@@ -85,6 +85,7 @@ func (m Model) viewHelp() string {
     C                 Copy this day onto all following days
     d                 Fill this day from defaults
     D                 Fill all empty days from defaults
+    a                 Mark this day as annual leave
     ] / [             Next / previous week
     r                 Reload from server
 
@@ -168,7 +169,7 @@ func (m Model) renderHeader() string {
 }
 
 func (m Model) renderFooter() string {
-	keys := "j/k move · Tab pane · e edit · c copy-next · C copy-rest · ] next-wk · [ prev-wk · / filter · r reload · ? help · q quit"
+	keys := "j/k move · Tab pane · e edit · c copy-next · C copy-rest · a leave · ] next-wk · [ prev-wk · / filter · r reload · ? help · q quit"
 	if m.pane == paneLeft {
 		keys = "j/k move · Enter open · / filter · Tab pane · ? help · q quit"
 	}

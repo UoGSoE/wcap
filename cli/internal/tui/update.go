@@ -432,6 +432,12 @@ func (m Model) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case "a":
+		if m.pane == paneRight {
+			return m.markAnnualLeave()
+		}
+		return m, nil
+
 	case "r":
 		m.statusf(statusNormal, "Reloading…")
 		return m, loadPlanCmd(m.client, m.planUserID, m.selfID, m.weekOffset, time.Now())
@@ -608,6 +614,34 @@ func (m Model) copyRest() (tea.Model, tea.Cmd) {
 	}
 	m.statusf(statusNormal, "Saving %d days…", len(changed))
 	return m, upsertCmd(m.client, m.planUserID, m.selfID, changed)
+}
+
+// markAnnualLeave sets the selected day to Not Available at the
+// "not-applicable" location with an "Annual leave" note, then saves it.
+func (m Model) markAnnualLeave() (tea.Model, tea.Cmd) {
+	if m.dayCursor >= len(m.entries) {
+		return m, nil
+	}
+	e := m.entries[m.dayCursor]
+	e.AvailabilityStatus = api.NotAvailable
+	e.AvailabilityStatusLabel = api.NotAvailable.Label()
+	e.Location = annualLeaveLocation
+	e.LocationLabel = m.locationLabel(annualLeaveLocation)
+	e.Note = "Annual leave"
+	m.entries[m.dayCursor] = e
+	m.statusf(statusNormal, "Saving…")
+	return m, upsertCmd(m.client, m.planUserID, m.selfID, []api.Entry{e})
+}
+
+// locationLabel looks up the display label for a location slug, falling
+// back to the slug itself if the server hasn't told us about it.
+func (m Model) locationLabel(slug string) string {
+	for _, l := range m.locations {
+		if l.Value == slug {
+			return l.Label
+		}
+	}
+	return slug
 }
 
 // ---------------------------------------------------------------------------

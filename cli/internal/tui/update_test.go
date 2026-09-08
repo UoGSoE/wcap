@@ -55,3 +55,33 @@ func TestFillStatusWording(t *testing.T) {
 		}
 	}
 }
+
+func TestPressingAMarksSelectedDayAsAnnualLeave(t *testing.T) {
+	m := Model{
+		mode:      modeList,
+		pane:      paneRight,
+		locations: []api.Location{{Value: "office", Label: "Office"}, {Value: "not-applicable", Label: "Not Applicable"}},
+		entries: []api.Entry{
+			{EntryDate: "2026-09-07", Location: "office", Note: "Support tickets", AvailabilityStatus: api.Onsite},
+			{EntryDate: "2026-09-08", Location: "office", Note: "Support tickets", AvailabilityStatus: api.Onsite},
+		},
+		dayCursor: 1,
+	}
+
+	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m = model.(Model)
+
+	if cmd == nil {
+		t.Fatal("expected a save command to be returned")
+	}
+	got := m.entries[1]
+	if got.AvailabilityStatus != api.NotAvailable || got.Location != "not-applicable" || got.Note != "Annual leave" {
+		t.Errorf("selected day not marked as annual leave: %+v", got)
+	}
+	if got.LocationLabel != "Not Applicable" {
+		t.Errorf("expected location label to be refreshed, got %q", got.LocationLabel)
+	}
+	if untouched := m.entries[0]; untouched.Note != "Support tickets" || untouched.AvailabilityStatus != api.Onsite {
+		t.Errorf("other day should be untouched: %+v", untouched)
+	}
+}
