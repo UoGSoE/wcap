@@ -99,7 +99,8 @@ test('manager can access team report endpoint', function () {
 });
 
 test('admin can access all report endpoints', function () {
-    $admin = User::factory()->create(['is_admin' => true]);
+    config(['wcap.service_report_viewers' => 'admin@example.com']);
+    $admin = User::factory()->create(['is_admin' => true, 'email' => 'admin@example.com']);
 
     Sanctum::actingAs($admin);
 
@@ -280,9 +281,9 @@ test('team report rejects invalid filter[from] / filter[to] values', function (a
 ]);
 
 test('service-availability response carries scope=global so consumers can rely on the field always being present', function () {
-    config(['wcap.services_enabled' => true]);
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'admin@example.com']);
 
-    $admin = User::factory()->create(['is_admin' => true]);
+    $admin = User::factory()->create(['is_admin' => true, 'email' => 'admin@example.com']);
     Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/service-availability');
@@ -291,11 +292,26 @@ test('service-availability response carries scope=global so consumers can rely o
     expect($response->json('scope'))->toBe('global');
 });
 
+test('service-availability report is only available to people on the service report viewers list', function () {
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'viewer@example.com']);
+
+    $managerOnViewersList = User::factory()->create(['email' => 'viewer@example.com']);
+    $managerOnViewersList->managedTeams()->create(['name' => 'Viewer Team']);
+    $managerNotOnViewersList = User::factory()->create();
+    $managerNotOnViewersList->managedTeams()->create(['name' => 'Other Team']);
+
+    Sanctum::actingAs($managerNotOnViewersList);
+    $this->getJson('/api/v1/reports/service-availability')->assertForbidden();
+
+    Sanctum::actingAs($managerOnViewersList);
+    $this->getJson('/api/v1/reports/service-availability')->assertOk();
+});
+
 test('service-availability filter[manager_only]=true returns only services with a manager-only day', function () {
-    config(['wcap.services_enabled' => true]);
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'admin@example.com']);
     $this->travelTo(CarbonImmutable::parse('2026-04-20'));
 
-    $admin = User::factory()->create(['is_admin' => true]);
+    $admin = User::factory()->create(['is_admin' => true, 'email' => 'admin@example.com']);
 
     // "At risk" service: has a manager, but the only available person that day is the manager.
     $manager = User::factory()->create();
@@ -329,9 +345,9 @@ test('service-availability filter[manager_only]=true returns only services with 
 });
 
 test('service-availability filter[service_slug] narrows to one service', function () {
-    config(['wcap.services_enabled' => true]);
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'admin@example.com']);
 
-    $admin = User::factory()->create(['is_admin' => true]);
+    $admin = User::factory()->create(['is_admin' => true, 'email' => 'admin@example.com']);
     Service::factory()->create(['name' => 'VPN Service']);
     Service::factory()->create(['name' => 'Email Service']);
 
@@ -346,9 +362,9 @@ test('service-availability filter[service_slug] narrows to one service', functio
 });
 
 test('service-availability report rejects unknown filter with a Spatie-style message listing allowed filters', function () {
-    config(['wcap.services_enabled' => true]);
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'admin@example.com']);
 
-    $admin = User::factory()->create(['is_admin' => true]);
+    $admin = User::factory()->create(['is_admin' => true, 'email' => 'admin@example.com']);
     Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/service-availability?filter[wibble]=foo');
@@ -361,10 +377,10 @@ test('service-availability report rejects unknown filter with a Spatie-style mes
 });
 
 test('service-availability report filter[from] and filter[to] narrow the date window', function () {
-    config(['wcap.services_enabled' => true]);
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'admin@example.com']);
     $this->travelTo(CarbonImmutable::parse('2026-04-20'));
 
-    $admin = User::factory()->create(['is_admin' => true]);
+    $admin = User::factory()->create(['is_admin' => true, 'email' => 'admin@example.com']);
     Sanctum::actingAs($admin);
 
     $response = $this->getJson('/api/v1/reports/service-availability?filter[from]=2026-04-20&filter[to]=2026-04-22');

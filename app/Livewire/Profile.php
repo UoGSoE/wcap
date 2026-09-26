@@ -151,7 +151,8 @@ class Profile extends Component
      *
      * Access is role-based now (see `accessManagerApi` gate), so this UI only
      * runs inside the `@adminOrManager` Blade guard — every viewer gets every
-     * endpoint.
+     * endpoint, except service availability, which follows the
+     * `viewServiceAvailability` gate.
      *
      * @return array<int, array{name: string, method: string, path: string, description: string}>
      */
@@ -226,7 +227,7 @@ class Profile extends Component
             ],
         ];
 
-        if (config('wcap.services_enabled')) {
+        if (config('wcap.services_enabled') && auth()->user()->can('viewServiceAvailability')) {
             $endpoints[] = [
                 'name' => 'Service Availability',
                 'method' => 'GET',

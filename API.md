@@ -32,7 +32,7 @@ Everything lives under `/api/v1`.
 | `GET /reports/team` — person × day grid | manager, admin |
 | `GET /reports/location` — day × location grouping | manager, admin |
 | `GET /reports/coverage` — location × day counts | manager, admin |
-| `GET /reports/service-availability` — service × day counts | manager, admin (when services enabled) |
+| `GET /reports/service-availability` — service × day counts | manager or admin on the `WCAP_SERVICE_REPORT_VIEWERS` list (when services enabled) |
 | `GET /manager/team-members` — list manageable users | manager, admin |
 | `GET /manager/team-members/{id}/plan` — view their plan | manager, admin |
 | `POST /manager/team-members/{id}/plan` — upsert their plan | manager, admin |

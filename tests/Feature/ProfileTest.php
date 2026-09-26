@@ -274,7 +274,7 @@ test('documentation shows all endpoints the user has role-based access to', func
 
     actingAs($manager);
 
-    $component = Livewire::test(Profile::class)
+    Livewire::test(Profile::class)
         ->call('selectToken', $token->accessToken->id)
         ->assertSee('Personal Plan')
         ->assertSee('/api/v1/plan')
@@ -284,11 +284,29 @@ test('documentation shows all endpoints the user has role-based access to', func
         ->assertSee('/api/v1/reports/location')
         ->assertSee('Coverage Report')
         ->assertSee('/api/v1/reports/coverage');
+});
 
-    if (config('wcap.services_enabled')) {
-        $component->assertSee('Service Availability')
-            ->assertSee('/api/v1/reports/service-availability');
-    }
+test('documentation only lists the service availability endpoint for service report viewers', function () {
+    config(['wcap.services_enabled' => true, 'wcap.service_report_viewers' => 'viewer@example.com']);
+
+    $managerOnViewersList = User::factory()->create(['email' => 'viewer@example.com']);
+    $managerOnViewersList->managedTeams()->create(['name' => 'Viewer Team']);
+    $viewerToken = $managerOnViewersList->createToken('Viewer Token');
+    $managerNotOnViewersList = User::factory()->create();
+    $managerNotOnViewersList->managedTeams()->create(['name' => 'Other Team']);
+    $otherToken = $managerNotOnViewersList->createToken('Other Token');
+
+    actingAs($managerNotOnViewersList);
+
+    Livewire::test(Profile::class)
+        ->call('selectToken', $otherToken->accessToken->id)
+        ->assertDontSee('/api/v1/reports/service-availability');
+
+    actingAs($managerOnViewersList);
+
+    Livewire::test(Profile::class)
+        ->call('selectToken', $viewerToken->accessToken->id)
+        ->assertSee('/api/v1/reports/service-availability');
 });
 
 test('no documentation section when user has no tokens', function () {
