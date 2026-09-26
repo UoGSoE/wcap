@@ -71,6 +71,8 @@ class Profile extends Component
 
     public function createToken(): void
     {
+        abort_unless(auth()->user()->can('accessManagerApi'), 403);
+
         $this->validate([
             'newTokenName' => 'required|string|max:255',
         ]);

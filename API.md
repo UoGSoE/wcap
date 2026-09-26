@@ -11,13 +11,13 @@ in to the app. This file just covers the bits the spec doesn't (or shouldn't) sa
 All endpoints sit behind Sanctum (`auth:sanctum`).
 
 1. Sign in to the app.
-2. Mint a personal access token from your profile page.
+2. Mint a personal access token from your profile page (managers and admins
+   only).
 3. Send it as `Authorization: Bearer <token>` on each request, with
    `Accept: application/json`.
 
 Access is decided by your **role** on the user record, not by token abilities. A
-plain token is enough — staff get personal-plan endpoints, managers/admins also
-get the manager and report endpoints.
+plain token is enough to reach the personal-plan, manager and report endpoints.
 
 ## Endpoint overview
 
@@ -142,7 +142,7 @@ exists by trying.
 
 ## Examples
 
-A staff user pulling their own next two weeks:
+Pulling your own next two weeks:
 
 ```
 GET /api/v1/plan

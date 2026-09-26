@@ -111,6 +111,34 @@ test('profile allows empty defaults', function () {
     expect($user->default_category)->toBe('');
 });
 
+test('staff cannot create an api token', function () {
+    $staffUser = User::factory()->create();
+
+    actingAs($staffUser);
+
+    Livewire::test(Profile::class)
+        ->set('newTokenName', 'Sneaky Token')
+        ->call('createToken')
+        ->assertForbidden();
+
+    expect($staffUser->tokens()->count())->toBe(0);
+});
+
+test('managers can create an api token', function () {
+    $manager = User::factory()->create();
+    $manager->managedTeams()->create(['name' => 'Test Team']);
+
+    actingAs($manager);
+
+    Livewire::test(Profile::class)
+        ->set('newTokenName', 'My Token')
+        ->call('createToken')
+        ->assertHasNoErrors();
+
+    expect($manager->tokens()->count())->toBe(1);
+    expect($manager->tokens()->first()->name)->toBe('My Token');
+});
+
 test('non-admin managers only see their own tokens', function () {
     $manager = User::factory()->create(['is_admin' => false]);
     $manager->managedTeams()->create(['name' => 'Test Team']);

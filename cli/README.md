@@ -39,8 +39,8 @@ Drop the binary somewhere on your `$PATH`. That's it.
 wcap config
 ```
 
-Prompts for the base URL and a Sanctum personal access token (mint one from
-your profile page in the web UI). The token is verified against `/api/user`
+Prompts for the base URL and a Sanctum personal access token (managers and
+admins can mint one from their profile page in the web UI). The token is verified against `/api/user`
 before anything gets written. Settings live at the platform's native config
 dir with `0600` permissions:
 
@@ -126,8 +126,6 @@ authoritative state.
 
 ### Who you see
 
-- Staff with a token: just your own plan. The left pane hides itself; you can
-  still edit your own days.
 - Managers / admins: every user the API surfaces via
   `/api/v1/manager/team-members`. Self pinned to the top, the rest sorted by
   surname.
@@ -198,9 +196,6 @@ cli/
 
 - **`unauthorized — token invalid or expired`** — your Sanctum token has been
   revoked or rotated. Re-run `wcap config`.
-- **The left pane is missing** — you're authenticated as staff. The API
-  refuses `/manager/team-members` for non-managers, so the TUI hides the
-  pane. Your own plan is still editable.
 - **`no config found`** — run `wcap config` once before launching the TUI, or
   set `WCAP_BASE_URL` / `WCAP_TOKEN`.
 - **Rendering looks off in tmux** — the TUI assumes a 24-bit-colour terminal.
