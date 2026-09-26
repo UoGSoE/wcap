@@ -10,12 +10,12 @@ use Illuminate\Support\Carbon;
 
 class PlanEntryImport
 {
-    public function __construct(protected array $rows) {}
+    public function __construct(protected array $rows, protected User $importer) {}
 
     public function import(): array
     {
         $errors = [];
-        $validator = new PlanEntryRowValidator;
+        $validator = new PlanEntryRowValidator($this->importer);
 
         foreach ($this->rows as $index => $row) {
             $result = $validator->validate($row);

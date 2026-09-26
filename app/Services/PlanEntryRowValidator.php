@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\User;
+use Closure;
 use DateTimeImmutable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
@@ -9,6 +11,8 @@ use Illuminate\Validation\Rule;
 
 class PlanEntryRowValidator
 {
+    public function __construct(protected User $importer) {}
+
     public function validate(array $row): \Illuminate\Validation\Validator
     {
         $date = $row[1] ?? '';
@@ -25,7 +29,7 @@ class PlanEntryRowValidator
         ];
 
         $rules = [
-            'email' => 'required|email|exists:users,email',
+            'email' => ['required', 'email', 'exists:users,email', $this->importerCanManage(...)],
             'date' => 'required|date_format:d/m/Y',
             'location' => 'nullable',
             'note' => 'nullable',
@@ -38,5 +42,14 @@ class PlanEntryRowValidator
         }
 
         return Validator::make($rowData, $rules);
+    }
+
+    protected function importerCanManage(string $attribute, mixed $email, Closure $fail): void
+    {
+        $user = User::where('email', $email)->first();
+
+        if ($user && ! $this->importer->canManagePlanFor($user)) {
+            $fail('You can only import entries for members of your teams.');
+        }
     }
 }

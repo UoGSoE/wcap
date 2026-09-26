@@ -59,7 +59,7 @@ class ImportPlanEntries extends Component
 
         $this->validRows = [];
         $this->errorRows = [];
-        $validator = new PlanEntryRowValidator;
+        $validator = new PlanEntryRowValidator(auth()->user());
 
         foreach ($rows as $index => $row) {
             $result = $validator->validate($row);
@@ -101,7 +101,7 @@ class ImportPlanEntries extends Component
     {
         $rows = array_map(fn ($r) => $r['raw'], $this->validRows);
 
-        $importer = new PlanEntryImport($rows);
+        $importer = new PlanEntryImport($rows, auth()->user());
         $importer->import();
 
         Flux::toast(

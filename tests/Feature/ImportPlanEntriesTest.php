@@ -48,6 +48,37 @@ test('import page shows file upload form', function () {
         ->assertSee('Drop file here or click to browse');
 });
 
+test('manager can only import entries for members of their own teams', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create(['email' => 'member@example.com']);
+    $team->users()->attach($teamMember);
+    $userOutsideTeam = User::factory()->create(['email' => 'outsider@example.com']);
+    Location::factory()->create(['slug' => 'jws', 'name' => 'JWS']);
+
+    $data = [
+        ['member@example.com', '15/12/2025', 'jws', 'Note', 'O'],
+        ['outsider@example.com', '15/12/2025', 'jws', 'Note', 'O'],
+    ];
+    $tempPath = (new ExcelSheet)->generate($data);
+    $file = (new FileFactory)->createWithContent('import.xlsx', file_get_contents($tempPath));
+
+    actingAs($manager);
+
+    $component = Livewire::test(ImportPlanEntries::class)
+        ->set('file', $file);
+
+    expect($component->get('validRows'))->toHaveCount(1);
+    expect($component->get('validRows')[0]['email'])->toBe('member@example.com');
+    expect($component->get('errorRows'))->toHaveCount(1);
+    expect($component->get('errorRows')[0]['data'][0])->toBe('outsider@example.com');
+
+    $component->call('confirmImport');
+
+    expect($teamMember->planEntries()->count())->toBe(1);
+    expect($userOutsideTeam->planEntries()->count())->toBe(0);
+});
+
 // PlanEntryRowValidator tests
 
 test('validator passes for valid row', function () {
@@ -56,7 +87,7 @@ test('validator passes for valid row', function () {
 
     $row = ['test@example.com', '15/12/2025', 'jws', 'Some note', 'O'];
 
-    $validator = new PlanEntryRowValidator;
+    $validator = new PlanEntryRowValidator(User::factory()->admin()->create());
     $result = $validator->validate($row);
 
     expect($result->fails())->toBeFalse();
@@ -67,7 +98,7 @@ test('validator fails for unknown email', function () {
 
     $row = ['unknown@example.com', '15/12/2025', 'jws', 'Some note', 'O'];
 
-    $validator = new PlanEntryRowValidator;
+    $validator = new PlanEntryRowValidator(User::factory()->admin()->create());
     $result = $validator->validate($row);
 
     expect($result->fails())->toBeTrue();
@@ -80,7 +111,7 @@ test('validator fails for invalid date format', function () {
 
     $row = ['test@example.com', '2025-12-15', 'jws', 'Some note', 'O'];
 
-    $validator = new PlanEntryRowValidator;
+    $validator = new PlanEntryRowValidator(User::factory()->admin()->create());
     $result = $validator->validate($row);
 
     expect($result->fails())->toBeTrue();
@@ -92,7 +123,7 @@ test('validator fails for invalid location', function () {
 
     $row = ['test@example.com', '15/12/2025', 'invalid-location', 'Some note', 'O'];
 
-    $validator = new PlanEntryRowValidator;
+    $validator = new PlanEntryRowValidator(User::factory()->admin()->create());
     $result = $validator->validate($row);
 
     expect($result->fails())->toBeTrue();
@@ -105,7 +136,7 @@ test('validator fails for invalid availability value', function () {
 
     $row = ['test@example.com', '15/12/2025', 'jws', 'Some note', 'maybe'];
 
-    $validator = new PlanEntryRowValidator;
+    $validator = new PlanEntryRowValidator(User::factory()->admin()->create());
     $result = $validator->validate($row);
 
     expect($result->fails())->toBeTrue();
@@ -114,7 +145,7 @@ test('validator fails for invalid availability value', function () {
 
 test('validator accepts all valid locations', function () {
     $user = User::factory()->create(['email' => 'test@example.com']);
-    $validator = new PlanEntryRowValidator;
+    $validator = new PlanEntryRowValidator(User::factory()->admin()->create());
 
     $locations = Location::factory()->count(3)->create();
 
@@ -139,7 +170,7 @@ test('import creates entries for valid rows', function () {
         ['test@example.com', '16/12/2025', 'jwn', 'Task two', 'N'],
     ];
 
-    $importer = new PlanEntryImport($rows);
+    $importer = new PlanEntryImport($rows, User::factory()->admin()->create());
     $errors = $importer->import();
 
     expect($errors)->toBeEmpty();
@@ -165,7 +196,7 @@ test('import skips header row', function () {
         ['test@example.com', '15/12/2025', 'jws', 'Real data', 'O'],
     ];
 
-    $importer = new PlanEntryImport($rows);
+    $importer = new PlanEntryImport($rows, User::factory()->admin()->create());
     $errors = $importer->import();
 
     expect($errors)->toBeEmpty();
@@ -183,7 +214,7 @@ test('import returns errors for invalid rows', function () {
         ['test@example.com', 'bad-date', 'jws', 'Invalid date', 'O'],
     ];
 
-    $importer = new PlanEntryImport($rows);
+    $importer = new PlanEntryImport($rows, User::factory()->admin()->create());
     $errors = $importer->import();
 
     expect($errors)->toHaveCount(2);
@@ -210,7 +241,7 @@ test('import updates existing entries with same user and date', function () {
         ['test@example.com', '15/12/2025', 'jwn', 'Updated note', 'O'],
     ];
 
-    $importer = new PlanEntryImport($rows);
+    $importer = new PlanEntryImport($rows, User::factory()->admin()->create());
     $importer->import();
 
     expect(PlanEntry::count())->toBe(1);
@@ -380,7 +411,7 @@ test('import uses user default availability when availability is empty', functio
         ['test@example.com', '16/12/2025', 'jws', 'No availability', ''],
     ];
 
-    $importer = new PlanEntryImport($rows);
+    $importer = new PlanEntryImport($rows, User::factory()->admin()->create());
     $errors = $importer->import();
 
     expect($errors)->toBeEmpty();
@@ -406,7 +437,7 @@ test('import uses user default location when location is empty', function () {
         ['test@example.com', '15/12/2025', '', 'No location specified', 'O'],
     ];
 
-    $importer = new PlanEntryImport($rows);
+    $importer = new PlanEntryImport($rows, User::factory()->admin()->create());
     $errors = $importer->import();
 
     expect($errors)->toBeEmpty();
@@ -426,7 +457,7 @@ test('import errors when location empty and user has no default', function () {
         ['test@example.com', '15/12/2025', '', 'No location', 'O'],
     ];
 
-    $importer = new PlanEntryImport($rows);
+    $importer = new PlanEntryImport($rows, User::factory()->admin()->create());
     $errors = $importer->import();
 
     expect($errors)->toHaveCount(1);
@@ -448,7 +479,7 @@ test('import uses user default_category for note when note is empty', function (
         ['test@example.com', '15/12/2025', 'jws', '', 'O'],
     ];
 
-    $importer = new PlanEntryImport($rows);
+    $importer = new PlanEntryImport($rows, User::factory()->admin()->create());
     $errors = $importer->import();
 
     expect($errors)->toBeEmpty();
@@ -470,7 +501,7 @@ test('import allows empty note when user has empty default_category', function (
         ['test@example.com', '15/12/2025', 'jws', '', 'O'],
     ];
 
-    $importer = new PlanEntryImport($rows);
+    $importer = new PlanEntryImport($rows, User::factory()->admin()->create());
     $errors = $importer->import();
 
     expect($errors)->toBeEmpty();
@@ -483,7 +514,7 @@ test('validator passes for empty location', function () {
 
     $row = ['test@example.com', '15/12/2025', '', 'Note', 'O'];
 
-    $validator = new PlanEntryRowValidator;
+    $validator = new PlanEntryRowValidator(User::factory()->admin()->create());
     $result = $validator->validate($row);
 
     expect($result->fails())->toBeFalse();
@@ -494,7 +525,7 @@ test('validator passes for empty availability', function () {
 
     $row = ['test@example.com', '15/12/2025', '', 'Note', ''];
 
-    $validator = new PlanEntryRowValidator;
+    $validator = new PlanEntryRowValidator(User::factory()->admin()->create());
     $result = $validator->validate($row);
 
     expect($result->fails())->toBeFalse();
