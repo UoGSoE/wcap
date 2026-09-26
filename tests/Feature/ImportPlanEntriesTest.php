@@ -395,6 +395,26 @@ test('saveNewUser validates unique email and username', function () {
         ->assertHasErrors(['newUserEmail', 'newUserUsername']);
 });
 
+test('saveNewUser only allows adding the new user to one of the managers own teams', function () {
+    $manager = User::factory()->create();
+    Team::factory()->create(['manager_id' => $manager->id]);
+    $someoneElsesTeam = Team::factory()->create();
+
+    actingAs($manager);
+
+    Livewire::test(ImportPlanEntries::class)
+        ->set('newUserForenames', 'John')
+        ->set('newUserSurname', 'Smith')
+        ->set('newUserEmail', 'john.smith@example.com')
+        ->set('newUserUsername', 'jsmith')
+        ->set('newUserTeamId', $someoneElsesTeam->id)
+        ->call('saveNewUser')
+        ->assertHasErrors(['newUserTeamId']);
+
+    expect(User::where('email', 'john.smith@example.com')->exists())->toBeFalse();
+    expect($someoneElsesTeam->users()->count())->toBe(0);
+});
+
 // Empty row handling tests - fallback to user defaults
 
 test('import uses user default availability when availability is empty', function () {

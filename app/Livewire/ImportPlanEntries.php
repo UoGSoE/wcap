@@ -11,6 +11,7 @@ use DateTimeImmutable;
 use Flux\Flux;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Ohffs\SimpleSpout\ExcelSheet;
@@ -145,7 +146,7 @@ class ImportPlanEntries extends Component
             'newUserUsername' => 'required|string|max:255|unique:users,username',
             'newUserDefaultLocationId' => 'nullable|integer|exists:locations,id',
             'newUserDefaultCategory' => 'nullable|string|max:255',
-            'newUserTeamId' => 'required|exists:teams,id',
+            'newUserTeamId' => ['required', Rule::in(auth()->user()->allManagedTeamIds())],
         ], [
             'newUserForenames.required' => 'Forenames is required.',
             'newUserSurname.required' => 'Surname is required.',
